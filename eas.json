@@ -21,7 +21,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.supamart.in/api",
+        "EXPO_PUBLIC_API_URL": "https://supamart-backend-353k.onrender.com/api",
         "EXPO_PUBLIC_DEMO_MODE": "false"
       }
     },
@@ -31,7 +31,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.supamart.in/api",
+        "EXPO_PUBLIC_API_URL": "https://supamart-backend-353k.onrender.com/api",
         "EXPO_PUBLIC_DEMO_MODE": "false"
       }
     }
