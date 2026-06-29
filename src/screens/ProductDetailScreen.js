@@ -187,7 +187,8 @@ export default function ProductDetailScreen({ route, navigation }) {
       {/* Add to cart / Qty CTA */}
       <Animated.View
         entering={FadeInDown.duration(400).delay(400)}
-        className="px-4 pb-8 pt-4 bg-white border-t border-border-light flex-row items-center shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)]"
+        className="px-4 pt-4 bg-white border-t border-border-light flex-row items-center shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)]"
+        style={{ paddingBottom: (insets.bottom || 0) + 16 }}
       >
         <View className="flex-1">
           {selectedVariant?.offerPrice && (
