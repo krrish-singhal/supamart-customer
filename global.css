@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .font-normal { font-family: 'PlusJakartaSans-Regular'; font-weight: normal; }
+  .font-medium { font-family: 'PlusJakartaSans-Medium'; font-weight: normal; }
+  .font-semibold { font-family: 'PlusJakartaSans-SemiBold'; font-weight: normal; }
+  .font-bold { font-family: 'PlusJakartaSans-Bold'; font-weight: normal; }
+  .font-black { font-family: 'PlusJakartaSans-Bold'; font-weight: normal; }
+}
+
+@layer base {
+  :root {
+    @apply bg-white;
+  }
+}

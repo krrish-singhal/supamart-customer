@@ -1,43 +1,55 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# ─── Dependencies ────────────────────────────────────────────────────────────
 node_modules/
 
-# Expo
+# ─── Expo ────────────────────────────────────────────────────────────────────
 .expo/
 dist/
 web-build/
 expo-env.d.ts
 
-# Native
-.kotlin/
-*.orig.*
+# ─── Generated native folders (from eas build / expo prebuild) ───────────────
+/android/
+/ios/
+
+# ─── Generated CSS (NativeWind) ──────────────────────────────────────────────
+output.css
+
+# ─── Environment — NEVER commit real env files ───────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Firebase / Google credentials ───────────────────────────────────────────
+google-services.json
+GoogleService-Info.plist
+google-services-key.json
+
+# ─── Native signing & provisioning ───────────────────────────────────────────
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.orig.*
 
-# Metro
+# ─── Metro ───────────────────────────────────────────────────────────────────
 .metro-health-check*
 
-# debug
+# ─── Debug logs ──────────────────────────────────────────────────────────────
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 
-# macOS
+# ─── macOS ───────────────────────────────────────────────────────────────────
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
-
-# typescript
+# ─── TypeScript ──────────────────────────────────────────────────────────────
 *.tsbuildinfo
 
-app-example
+# ─── Kotlin build cache ──────────────────────────────────────────────────────
+.kotlin/
 
-# generated native folders
-/ios
-/android
+# ─── Editor ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
