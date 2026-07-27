@@ -8,7 +8,7 @@ import { Trash2, Plus, Minus, Ticket, Check, ShoppingBag, ArrowRight } from 'luc
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, limit, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Header, Card, Button, Input, Skeleton, ProductCard } from '../components/ui';
 import { useCart } from '../context/CartContext';
@@ -167,6 +167,34 @@ export default function CartScreen({ navigation }) {
   const { items, subtotal, discount, total, couponCode, couponDetails, loading, updateQty, applyCoupon, removeCoupon, loadCart } = useCart();
   const [coupon, setCoupon] = useState('');
   const [applying, setApplying] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [loadingRecs, setLoadingRecs] = useState(true);
+
+  useEffect(() => {
+    const fetchRecs = async () => {
+      if (!items.length) return;
+      try {
+        const q = query(collection(db, 'products'), limit(30));
+        const snap = await getDocs(q);
+        const allProds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const cartCategories = new Set(items.map(i => i.categoryId));
+        let recs = [];
+        if (cartCategories.size > 0) {
+          recs = allProds.filter(p => cartCategories.has(p.categoryId) && !items.find(i => i.productId === p.id));
+        }
+        if (recs.length < 5) {
+          const others = allProds.filter(p => !items.find(i => i.productId === p.id) && !recs.find(r => r.id === p.id));
+          recs = [...recs, ...others].slice(0, 8);
+        }
+        setRecommendations(recs.slice(0, 10));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingRecs(false);
+      }
+    };
+    fetchRecs();
+  }, [items.length]);
 
   // Sync coupon input with context state
   useEffect(() => {
@@ -215,7 +243,9 @@ export default function CartScreen({ navigation }) {
   return (
     <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-      <Header title="Your Cart" showBack={false} />
+      <View style={{ paddingTop: 16, paddingBottom: 16, alignItems: 'center' }}>
+        <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a' }}>Your Cart</Text>
+      </View>
 
       <FlatList
         data={items}
@@ -224,74 +254,110 @@ export default function CartScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInUp.duration(400).delay(index * 80)}>
-            <Card elevation="sm" className="flex-row items-center p-3 mb-3 border-0 bg-white">
-              <View className="flex-1 pr-2">
-                <Text className="text-sm font-semibold text-text-primary mb-1" numberOfLines={2}>
-                  {item.name}
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', backgroundColor: '#fff' }}>
+              {(item.images && item.images[0]) || item.image ? (
+                <Image source={{ uri: (item.images && item.images[0]) || item.image }} style={{ width: 56, height: 56, borderRadius: 8, marginRight: 16 }} contentFit="cover" />
+              ) : (
+                <View style={{ width: 56, height: 56, borderRadius: 8, marginRight: 16, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShoppingBag size={24} color="#cbd5e1" />
+                </View>
+              )}
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#0f172a', marginBottom: 4 }} numberOfLines={2}>
+                  {item.name} {item.variantLabel ? `, ${item.variantLabel}` : ''}
                 </Text>
-                <Text className="text-xs text-text-tertiary font-medium mb-2">{item.variantLabel}</Text>
-                <Text className="text-base font-bold text-text-primary">₹{item.price}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>₹{item.price}</Text>
               </View>
-              <View className="flex-row items-center bg-surface-100 rounded-full p-1 border border-border-light">
+              <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 4, overflow: 'hidden', borderWidth: 1, borderColor: '#16a34a' }}>
                 <Pressable
                   onPress={() => updateQty(item.productId, item.variantId, -1)}
-                  className="w-8 h-8 rounded-full bg-white shadow-sm items-center justify-center border border-border-light"
+                  style={{ width: 28, height: 28, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  {item.qty === 1 ? <Trash2 size={14} color="#ef4444" /> : <Minus size={14} color="#0f172a" />}
+                  <Minus size={14} color="#fff" strokeWidth={3} />
                 </Pressable>
-                <Text className="w-8 text-center text-base font-bold text-text-primary">{item.qty}</Text>
+                <Text style={{ width: 32, textAlign: 'center', fontSize: 13, fontWeight: '800', color: '#0f172a', backgroundColor: '#fff' }}>
+                  {item.qty}
+                </Text>
                 <Pressable
                   onPress={() => updateQty(item.productId, item.variantId, 1)}
-                  className="w-8 h-8 rounded-full bg-primary-600 shadow-sm items-center justify-center"
+                  style={{ width: 28, height: 28, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Plus size={14} color="#ffffff" />
+                  <Plus size={14} color="#fff" strokeWidth={3} />
                 </Pressable>
               </View>
-            </Card>
+            </View>
           </Animated.View>
         )}
         ListFooterComponent={
-          <Animated.View entering={FadeInUp.duration(400).delay(300)} className="mt-4">
+          <Animated.View entering={FadeInUp.duration(400).delay(200)} className="mt-4">
+            
+            {/* Recommendations */}
+            {!loadingRecs && recommendations.length > 0 && (
+              <View className="mb-6 -mx-4">
+                <Text className="text-sm font-bold text-text-primary px-5 mb-3 uppercase tracking-wider">Before you checkout</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+                  {recommendations.map(item => (
+                    <ProductCard
+                      key={item.id}
+                      item={item}
+                      style={{ width: 140, marginRight: 12 }}
+                      onPress={() => navigation.navigate('ProductDetail', { id: item.id })}
+                      qty={items.find(i => i.productId === item.id)?.qty || 0}
+                      onAdd={() => updateQty(item.id, item.variants?.[0]?.id || '', 1)}
+                      onIncrement={() => updateQty(item.id, item.variants?.[0]?.id || '', 1)}
+                      onDecrement={() => updateQty(item.id, item.variants?.[0]?.id || '', -1)}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             {/* Coupon */}
-            <View className="flex-row items-end mb-6">
-              <Input
-                containerStyle={{ flex: 1, marginBottom: 0, marginRight: 12 }}
-                style={{ height: 48 }}
-                placeholder="Enter coupon code"
-                value={coupon}
-                onChangeText={setCoupon}
-                autoCapitalize="characters"
-                leftIcon={<Ticket size={18} color="#94a3b8" />}
-              />
-              <Button
-                title={couponCode ? 'Remove' : 'Apply'}
-                onPress={couponCode ? removeCoupon : handleApplyCoupon}
-                loading={applying}
-                variant={couponCode ? 'outline' : 'primary'}
-                size="sm"
-                fullWidth={false}
-                className="h-12 w-24"
-              />
+            <View className="mb-6 px-4">
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 12 }}>Coupon Code</Text>
+              <View className="flex-row items-center">
+                <Input
+                  containerStyle={{ flex: 1, marginBottom: 0, marginRight: 12 }}
+                  style={{ height: 48, borderRadius: 4, borderColor: '#e2e8f0' }}
+                  placeholder="Enter coupon code"
+                  value={coupon}
+                  onChangeText={setCoupon}
+                  autoCapitalize="characters"
+                />
+                  <Button
+                    title={couponCode ? 'Remove' : 'Apply'}
+                    onPress={couponCode ? removeCoupon : handleApplyCoupon}
+                    loading={applying}
+                    style={{ backgroundColor: '#16a34a', height: 48, paddingHorizontal: 20, borderRadius: 4 }}
+                    textStyle={{ fontWeight: '800', fontSize: 14 }}
+                    fullWidth={false}
+                  />
+              </View>
             </View>
 
-            {/* Bill Details */}
-            <Text className="text-lg font-bold text-text-primary mb-3 px-1">Bill Details</Text>
-            <Card elevation="sm" className="p-4 border-0 mb-8 bg-white">
-              <BillRow label="Item Total" value={`₹${subtotal.toFixed(2)}`} />
-              <BillRow label="Delivery Fee" value="Free" color="text-primary-600" />
-              {discount > 0 && (
-                <BillRow label={`Coupon Applied (${couponCode} - ${couponDetails?.value || ''}${couponDetails?.kind === 'PERCENT' ? '%' : '₹'} off)`} value={`-₹${discount.toFixed(2)}`} color="text-primary-600" />
-              )}
-              <View className="h-px bg-border-light my-3" />
-              <BillRow label="To Pay" value={`₹${total.toFixed(2)}`} bold />
-            </Card>
+            {/* Bill Summary */}
+            <View className="px-4 mb-8">
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 12 }}>Bill Summary</Text>
+              <View style={{ backgroundColor: '#fff', borderRadius: 8, padding: 16 }}>
+                <BillRow label="Item Total" value={`₹${subtotal.toFixed(2)}`} />
+                <BillRow label="Delivery Fee" value="₹25" />
+                <BillRow label="Taxes and Charges" value="₹12.50" />
+                {discount > 0 && (
+                  <BillRow label={`Coupon (${couponCode})`} value={`-₹${discount.toFixed(2)}`} color="#16a34a" />
+                )}
+                <View style={{ height: 1, backgroundColor: '#f1f5f9', marginVertical: 12 }} />
+                <BillRow label="To Pay" value={`₹${(total + 25 + 12.50).toFixed(2)}`} bold />
+              </View>
+            </View>
+              
+            <View className="px-4">
               <Button
-                title={`Checkout · ₹${total.toFixed(2)}`}
+                title="Proceed to Pay"
                 onPress={() => navigation.navigate('Checkout')}
-                size="lg"
-                icon={<Check size={20} color="#fff" />}
-                className="mt-2"
+                style={{ backgroundColor: '#16a34a', height: 52, borderRadius: 4 }}
+                textStyle={{ fontWeight: '800', fontSize: 16 }}
               />
+            </View>
             </Animated.View>
           }
         />
@@ -301,9 +367,9 @@ export default function CartScreen({ navigation }) {
 
 function BillRow({ label, value, bold, color }) {
   return (
-    <View className="flex-row justify-between mb-2">
-      <Text className={`text-sm ${bold ? 'font-bold text-text-primary' : 'font-medium text-text-secondary'}`}>{label}</Text>
-      <Text className={`text-sm ${bold ? 'font-bold text-text-primary text-base' : color || 'font-semibold text-text-primary'}`}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+      <Text style={{ fontSize: 13, color: bold ? '#0f172a' : '#64748b', fontWeight: bold ? '800' : '500' }}>{label}</Text>
+      <Text style={{ fontSize: 13, color: color || '#0f172a', fontWeight: bold ? '800' : '500' }}>
         {value}
       </Text>
     </View>

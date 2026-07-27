@@ -143,8 +143,8 @@ export default function CheckoutScreen({ navigation }) {
     } catch (err) {
       Toast.show({
         type: 'error',
-        text1: 'Order failed',
-        text2: err.response?.data?.error || err.message || 'Please try again.',
+        text1: 'Checkout Failed',
+        text2: 'Something went wrong. Please check your connection and try again.',
       });
     } finally {
       setPlacing(false);
@@ -167,9 +167,10 @@ export default function CheckoutScreen({ navigation }) {
   if (!items?.length) return <EmptyState icon="cart" message="Cart is empty" onRetry={() => navigation.navigate('Home')} buttonText="Keep Shopping" />;
 
   const activeSlots = (config?.slots || []).filter((s) => s.active);
+  const deliveryFee = 25;
+  const handlingFee = 5;
   const baseTotal = subtotal - discount;
-  const calculatedGst = config?.taxPercent ? (baseTotal * config.taxPercent) / 100 : 0;
-  const finalToPay = baseTotal + calculatedGst + deliveryTip;
+  const finalToPay = baseTotal + deliveryFee + handlingFee;
 
   return (
     <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
@@ -185,26 +186,47 @@ export default function CheckoutScreen({ navigation }) {
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         
-        {/* Cart Items */}
+        {/* Delivering to Home */}
         <Animated.View entering={FadeInUp.duration(400)}>
-          <Card className="mx-4 mt-4 mb-6 p-4 bg-white border border-border-light rounded-3xl" elevation="sm">
+          <Card className="mx-4 mt-4 mb-4 p-4 bg-white border border-border-light rounded-2xl flex-row items-center justify-between" elevation="sm">
+             <View style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
+               <MapPin size={24} color="#64748b" style={{ marginRight: 12 }} />
+               <View style={{ flex: 1, paddingRight: 12 }}>
+                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 2 }}>Delivering to Home</Text>
+                 <Text style={{ fontSize: 13, color: '#475569' }} numberOfLines={2}>
+                   {selectedAddress ? `${selectedAddress.houseNo}, ${selectedAddress.street}, ${selectedAddress.pincode}` : 'Select Delivery Address'}
+                 </Text>
+               </View>
+             </View>
+             <Pressable onPress={() => navigation.navigate('MyAddresses')}>
+               <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 13 }}>Edit</Text>
+             </Pressable>
+          </Card>
+        </Animated.View>
+
+        {/* Cart Items */}
+        <Animated.View entering={FadeInUp.duration(400).delay(100)}>
+          <Card className="mx-4 mb-6 p-4 bg-white border border-border-light rounded-2xl" elevation="sm">
             {items.map((item, index) => (
-              <View key={`${item.productId}-${item.variantId}`} className={`flex-row items-start ${index !== items.length - 1 ? 'mb-5' : ''}`}>
-                <View className="w-4 h-4 rounded-sm border border-emerald-500 items-center justify-center mt-1 mr-3">
-                  <View className="w-2 h-2 rounded-full bg-emerald-500" />
+              <View key={`${item.productId}-${item.variantId}`} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: index !== items.length - 1 ? 20 : 0 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', marginRight: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', padding: 4 }}>
+                  {((item.images && item.images[0]) || item.image) ? (
+                    <Image source={{ uri: (item.images && item.images[0]) || item.image }} style={{ width: '100%', height: '100%' }} />
+                  ) : (
+                    <ShoppingBag size={24} color="#cbd5e1" />
+                  )}
                 </View>
-                <View className="flex-1 pr-2">
-                  <Text className="text-sm font-bold text-text-primary mb-1">{item.name}</Text>
-                  <Text className="text-xs font-medium text-text-tertiary mb-1.5">{item.variantLabel}</Text>
-                  <Text className="text-sm font-bold text-text-primary">₹{item.price}</Text>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '500', color: '#0f172a', marginBottom: 4 }}>{item.name} ({item.variantLabel})</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>₹{item.price.toFixed(2)}</Text>
                 </View>
-                <View className="flex-row items-center bg-surface-50 rounded-xl p-1 border border-border-light shadow-sm">
-                  <Pressable onPress={() => updateQty(item.productId, item.variantId, -1)} className="w-8 h-8 rounded-lg bg-white items-center justify-center shadow-sm border border-border-light">
-                    {item.qty === 1 ? <Trash2 size={14} color="#ef4444" /> : <Minus size={14} color="#0f172a" />}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 6, borderWidth: 1, borderColor: '#e2e8f0', overflow: 'hidden' }}>
+                  <Pressable onPress={() => updateQty(item.productId, item.variantId, -1)} style={{ width: 32, height: 32, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}>
+                    <Minus size={14} color="#64748b" strokeWidth={3} />
                   </Pressable>
-                  <Text className="w-8 text-center text-sm font-bold text-text-primary">{item.qty}</Text>
-                  <Pressable onPress={() => updateQty(item.productId, item.variantId, 1)} className="w-8 h-8 rounded-lg bg-primary-600 items-center justify-center shadow-sm">
-                    <Plus size={14} color="#ffffff" />
+                  <Text style={{ width: 32, textAlign: 'center', fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{item.qty}</Text>
+                  <Pressable onPress={() => updateQty(item.productId, item.variantId, 1)} style={{ width: 32, height: 32, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' }}>
+                    <Plus size={14} color="#ffffff" strokeWidth={3} />
                   </Pressable>
                 </View>
               </View>
@@ -212,162 +234,61 @@ export default function CheckoutScreen({ navigation }) {
           </Card>
         </Animated.View>
 
-        {/* Recommendations */}
-        {!loadingRecs && recommendations.length > 0 && (
-          <Animated.View entering={FadeInUp.duration(400).delay(100)} className="mb-6">
-            <Text className="text-sm font-bold text-text-primary px-5 mb-3 uppercase tracking-wider">Before you checkout</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {recommendations.map(item => (
-                <ProductCard
-                  key={item.id}
-                  item={item}
-                  style={{ width: 140, marginRight: 12 }}
-                  onPress={() => navigation.navigate('ProductDetail', { id: item.id })}
-                  qty={getQty(item.id, item.variants?.[0]?.id)}
-                  onAdd={() => addItem(item, item.variants?.[0])}
-                  onIncrement={() => addItem(item, item.variants?.[0])}
-                  onDecrement={() => updateQty(item.id, item.variants?.[0]?.id, -1)}
-                />
-              ))}
-            </ScrollView>
-          </Animated.View>
-        )}
-
-        {/* Savings Corner */}
+        {/* Apply Coupon */}
         <Animated.View entering={FadeInUp.duration(400).delay(150)}>
-          <Card className="mx-4 mb-6 p-4 bg-white border border-border-light rounded-3xl" elevation="sm">
-            <Text className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-4">Savings Corner</Text>
+          <Card className="mx-4 mb-6 p-4 bg-white border border-border-light rounded-2xl" elevation="sm">
             <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center">
-                <Tag size={20} color="#f97316" className="mr-3" />
-                <Text className="text-sm font-bold text-text-primary">Apply Coupon</Text>
-              </View>
-              <ChevronRight size={20} color="#94a3b8" />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>Apply Coupon</Text>
+              <Pressable>
+                <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 13 }}>View Offers</Text>
+              </Pressable>
             </View>
-            <View className="flex-row items-center mt-1">
+            <View className="flex-row items-center">
               <Input
-                containerStyle={{ flex: 1, marginBottom: 0, marginRight: 10 }}
-                style={{ height: 46 }}
-                placeholder="Enter coupon code"
+                containerStyle={{ flex: 1, marginBottom: 0 }}
+                style={{ height: 46, borderRadius: 4 }}
+                placeholder="Input Coupon"
                 value={couponInput}
                 onChangeText={setCouponInput}
                 autoCapitalize="characters"
               />
-              <Button
-                title={couponCode ? 'Remove' : 'Apply'}
-                onPress={couponCode ? removeCoupon : handleApplyCoupon}
-                loading={applying}
-                variant={couponCode ? 'outline' : 'primary'}
-                size="sm"
-                className="h-[46px] w-24"
-              />
             </View>
             {discount > 0 && (
-              <View className="flex-row items-center justify-between mt-4 p-3.5 bg-emerald-50 rounded-2xl border border-emerald-100">
-                <View className="flex-row items-center">
-                  <Tag size={16} color="#10b981" className="mr-2" />
-                  <Text className="text-sm font-bold text-text-primary">₹{discount} saved!</Text>
-                </View>
-                <Text className="text-xs font-bold text-emerald-600">✓ Applied</Text>
+              <View className="flex-row items-center justify-between mt-4 p-3.5 bg-emerald-50 rounded-lg border border-emerald-100">
+                <Text className="text-sm font-bold text-text-primary">₹{discount} saved!</Text>
+                <Pressable onPress={removeCoupon}>
+                  <Text className="text-xs font-bold text-red-500">Remove</Text>
+                </Pressable>
               </View>
             )}
-          </Card>
-        </Animated.View>
-
-        {/* Delivery Options */}
-        <Animated.View entering={FadeInUp.duration(400).delay(200)}>
-          <Card className="mx-4 mb-6 p-4 bg-white border border-border-light rounded-3xl" elevation="sm">
-            <Text className="text-sm font-bold text-text-primary mb-4">Delivery Options</Text>
-            
-            {/* Address */}
-            <View className="mb-5">
-              <Text className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Deliver To</Text>
-              {addresses.length === 0 ? (
-                <Pressable onPress={() => navigation.navigate('AddAddress')} className="flex-row items-center py-2">
-                  <View className="w-8 h-8 rounded-full bg-primary-50 items-center justify-center mr-3">
-                    <MapPin size={16} color="#16a34a" />
-                  </View>
-                  <Text className="text-sm font-bold text-primary-600 flex-1">+ Add New Address</Text>
-                </Pressable>
-              ) : (
-                addresses.map((addr) => (
-                  <Pressable key={addr.id} onPress={() => setSelectedAddress(addr)} className={`flex-row items-start py-2.5 ${selectedAddress?.id !== addr.id ? 'opacity-60' : ''}`}>
-                    <View className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 items-center justify-center ${selectedAddress?.id === addr.id ? 'border-primary-600' : 'border-border-dark'}`}>
-                      {selectedAddress?.id === addr.id && <View className="w-2.5 h-2.5 rounded-full bg-primary-600" />}
-                    </View>
-                    <View className="flex-1">
-                      <Text className={`text-sm ${selectedAddress?.id === addr.id ? 'font-bold text-text-primary' : 'font-medium text-text-secondary'}`}>
-                        {addr.houseNo}, {addr.street}
-                      </Text>
-                      <Text className="text-xs text-text-tertiary font-medium mt-1">{addr.pincode}</Text>
-                    </View>
-                  </Pressable>
-                ))
-              )}
-            </View>
-
-            {/* Time Slot */}
-            <View className="mb-5">
-              <Text className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Delivery Time</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {(activeSlots.length ? activeSlots : [{ label: 'ASAP (Within 45 mins)', from: 0, to: 0 }]).map((slot) => (
-                  <Pressable key={slot.label} onPress={() => setSelectedSlot(slot)} className={`px-4 py-2.5 rounded-xl border ${selectedSlot?.label === slot.label ? 'border-primary-600 bg-primary-50' : 'border-border-light bg-surface-50'}`}>
-                    <Text className={`text-sm font-semibold ${selectedSlot?.label === slot.label ? 'text-primary-700' : 'text-text-secondary'}`}>{slot.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Tip */}
-            <View className="mb-2">
-              <Text className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Delivery Tip</Text>
-              <Text className="text-xs font-medium text-text-tertiary mb-3">Your tip means a lot! 100% of your tip goes directly to your delivery partner.</Text>
-              <View className="flex-row gap-2">
-                {[10, 20, 30, 50].map(amt => (
-                  <Pressable key={amt} onPress={() => setDeliveryTip(deliveryTip === amt ? 0 : amt)} className={`flex-1 items-center justify-center py-2.5 rounded-xl border ${deliveryTip === amt ? 'border-primary-600 bg-primary-50 shadow-sm' : 'border-border-light bg-white shadow-sm'}`}>
-                    <Text className={`text-sm font-bold ${deliveryTip === amt ? 'text-primary-700' : 'text-text-primary'}`}>₹{amt}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
           </Card>
         </Animated.View>
 
         {/* Bill Details */}
         <Animated.View entering={FadeInUp.duration(400).delay(250)}>
-          <Card className="mx-4 mb-6 p-5 bg-white border border-border-light rounded-3xl" elevation="sm">
-            <Text className="text-sm font-bold text-text-primary mb-4">Bill Details</Text>
+          <Card className="mx-4 mb-6 p-5 bg-white border border-border-light rounded-2xl" elevation="sm">
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 16 }}>Bill Details</Text>
             
             <View className="flex-row justify-between mb-3">
-              <Text className="text-sm font-medium text-text-secondary">Item Total</Text>
-              <View className="flex-row items-center">
-                {discount > 0 && <Text className="text-xs line-through text-text-tertiary mr-1.5">₹{subtotal.toFixed(2)}</Text>}
-                <Text className="text-sm font-medium text-text-primary">₹{(subtotal - discount).toFixed(2)}</Text>
-              </View>
+              <Text className="text-sm font-medium text-text-secondary">Item Total:</Text>
+              <Text className="text-sm font-medium text-text-primary">₹{(subtotal - discount).toFixed(2)}</Text>
             </View>
 
             <View className="flex-row justify-between mb-3">
-              <Text className="text-sm font-medium text-text-secondary border-b border-dashed border-text-tertiary pb-0.5">Delivery Fee | 3.0 kms</Text>
-              <Text className="text-sm font-bold text-emerald-600">FREE</Text>
+              <Text className="text-sm font-medium text-text-secondary">Delivery Fee:</Text>
+              <Text className="text-sm font-medium text-text-primary">₹{deliveryFee.toFixed(2)}</Text>
             </View>
 
-            {deliveryTip > 0 && (
-              <View className="flex-row justify-between mb-3">
-                <Text className="text-sm font-medium text-text-secondary">Delivery Tip</Text>
-                <Text className="text-sm font-medium text-text-primary">₹{deliveryTip.toFixed(2)}</Text>
-              </View>
-            )}
-
             <View className="flex-row justify-between mb-4">
-              <Text className="text-sm font-medium text-text-secondary border-b border-dashed border-text-tertiary pb-0.5">GST & Other Charges</Text>
-              <Text className="text-sm font-medium text-text-primary">₹{calculatedGst.toFixed(2)}</Text>
+              <Text className="text-sm font-medium text-text-secondary">Handling Fee:</Text>
+              <Text className="text-sm font-medium text-text-primary">₹{handlingFee.toFixed(2)}</Text>
             </View>
 
             <View className="h-[1px] bg-border-light mb-4" />
 
             <View className="flex-row justify-between items-center">
-              <Text className="text-base font-bold text-text-primary">To Pay</Text>
-              <Text className="text-lg font-black text-text-primary">₹{finalToPay.toFixed(2)}</Text>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#16a34a' }}>Total to Pay</Text>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#16a34a' }}>₹{finalToPay.toFixed(2)}</Text>
             </View>
           </Card>
         </Animated.View>
@@ -377,7 +298,6 @@ export default function CheckoutScreen({ navigation }) {
           <Text className="text-xs font-bold text-text-secondary mb-1.5 uppercase tracking-wider">Cancellation Policy</Text>
           <Text className="text-xs font-medium text-text-tertiary leading-5">Please double-check your order and address details. Orders are non-refundable once placed.</Text>
         </Animated.View>
-
       </ScrollView>
 
       {/* Fixed Bottom CTA */}
@@ -387,13 +307,12 @@ export default function CheckoutScreen({ navigation }) {
           <Text className="text-2xl font-black text-text-primary">₹{finalToPay.toFixed(2)}</Text>
         </View>
         <Button
-          title={placing ? 'Processing...' : 'Place Order securely'}
+          title="Proceed to Pay"
           onPress={placeOrder}
           disabled={placing || !selectedAddress || !selectedSlot}
           loading={placing}
-          size="lg"
-          fullWidth={false}
-          className="flex-[1.5] shadow-md"
+          style={{ backgroundColor: '#16a34a', height: 50, borderRadius: 4, paddingHorizontal: 20 }}
+          textStyle={{ fontWeight: '800', fontSize: 16 }}
         />
       </Animated.View>
     </SafeAreaView>

@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, FlatList, Pressable, StatusBar, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Package, ChevronRight, ShoppingBag } from 'lucide-react-native';
+import { Package, ChevronRight, ShoppingBag, CheckCircle2, ArrowLeft } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -70,7 +70,7 @@ function EmptyOrders({ navigation }) {
         >
           <Package size={56} color="#16a34a" />
         </View>
-        <Text className="text-2xl font-black text-text-primary mb-2 text-center">No orders yet</Text>
+        <Text className="text-[22px] font-extrabold text-text-primary mb-2 text-center">No orders yet</Text>
         <Text className="text-sm font-medium text-text-secondary text-center leading-6 mb-8">
           Your order history will appear here.{'\n'}Start shopping to place your first order!
         </Text>
@@ -222,8 +222,8 @@ export default function OrdersScreen({ navigation }) {
     return (
       <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-        <View className="px-5 pt-5 pb-3">
-          <Text className="text-2xl font-black text-text-primary tracking-tight">My Orders</Text>
+        <View style={{ padding: 20, backgroundColor: '#fff' }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a' }}>My Orders</Text>
         </View>
         <EmptyOrders navigation={navigation} />
       </SafeAreaView>
@@ -233,11 +233,8 @@ export default function OrdersScreen({ navigation }) {
   return (
     <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-      <View className="px-5 pt-5 pb-3">
-        <Text className="text-2xl font-black text-text-primary tracking-tight">My Orders</Text>
-        <Text className="text-sm font-medium text-text-tertiary mt-0.5">
-          {orders.length} order{orders.length !== 1 ? 's' : ''}
-        </Text>
+      <View style={{ padding: 20, backgroundColor: '#fff' }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a' }}>Order History</Text>
       </View>
       <FlatList
         data={orders}
@@ -251,39 +248,50 @@ export default function OrdersScreen({ navigation }) {
           const colors = STATUS_COLOR[item.status] || { bg: 'bg-surface-100', text: 'text-text-secondary' };
           return (
             <Animated.View entering={FadeInDown.duration(350).delay(index < 6 ? index * 50 : 0)}>
-              <Card
-                elevation="sm"
-                className="mb-3 border-0 bg-white"
+              <Pressable
                 onPress={() => navigation.navigate('OrderTracking', { orderId: item.id, orderNo: item.orderNo })}
+                style={{
+                  backgroundColor: '#fff',
+                  borderWidth: 1.5,
+                  borderColor: '#16a34a',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 16,
+                }}
               >
-                <View className="flex-row items-start justify-between mb-3">
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                   <View>
-                    <Text className="text-base font-black text-text-primary">Order #{item.orderNo}</Text>
-                    <Text className="text-xs font-medium text-text-tertiary mt-0.5">
-                      {new Date(item.createdAt).toLocaleDateString('en-IN', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                      })}
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>Order #{item.orderNo}</Text>
+                    <Text style={{ fontSize: 13, color: '#475569', marginTop: 2 }}>
+                      {new Date(item.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </Text>
                   </View>
-                  <View className={`px-3 py-1 rounded-full ${colors.bg}`}>
-                    <Text className={`text-xs font-bold ${colors.text}`}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#bbf7d0' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#16a34a', marginRight: 4 }}>
                       {STATUS_LABEL[item.status] || item.status}
                     </Text>
+                    {item.status === 'DELIVERED' && <CheckCircle2 size={12} color="#16a34a" />}
                   </View>
                 </View>
 
-                <Text className="text-sm font-medium text-text-secondary mb-3" numberOfLines={1}>
-                  {item.items?.map((i) => `${i.name} ×${i.qty}`).join(', ')}
+                <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 8 }} numberOfLines={1}>
+                  {item.items?.map((i) => i.name).join(', ')}
                 </Text>
 
-                <View className="flex-row items-center justify-between pt-3 border-t border-border-light">
-                  <Text className="text-base font-black text-text-primary">₹{item.total?.toFixed(2)}</Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-xs font-semibold text-primary-600 mr-1">View details</Text>
-                    <ChevronRight size={14} color="#16a34a" />
-                  </View>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a', marginTop: 4 }}>
+                  Total: ₹{item.total?.toFixed(2)}
+                </Text>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+                  <Pressable style={{ backgroundColor: '#16a34a', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8, marginRight: 16 }}>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>Reorder</Text>
+                  </Pressable>
+                  <Pressable onPress={() => navigation.navigate('OrderTracking', { orderId: item.id, orderNo: item.orderNo })} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: '#16a34a', fontSize: 13, fontWeight: '800', marginRight: 4 }}>View Details</Text>
+                    <ChevronRight size={14} color="#16a34a" strokeWidth={3} />
+                  </Pressable>
                 </View>
-              </Card>
+              </Pressable>
             </Animated.View>
           );
         }}

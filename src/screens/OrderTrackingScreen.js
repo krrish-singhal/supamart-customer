@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '../config/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Check, Clock, Package, Truck, MapPin } from 'lucide-react-native';
+import { Check, Package, Truck, MapPin, RefreshCcw } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Header, Card, Skeleton, Button } from '../components/ui';
 import Toast from 'react-native-toast-message';
@@ -96,7 +96,6 @@ export default function OrderTrackingScreen({ route, navigation }) {
         {!isCancelled && (
           <Animated.View entering={FadeInUp.duration(400).delay(100)}>
             <Card elevation="sm" className="mb-6 p-5 border-0 bg-white">
-              <Text className="text-sm font-bold text-text-primary mb-4 uppercase tracking-wider">Tracking History</Text>
               {STATUS_STEPS.map((step, i) => {
                 const done = i <= currentIndex;
                 const isCurrent = i === currentIndex;
@@ -104,17 +103,16 @@ export default function OrderTrackingScreen({ route, navigation }) {
                 return (
                   <View key={step.key} className="flex-row mb-4">
                     <View className="items-center mr-4">
-                      <View className={`w-8 h-8 rounded-full items-center justify-center z-10 ${
-                        isCurrent ? 'bg-primary-600 shadow-md shadow-primary-500/30 border-2 border-primary-200' :
-                        done ? 'bg-primary-600' : 'bg-surface-200 border border-border'
+                      <View className={`w-6 h-6 rounded-full items-center justify-center z-10 ${
+                        done ? 'bg-[#059669]' : 'bg-[#e2e8f0]'
                       }`}>
-                        <Icon size={14} color={done ? 'white' : '#94a3b8'} />
+                        {done && <Check size={14} color="#fff" />}
                       </View>
                       {i < STATUS_STEPS.length - 1 && (
-                        <View className={`absolute top-8 w-0.5 h-10 ${done ? 'bg-primary-600' : 'bg-surface-200'}`} />
+                        <View className={`absolute top-6 w-0.5 h-12 ${done && !isCurrent ? 'bg-[#059669]' : 'bg-[#e2e8f0]'}`} />
                       )}
                     </View>
-                    <View className="flex-1 pt-1.5 pb-6">
+                    <View className="flex-1 pb-8">
                       <Text className={`text-base ${isCurrent ? 'font-bold text-primary-600' : done ? 'font-bold text-text-primary' : 'font-medium text-text-tertiary'}`}>
                         {step.label}
                       </Text>
@@ -138,11 +136,8 @@ export default function OrderTrackingScreen({ route, navigation }) {
             {order.items?.map((item, i) => (
               <View key={i} className="flex-row justify-between items-center mb-3">
                 <View className="flex-row items-center flex-1 pr-4">
-                  <View className="w-6 h-6 rounded bg-surface-100 items-center justify-center mr-3 border border-border-light">
-                    <Text className="text-xs font-bold text-text-secondary">{item.qty}</Text>
-                  </View>
                   <Text className="text-sm font-medium text-text-primary" numberOfLines={2}>
-                    {item.name} <Text className="text-text-tertiary text-xs">({item.variantLabel})</Text>
+                    {item.qty} × {item.name} <Text className="text-text-tertiary text-xs">({item.variantLabel})</Text>
                   </Text>
                 </View>
                 <Text className="text-sm font-bold text-text-primary">₹{(item.price * item.qty).toFixed(2)}</Text>
@@ -150,28 +145,28 @@ export default function OrderTrackingScreen({ route, navigation }) {
             ))}
             <View className="h-px bg-border-light my-4" />
             <View className="flex-row justify-between items-center">
-              <Text className="text-base font-bold text-text-primary">Total Paid</Text>
-              <Text className="text-lg font-black text-primary-600">₹{order.total?.toFixed(2)}</Text>
+              <Text className="text-base font-bold text-[#059669]">Total Paid</Text>
+              <Text className="text-lg font-black text-[#059669]">₹{order.total?.toFixed(2)}</Text>
             </View>
           </Card>
         </Animated.View>
 
         {/* Delivery address */}
         <Animated.View entering={FadeInUp.duration(400).delay(300)}>
-          <Card elevation="sm" className="p-4 border-0 bg-white">
-            <View className="flex-row items-center mb-3">
-              <MapPin size={16} color="#64748b" className="mr-2" />
-              <Text className="text-sm font-bold text-text-primary uppercase tracking-wider">Delivery Details</Text>
-            </View>
-            <Text className="text-sm font-bold text-text-primary ml-6 mb-1">
+          <Card elevation="sm" className="p-4 border-0 bg-white flex-row items-start">
+            <MapPin size={24} color="#059669" className="mr-4 mt-1" />
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-text-primary uppercase tracking-wider mb-2">Delivery Details</Text>
+            <Text className="text-sm font-bold text-text-primary mb-1">
               {order.addressSnapshot?.houseNo}, {order.addressSnapshot?.street}
             </Text>
             {order.addressSnapshot?.landmark && (
-              <Text className="text-xs font-medium text-text-secondary ml-6 mb-0.5">
+              <Text className="text-xs font-medium text-text-secondary mb-0.5">
                 Landmark: {order.addressSnapshot.landmark}
               </Text>
             )}
-            <Text className="text-xs font-medium text-text-secondary ml-6">{order.addressSnapshot?.pincode}</Text>
+              <Text className="text-sm text-text-secondary font-medium mt-1">{order.addressSnapshot?.pincode}</Text>
+            </View>
           </Card>
         </Animated.View>
 
@@ -180,8 +175,10 @@ export default function OrderTrackingScreen({ route, navigation }) {
             title="Repeat Last Order"
             onPress={handleRepeatOrder}
             loading={repeating}
-            icon={!repeating && <Package size={18} color="#fff" />}
-            size="lg"
+            icon={!repeating && <RefreshCcw size={18} color="#fff" />}
+            style={{ backgroundColor: '#059669', height: 50, borderRadius: 8 }}
+            textStyle={{ fontWeight: '700', fontSize: 16 }}
+            fullWidth
           />
         </Animated.View>
       </ScrollView>

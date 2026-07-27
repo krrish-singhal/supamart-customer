@@ -162,7 +162,7 @@ export default function EditProfileScreen({ navigation }) {
 
               {/* Phone — read-only */}
               <View className="mb-4">
-                <Text className="text-xs font-black text-text-tertiary uppercase tracking-widest mb-2">
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 8 }}>
                   Mobile Number
                 </Text>
                 <View
@@ -196,7 +196,7 @@ export default function EditProfileScreen({ navigation }) {
 
             <Card elevation="sm" className="border-0 bg-white p-5 mb-4">
               {/* Gender */}
-              <Text className="text-xs font-black text-text-tertiary uppercase tracking-widest mb-2">
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 8 }}>
                 Gender
               </Text>
               <Pressable
@@ -226,7 +226,7 @@ export default function EditProfileScreen({ navigation }) {
               )}
 
               {/* Date of Birth */}
-              <Text className="text-xs font-black text-text-tertiary uppercase tracking-widest mb-2">
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 8 }}>
                 Date of Birth
               </Text>
               <Pressable

@@ -24,7 +24,7 @@ export default function Header({ title, subtitle, showBack = true, onBack, right
 
       <View className="flex-1 items-center justify-center px-2">
         {title && (
-          <Text className="text-[18px] leading-[26px] font-bold text-text-primary text-center" numberOfLines={1}>
+          <Text className="text-[22px] leading-[28px] font-extrabold text-text-primary text-center" numberOfLines={1}>
             {title}
           </Text>
         )}

@@ -3,14 +3,15 @@ import {
   View, Text, ScrollView, Pressable, StatusBar, Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Minus, Plus, ChevronLeft, MapPin, ShoppingBag } from 'lucide-react-native';
+import { Minus, Plus, ChevronLeft, MapPin, ShoppingBag, CheckCircle2 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import EmptyState from '../components/EmptyState';
 import { Button, Card, Skeleton, Header } from '../components/ui';
 import { useCart } from '../context/CartContext';
+import { ProductCard } from '../components/ui';
 
 const { width } = Dimensions.get('window');
 
@@ -22,6 +23,22 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { addItem, updateQty, getQty } = useCart();
+  const [recommendations, setRecommendations] = useState([]);
+  
+  useEffect(() => {
+    if (!product) return;
+    const fetchRecs = async () => {
+      try {
+        const q = query(collection(db, 'products'), where('categoryId', '==', product.categoryId), limit(8));
+        const snap = await getDocs(q);
+        const recs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.id !== product.id);
+        setRecommendations(recs);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchRecs();
+  }, [product?.categoryId]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'products', id), (snap) => {
@@ -141,18 +158,24 @@ export default function ProductDetailScreen({ route, navigation }) {
                   <Pressable
                     key={v.id}
                     onPress={() => setSelectedVariant(v)}
-                    className={`mr-3 px-4 py-3 rounded-2xl border min-w-[120px] ${
-                      selectedVariant?.id === v.id
-                        ? 'border-primary-600 bg-primary-50 shadow-sm'
-                        : 'border-border-light bg-white shadow-sm'
-                    }`}
+                    style={{
+                      marginRight: 12, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minWidth: 120,
+                      backgroundColor: selectedVariant?.id === v.id ? '#dcfce7' : '#fff',
+                      borderWidth: 1, borderColor: selectedVariant?.id === v.id ? '#16a34a' : '#e2e8f0',
+                      position: 'relative'
+                    }}
                   >
-                    <Text className={`text-sm font-bold mb-1 ${selectedVariant?.id === v.id ? 'text-primary-700' : 'text-text-primary'}`}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 4 }}>
                       {v.label}
                     </Text>
-                    <Text className={`text-xs ${selectedVariant?.id === v.id ? 'text-primary-600' : 'text-text-secondary'}`}>
+                    <Text style={{ fontSize: 13, color: '#475569' }}>
                       ₹{v.offerPrice ?? v.price}
                     </Text>
+                    {selectedVariant?.id === v.id && (
+                      <View style={{ position: 'absolute', top: 12, right: 12 }}>
+                        <CheckCircle2 size={16} color="#16a34a" fill="#16a34a" />
+                      </View>
+                    )}
                   </Pressable>
                 ))}
               </ScrollView>
@@ -182,6 +205,29 @@ export default function ProductDetailScreen({ route, navigation }) {
             </Card>
           </Animated.View>
         </View>
+
+        {/* People usually pair this with */}
+        {recommendations.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(400).delay(350)} className="mb-6 mt-2">
+            <Text className="text-sm font-bold text-text-primary mb-4 px-5 uppercase tracking-wider">
+              People usually pair this with
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+              {recommendations.map(item => (
+                <ProductCard
+                  key={item.id}
+                  item={item}
+                  style={{ width: 140, marginRight: 12 }}
+                  onPress={() => navigation.push('ProductDetail', { id: item.id })}
+                  qty={getQty(item.id, item.variants?.[0]?.id)}
+                  onAdd={() => addItem(item, item.variants?.[0])}
+                  onIncrement={() => addItem(item, item.variants?.[0])}
+                  onDecrement={() => updateQty(item.id, item.variants?.[0]?.id, -1)}
+                />
+              ))}
+            </ScrollView>
+          </Animated.View>
+        )}
       </ScrollView>
 
       {/* Add to cart / Qty CTA */}
@@ -194,7 +240,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           {selectedVariant?.offerPrice && (
             <Text className="text-xs font-bold text-text-tertiary line-through mb-0.5">₹{mrp}</Text>
           )}
-          <Text className="text-2xl font-black text-text-primary">₹{price}</Text>
+          <Text style={{ fontSize: 24, fontWeight: '800', color: '#16a34a' }}>₹{price}</Text>
           {selectedVariant?.stock <= 10 && selectedVariant?.stock > 0 && (
             <Text className="text-xs font-bold text-orange-500 mt-1">
               Only {selectedVariant.stock} left
@@ -203,29 +249,28 @@ export default function ProductDetailScreen({ route, navigation }) {
         </View>
 
         {outOfStock ? (
-          <View className="flex-[1.5] h-14 items-center justify-center bg-surface-100 rounded-2xl border border-border-light">
+          <View className="flex-[1.5] h-12 items-center justify-center bg-surface-100 rounded-lg border border-border-light">
             <Text className="text-sm font-bold text-text-tertiary">Out of Stock</Text>
           </View>
         ) : currentQty === 0 ? (
           <Button
             title="Add to Cart"
             onPress={handleAdd}
-            size="lg"
-            fullWidth={false}
-            className="flex-[1.5] shadow-md"
+            style={{ flex: 1.5, backgroundColor: '#16a34a', height: 48, borderRadius: 8 }}
+            textStyle={{ fontWeight: '800', fontSize: 16 }}
           />
         ) : (
-          <View className="flex-[1.5] flex-row items-center justify-between bg-primary-50 border border-primary-200 rounded-2xl px-4 h-14">
+          <View className="flex-[1.5] flex-row items-center justify-between bg-primary-50 border border-primary-200 px-4 h-12" style={{ borderRadius: 8 }}>
             <Pressable
               onPress={handleDecrement}
-              className="w-9 h-9 rounded-full bg-white border border-border-light items-center justify-center shadow-sm"
+              className="w-8 h-8 rounded bg-white border border-border-light items-center justify-center shadow-sm"
             >
               <Minus size={16} color="#0f172a" />
             </Pressable>
             <Text className="text-xl font-black text-primary-700 w-10 text-center">{currentQty}</Text>
             <Pressable
               onPress={handleIncrement}
-              className="w-9 h-9 rounded-full bg-primary-600 items-center justify-center shadow-sm"
+              className="w-8 h-8 rounded bg-primary-600 items-center justify-center shadow-sm"
             >
               <Plus size={16} color="#ffffff" />
             </Pressable>

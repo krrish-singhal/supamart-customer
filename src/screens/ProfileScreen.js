@@ -1,59 +1,49 @@
 import React, { useContext, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, StatusBar } from 'react-native';
+import { View, Text, ScrollView, Pressable, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  User, MapPin, CreditCard, Bell, Shield, FileText, HelpCircle,
-  Info, LogOut, ChevronRight, Star,
+  User, MapPin, CreditCard, HelpCircle,
+  LogOut, ChevronRight, Settings
 } from 'lucide-react-native';
+import { Image } from 'expo-image';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
-import { Image } from 'expo-image';
 import { AuthContext } from '../context/AuthContext';
-import { Card, Avatar, Skeleton, Dialog } from '../components/ui';
+import { Dialog } from '../components/ui';
 
-const MENU_SECTIONS = [
-  {
-    items: [
-      { id: 'edit',      icon: User,       label: 'Edit Profile',      route: 'EditProfile' },
-      { id: 'addresses', icon: MapPin,      label: 'My Addresses',      route: 'MyAddresses' },
-      { id: 'payments',  icon: CreditCard,  label: 'Payment Methods',   route: null },
-      { id: 'notifs',    icon: Bell,        label: 'Notifications',     route: null },
-    ],
-  },
-  {
-    items: [
-      { id: 'privacy',   icon: Shield,      label: 'Privacy Policy',    route: null },
-      { id: 'terms',     icon: FileText,    label: 'Terms & Conditions', route: null },
-      { id: 'help',      icon: HelpCircle,  label: 'Help & Support',    route: null },
-      { id: 'about',     icon: Info,        label: 'About SupaMart',    route: null },
-    ],
-  },
+const MENU_ITEMS = [
+  { id: 'account',   icon: User,        label: 'My Account',      route: null },
+  { id: 'addresses', icon: MapPin,      label: 'Address Book',    route: 'MyAddresses' },
+  { id: 'payment',   icon: CreditCard,  label: 'Payment Methods', route: null },
+  { id: 'help',      icon: HelpCircle,  label: 'Help & Support',  route: null },
+  { id: 'settings',  icon: Settings,    label: 'Settings',        route: null },
 ];
 
 function MenuItem({ icon: Icon, label, onPress, danger }) {
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center justify-between px-4 py-4 border-b border-border-light last:border-b-0 active:bg-surface-50 ${danger ? 'active:bg-red-50' : ''}`}
+      style={{
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingVertical: 18, paddingHorizontal: 20,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1, borderBottomColor: '#f1f5f9'
+      }}
     >
-      <View className="flex-row items-center flex-1">
-        <View className={`w-9 h-9 rounded-2xl items-center justify-center mr-3 ${danger ? 'bg-red-50' : 'bg-surface-100'}`}>
-          <Icon size={17} color={danger ? '#ef4444' : '#475569'} />
-        </View>
-        <Text className={`text-sm font-semibold ${danger ? 'text-red-500' : 'text-text-primary'}`}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Icon size={20} color={danger ? '#ef4444' : '#64748b'} />
+        <Text style={{ fontSize: 16, fontWeight: '500', color: danger ? '#ef4444' : '#0f172a', marginLeft: 16 }}>{label}</Text>
       </View>
-      {!danger && <ChevronRight size={16} color="#94a3b8" />}
+      {!danger && <ChevronRight size={18} color="#cbd5e1" />}
     </Pressable>
   );
 }
 
 export default function ProfileScreen({ navigation }) {
-  const { userProfile: user, logout, loading } = useContext(AuthContext);
+  const { userProfile: user, logout } = useContext(AuthContext);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  const confirmLogout = () => {
-    setShowLogoutDialog(true);
-  };
+  const confirmLogout = () => setShowLogoutDialog(true);
 
   const handleLogout = async () => {
     setShowLogoutDialog(false);
@@ -62,96 +52,73 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleNav = (route) => {
-    if (route) {
-      navigation.navigate(route);
-    } else {
-      Toast.show({ type: 'info', text1: 'Coming soon.' });
-    }
+    if (route) navigation.navigate(route);
+    else Toast.show({ type: 'info', text1: 'Coming soon.' });
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-surface-50">
-        <View className="p-5">
-          <Skeleton width="100%" height={130} borderRadius={24} className="mb-6" />
-          <Skeleton width="100%" height={200} borderRadius={24} className="mb-4" />
-          <Skeleton width="100%" height={200} borderRadius={24} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const userName = user?.name || 'User';
+  const initial = userName.charAt(0).toUpperCase();
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        style={{ flex: 1, backgroundColor: '#ffffff' }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Card */}
+        {/* Header */}
         <Animated.View entering={FadeInUp.duration(350)}>
-          <Card elevation="sm" className="mb-5 p-5 border-0 bg-white">
-            <View className="flex-row items-center">
+          <View style={{ padding: 20, backgroundColor: '#fff' }}>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a' }}>User Profile & Settings</Text>
+          </View>
+        </Animated.View>
+
+        {/* User Info Section */}
+        <Animated.View entering={FadeInUp.duration(350)}>
+          <View style={{ padding: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f8fafc', paddingBottom: 24 }}>
+            <View>
               {user?.profileImage ? (
                 <Image
                   source={{ uri: user.profileImage }}
-                  style={{ width: 64, height: 64, borderRadius: 32 }}
+                  style={{ width: 80, height: 80, borderRadius: 40 }}
                   contentFit="cover"
                 />
               ) : (
-                <Avatar name={user?.name || 'User'} size="lg" />
-              )}
-              <View className="flex-1 ml-4">
-                <Text className="text-xl font-black text-text-primary">{user?.name || 'User'}</Text>
-                <Text className="text-sm font-medium text-text-secondary mt-0.5">
-                  +91 {user?.mobile}
-                </Text>
-                {(user?.email) && (
-                  <Text className="text-xs font-medium text-text-tertiary mt-0.5">{user.email}</Text>
-                )}
-                <View className="flex-row items-center mt-3 bg-surface-50 self-start px-3 py-1.5 rounded-full border border-border-light">
-                  <Star size={12} color="#f59e0b" fill="#f59e0b" />
-                  <Text className="text-xs font-bold text-text-secondary ml-1.5">
-                    {user?.totalOrders || 0} Orders · ₹{(user?.lifetimeSpending || 0).toFixed(0)} Spent
-                  </Text>
+                <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#e0f2fe', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 36, color: '#3b82f6', fontWeight: '400' }}>{initial}</Text>
                 </View>
-              </View>
+              )}
             </View>
-          </Card>
+            <View style={{ marginLeft: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: '600', color: '#0f172a', marginBottom: 4 }}>{userName}</Text>
+              <Pressable onPress={() => handleNav('EditProfile')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, fontWeight: '500', color: '#16a34a' }}>Edit profile</Text>
+                <ChevronRight size={14} color="#16a34a" style={{ marginTop: 1, marginLeft: 2 }} />
+              </Pressable>
+            </View>
+          </View>
         </Animated.View>
 
-        {/* Menu Sections */}
-        {MENU_SECTIONS.map((section, si) => (
-          <Animated.View
-            key={si}
-            entering={FadeInUp.duration(350).delay((si + 1) * 80)}
-            className="mb-4"
-          >
-            <Card elevation="sm" className="border-0 bg-white overflow-hidden p-0">
-              {section.items.map((item) => (
-                <MenuItem
-                  key={item.id}
-                  icon={item.icon}
-                  label={item.label}
-                  onPress={() => handleNav(item.route)}
-                />
-              ))}
-            </Card>
-          </Animated.View>
-        ))}
+        {/* Menu Items */}
+        <Animated.View entering={FadeInUp.duration(350).delay(80)}>
+          <View style={{ backgroundColor: '#fff', marginTop: 8 }}>
+            {MENU_ITEMS.map((item) => (
+              <MenuItem
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                onPress={() => handleNav(item.route)}
+              />
+            ))}
+          </View>
+        </Animated.View>
 
         {/* Logout */}
-        <Animated.View entering={FadeInUp.duration(350).delay(240)}>
-          <Card elevation="sm" className="border-0 bg-white overflow-hidden p-0">
-            <MenuItem icon={LogOut} label="Sign Out" onPress={confirmLogout} danger />
-          </Card>
+        <Animated.View entering={FadeInUp.duration(350).delay(160)} style={{ marginTop: 32, marginBottom: 40 }}>
+          <MenuItem icon={LogOut} label="Log out" onPress={confirmLogout} danger />
         </Animated.View>
-
-        <Text className="text-center text-xs font-medium text-text-tertiary mt-8">
-          SupaMart v1.0 · Made with ♥ in India
-        </Text>
       </ScrollView>
 
       <Dialog

@@ -13,7 +13,9 @@ export default function Button({
   disabled = false, 
   className = '',
   icon = null,
-  fullWidth = true
+  fullWidth = true,
+  style,
+  textStyle
 }) {
   const scale = useSharedValue(1);
 
@@ -59,13 +61,14 @@ export default function Button({
       onPressOut={handlePressOut}
       disabled={disabled || loading}
       className={`flex-row items-center justify-center ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50' : ''} ${fullWidth ? 'w-full' : 'self-start'} ${className}`}
+      style={style}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'primary' || variant === 'danger' ? '#fff' : '#16a34a'} />
       ) : (
         <>
           {icon && <React.Fragment>{icon}</React.Fragment>}
-          <Text className={`${textVariants[variant]} ${textSizes[size]} ${icon ? 'ml-2' : ''}`}>
+          <Text className={`${textVariants[variant]} ${textSizes[size]} ${icon ? 'ml-2' : ''}`} style={textStyle}>
             {title}
           </Text>
         </>

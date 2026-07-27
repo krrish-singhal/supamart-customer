@@ -92,9 +92,9 @@ export default function AddAddressScreen({ navigation }) {
         houseNo: f.houseNo ? f.houseNo : 'Current Location',
       }));
       
-      Toast.show({ type: 'success', text1: 'Location fetched successfully!' });
+      Toast.show({ type: 'success', text1: 'Got your location!' });
     } catch (err) {
-      Toast.show({ type: 'error', text1: 'Failed to fetch location' });
+      Toast.show({ type: 'error', text1: 'Could not fetch your location.' });
     } finally {
       setLocating(false);
     }
@@ -116,10 +116,10 @@ export default function AddAddressScreen({ navigation }) {
         lng:         form.lng || 0,
       };
       await apiClient.post(`/users/${user.id}/addresses`, payload);
-      Toast.show({ type: 'success', text1: 'Address saved.' });
+      Toast.show({ type: 'success', text1: 'Your address is saved.' });
       navigation.goBack();
     } catch (err) {
-      Toast.show({ type: 'error', text1: err.response?.data?.error || 'Failed to save address' });
+      Toast.show({ type: 'error', text1: err.response?.data?.error || 'Could not save the address.' });
     } finally {
       setSaving(false);
     }
