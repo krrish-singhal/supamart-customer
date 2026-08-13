@@ -3,23 +3,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, FlatList, Pressable, StatusBar, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Package, ChevronRight, ShoppingBag, CheckCircle2, ArrowLeft } from 'lucide-react-native';
+import { Package, ChevronRight, ShoppingBag, CheckCircle2, Trash2 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { AuthContext } from '../context/AuthContext';
-import { Skeleton, Card, StatusChip, ProductCard } from '../components/ui';
+import { Skeleton, ProductCard, Dialog } from '../components/ui';
 import apiClient from '../services/api';
-
-const STATUS_COLOR = {
-  ORDER_PLACED:       { bg: 'bg-blue-50',     text: 'text-blue-600' },
-  ORDER_ACCEPTED:     { bg: 'bg-indigo-50',   text: 'text-indigo-600' },
-  PACKING:            { bg: 'bg-orange-50',   text: 'text-orange-600' },
-  READY_FOR_DELIVERY: { bg: 'bg-amber-50',    text: 'text-amber-700' },
-  OUT_FOR_DELIVERY:   { bg: 'bg-sky-50',      text: 'text-sky-700' },
-  DELIVERED:          { bg: 'bg-primary-50',  text: 'text-primary-700' },
-  CANCELLED:          { bg: 'bg-red-50',      text: 'text-red-600' },
-};
+import Toast from 'react-native-toast-message';
 
 const STATUS_LABEL = {
   ORDER_PLACED:       'Placed',
@@ -47,7 +38,8 @@ function EmptyOrders({ navigation }) {
 
   useEffect(() => {
     const unsubCats = onSnapshot(query(collection(db, 'categories'), where('isActive', '==', true)), (snap) => {
-      setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.order||0)-(b.order||0)).slice(0, 6));
+      const topLevel = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
+      setCategories(topLevel.sort((a,b) => (a.order||0)-(b.order||0)).slice(0, 6));
     });
     const unsubFeatured = onSnapshot(query(collection(db, 'products'), where('isFeatured', '==', true)), (snap) => {
       setFeatured(snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 8));
@@ -177,6 +169,7 @@ export default function OrdersScreen({ navigation }) {
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError]         = useState(false);
+  const [pendingDeleteOrder, setPendingDeleteOrder] = useState(null);
 
   // Use the backend API — avoids Firestore security rules and works for
   // both real Firebase-auth users and demo-bypass sessions.
@@ -202,6 +195,24 @@ export default function OrdersScreen({ navigation }) {
     }, [userProfile, fetchOrders])
   );
 
+  // Removes an order from just this customer's own history list — doesn't cancel it or
+  // touch the underlying business record (see backend's hideOrderForUser), purely so a
+  // long list of old orders doesn't become unmanageable to scroll through.
+  const handleDeleteOrder = (order) => setPendingDeleteOrder(order);
+
+  const confirmDeleteOrder = async () => {
+    const order = pendingDeleteOrder;
+    setPendingDeleteOrder(null);
+    setOrders((prev) => prev.filter((o) => o.id !== order.id));
+    try {
+      await apiClient.patch(`/orders/${order.id}/hide`);
+      Toast.show({ type: 'success', text1: 'Order removed', text2: `Order #${order.orderNo} removed from your history.` });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Could not remove order', text2: 'Please try again.' });
+      fetchOrders();
+    }
+  };
+
   if (loading) return <OrdersSkeleton />;
 
   if (error) {
@@ -209,7 +220,7 @@ export default function OrdersScreen({ navigation }) {
       <SafeAreaView className="flex-1 bg-surface-50 items-center justify-center" edges={['top']}>
         <Package size={48} color="#94a3b8" strokeWidth={1.5} />
         <Text className="text-base font-semibold text-text-secondary mt-4 mb-6">
-          Couldn't load orders
+          Couldn&apos;t load orders
         </Text>
         <Pressable onPress={() => fetchOrders()} className="bg-primary-600 px-6 py-3 rounded-2xl">
           <Text className="text-white font-bold">Retry</Text>
@@ -245,7 +256,6 @@ export default function OrdersScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={() => fetchOrders(true)} colors={['#16a34a']} tintColor="#16a34a" />
         }
         renderItem={({ item, index }) => {
-          const colors = STATUS_COLOR[item.status] || { bg: 'bg-surface-100', text: 'text-text-secondary' };
           return (
             <Animated.View entering={FadeInDown.duration(350).delay(index < 6 ? index * 50 : 0)}>
               <Pressable
@@ -266,11 +276,20 @@ export default function OrdersScreen({ navigation }) {
                       {new Date(item.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#bbf7d0' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#16a34a', marginRight: 4 }}>
-                      {STATUS_LABEL[item.status] || item.status}
-                    </Text>
-                    {item.status === 'DELIVERED' && <CheckCircle2 size={12} color="#16a34a" />}
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#bbf7d0', marginRight: 8 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#16a34a', marginRight: 4 }}>
+                        {STATUS_LABEL[item.status] || item.status}
+                      </Text>
+                      {item.status === 'DELIVERED' && <CheckCircle2 size={12} color="#16a34a" />}
+                    </View>
+                    <Pressable
+                      onPress={() => handleDeleteOrder(item)}
+                      hitSlop={8}
+                      style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#fef2f2', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Trash2 size={14} color="#ef4444" />
+                    </Pressable>
                   </View>
                 </View>
 
@@ -295,6 +314,17 @@ export default function OrdersScreen({ navigation }) {
             </Animated.View>
           );
         }}
+      />
+
+      <Dialog
+        visible={!!pendingDeleteOrder}
+        title="Remove this order?"
+        message={`Order #${pendingDeleteOrder?.orderNo} will be removed from your order history. This won't affect the order itself.`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        destructive
+        onConfirm={confirmDeleteOrder}
+        onCancel={() => setPendingDeleteOrder(null)}
       />
     </SafeAreaView>
   );

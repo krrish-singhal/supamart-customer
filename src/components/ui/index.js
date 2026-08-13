@@ -1,6 +1,5 @@
 export { default as Button } from './Button';
 export { default as Input } from './Input';
-export { default as OTPInput } from './OTPInput';
 export { default as Card } from './Card';
 export { default as Header } from './Header';
 export { default as SectionHeader } from './SectionHeader';
@@ -12,3 +11,6 @@ export { default as Loader } from './Loader';
 export { default as Skeleton } from './Skeleton';
 export { default as ProductCard } from './ProductCard';
 export { default as Dialog } from './Dialog';
+export { default as BrandLogo } from './BrandLogo';
+export { default as FavoriteButton } from './FavoriteButton';
+export { default as FreeDeliveryBanner } from './FreeDeliveryBanner';

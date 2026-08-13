@@ -1,6 +1,5 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 export default function Dialog({ visible, title, message, onCancel, onConfirm, confirmText = 'Confirm', cancelText = 'Cancel', destructive = false }) {
   return (

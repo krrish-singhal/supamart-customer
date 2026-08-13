@@ -3,15 +3,15 @@ import {
   View, Text, ScrollView, Pressable, StatusBar, Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Minus, Plus, ChevronLeft, MapPin, ShoppingBag, CheckCircle2 } from 'lucide-react-native';
+import { Minus, Plus, ChevronLeft, ShoppingBag, CheckCircle2 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { doc, onSnapshot, collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import EmptyState from '../components/EmptyState';
-import { Button, Card, Skeleton, Header } from '../components/ui';
+import { Button, Card, Skeleton, Header, ProductCard, FavoriteButton } from '../components/ui';
 import { useCart } from '../context/CartContext';
-import { ProductCard } from '../components/ui';
+import { getProductImageSource } from '../utils/productImages';
 
 const { width } = Dimensions.get('window');
 
@@ -25,20 +25,49 @@ export default function ProductDetailScreen({ route, navigation }) {
   const { addItem, updateQty, getQty } = useCart();
   const [recommendations, setRecommendations] = useState([]);
   
+  // Same-category alone frequently comes back empty or with just 1-2 items — many
+  // categories in this catalog (subcategories especially) only hold a handful of
+  // products, and filtering out the current product can leave nothing at all. Layer in
+  // same-brand, then a generic pool, as fallbacks so this section reliably shows real
+  // cross-sell recommendations instead of silently disappearing for most products.
   useEffect(() => {
     if (!product) return;
     const fetchRecs = async () => {
       try {
-        const q = query(collection(db, 'products'), where('categoryId', '==', product.categoryId), limit(8));
-        const snap = await getDocs(q);
-        const recs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.id !== product.id);
-        setRecommendations(recs);
+        const seen = new Set([product.id]);
+        const recs = [];
+
+        const catSnap = await getDocs(
+          query(collection(db, 'products'), where('categoryId', '==', product.categoryId), limit(12))
+        );
+        catSnap.docs.forEach((d) => {
+          if (!seen.has(d.id)) { seen.add(d.id); recs.push({ id: d.id, ...d.data() }); }
+        });
+
+        if (recs.length < 6 && product.brandId) {
+          const brandSnap = await getDocs(
+            query(collection(db, 'products'), where('brandId', '==', product.brandId), limit(12))
+          );
+          brandSnap.docs.forEach((d) => {
+            if (!seen.has(d.id)) { seen.add(d.id); recs.push({ id: d.id, ...d.data() }); }
+          });
+        }
+
+        if (recs.length < 6) {
+          const genSnap = await getDocs(query(collection(db, 'products'), limit(20)));
+          genSnap.docs.forEach((d) => {
+            if (!seen.has(d.id) && recs.length < 10) { seen.add(d.id); recs.push({ id: d.id, ...d.data() }); }
+          });
+        }
+
+        setRecommendations(recs.slice(0, 10));
       } catch (e) {
         console.error(e);
       }
     };
     fetchRecs();
-  }, [product?.categoryId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.categoryId, product?.brandId]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'products', id), (snap) => {
@@ -80,7 +109,7 @@ export default function ProductDetailScreen({ route, navigation }) {
     );
   }
 
-  if (error || !product) return <EmptyState icon="error" message="Product not found" onRetry={load} />;
+  if (error || !product) return <EmptyState icon="error" message="Product not found" onRetry={() => navigation.goBack()} />;
 
   const price = selectedVariant?.offerPrice ?? selectedVariant?.price ?? 0;
   const mrp = selectedVariant?.price ?? 0;
@@ -111,24 +140,38 @@ export default function ProductDetailScreen({ route, navigation }) {
     <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* Floating back button */}
-      <View className="absolute left-0 right-0 z-10 px-4 py-2 flex-row items-center pointer-events-box-none" style={{ top: insets.top || 16 }}>
+      {/* Floating back + favorite buttons */}
+      <View className="absolute left-0 right-0 z-10 px-4 py-2 flex-row items-center justify-between pointer-events-box-none" style={{ top: insets.top || 16 }}>
         <Pressable
           onPress={() => navigation.goBack()}
           className="w-10 h-10 rounded-full bg-white/80 items-center justify-center backdrop-blur-md shadow-sm border border-white/50"
         >
           <ChevronLeft size={24} color="#0f172a" />
         </Pressable>
+        <FavoriteButton
+          productId={product.id}
+          size={20}
+          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.8)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)' }}
+        />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {/* Image gallery */}
         <Animated.View entering={FadeIn.duration(400)} className="bg-white rounded-b-3xl shadow-sm border-b border-border-light pb-6 overflow-hidden">
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-            {(product.images?.length ? product.images : [null]).map((uri, i) => (
+            {(() => {
+              // Same priority as ProductCard/everywhere else: a real admin-uploaded photo
+              // (product.images[0]) overrides the bundled default, so replacing a photo from
+              // the admin portal (e.g. packaging changed) actually shows up here too, instead
+              // of this screen silently keeping the old bundled photo forever.
+              const primary = getProductImageSource(product);
+              const extras = (product.images || []).slice(1).map((uri) => ({ uri }));
+              const gallery = primary ? [primary, ...extras] : (extras.length ? extras : [null]);
+              return gallery;
+            })().map((img, i) => (
               <View key={i} style={{ width, height: 320 }} className="items-center justify-center p-8">
-                {uri ? (
-                  <Image source={{ uri }} style={{ width: '100%', height: '100%' }} contentFit="contain" />
+                {img ? (
+                  <Image source={typeof img === 'string' ? { uri: img } : img} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" transition={200} />
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <ShoppingBag size={64} color="#e2e8f0" />
@@ -144,7 +187,6 @@ export default function ProductDetailScreen({ route, navigation }) {
               </View>
             )}
             <Text className="text-2xl font-black text-text-primary leading-8 mb-1">{product.name}</Text>
-            <Text className="text-sm font-semibold text-text-secondary">{product.unit}</Text>
           </View>
         </Animated.View>
 
@@ -192,18 +234,6 @@ export default function ProductDetailScreen({ route, navigation }) {
             </Animated.View>
           ) : null}
 
-          {/* Delivery Info */}
-          <Animated.View entering={FadeInDown.duration(400).delay(300)} className="mb-6">
-            <Card elevation="sm" className="p-4 border-0 bg-white flex-row items-center">
-              <View className="w-10 h-10 rounded-full bg-primary-50 items-center justify-center mr-4">
-                <MapPin size={20} color="#16a34a" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-bold text-text-primary">Superfast Delivery</Text>
-                <Text className="text-xs font-medium text-text-secondary mt-0.5">Get it delivered in 10-15 minutes</Text>
-              </View>
-            </Card>
-          </Animated.View>
         </View>
 
         {/* People usually pair this with */}

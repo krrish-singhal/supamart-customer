@@ -4,25 +4,29 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, ShoppingCart, Package, User } from 'lucide-react-native';
+import { Home, LayoutGrid, ShoppingCart, Package, Heart } from 'lucide-react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring,
 } from 'react-native-reanimated';
 import { AuthContext } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
-import OtpAuthScreen from '../screens/OtpAuthScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CategoryScreen from '../screens/CategoryScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import ProductListScreen from '../screens/ProductListScreen';
 import SearchScreen from '../screens/SearchScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import CartScreen from '../screens/CartScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
+import PaymentScreen from '../screens/PaymentScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import OrdersScreen from '../screens/OrdersScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
 import AddAddressScreen from '../screens/AddAddressScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import MyAddressesScreen from '../screens/MyAddressesScreen';
@@ -32,10 +36,11 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const TABS = [
-  { name: 'Home',    label: 'Home',    Icon: Home },
-  { name: 'Cart',    label: 'Cart',    Icon: ShoppingCart },
-  { name: 'Orders',  label: 'Orders',  Icon: Package },
-  { name: 'Profile', label: 'Profile', Icon: User },
+  { name: 'Home',       label: 'Home',       Icon: Home },
+  { name: 'Categories', label: 'Categories', Icon: LayoutGrid },
+  { name: 'Cart',       label: 'Cart',       Icon: ShoppingCart },
+  { name: 'Orders',     label: 'Orders',     Icon: Package },
+  { name: 'Favorites',  label: 'Favorites',  Icon: Heart },
 ];
 
 function TabBarIcon({ Icon, focused }) {
@@ -48,6 +53,7 @@ function TabBarIcon({ Icon, focused }) {
     scale.value = focused
       ? withSpring(1.15, { damping: 10, stiffness: 200 })
       : withSpring(1, { damping: 10, stiffness: 200 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focused]);
 
   return (
@@ -180,9 +186,10 @@ function HomeTabs() {
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Categories" component={CategoriesScreen} />
       <Tab.Screen name="Cart" component={CartScreen} />
       <Tab.Screen name="Orders" component={OrdersScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Favorites" component={FavoritesScreen} />
     </Tab.Navigator>
   );
 }
@@ -240,13 +247,22 @@ export default function Navigation() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="Payment"
+              component={PaymentScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="OrderTracking"
               component={OrderTrackingScreen}
               options={{ headerShown: false }}
             />
           </>
         ) : (
-          <Stack.Screen name="Auth" component={OtpAuthScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

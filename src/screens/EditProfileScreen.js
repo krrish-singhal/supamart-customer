@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable, StatusBar, Platform, KeyboardAvoidingView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, User, Mail, Calendar, ChevronDown } from 'lucide-react-native';
+import { Camera, User, Mail, Phone, Calendar, ChevronDown } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,7 +19,7 @@ export default function EditProfileScreen({ navigation }) {
   const { userProfile: user, loadToken } = useContext(AuthContext);
 
   const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const [mobile, setMobile] = useState(user?.mobile || '');
   const [gender, setGender] = useState(user?.gender || '');
   const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth || '');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -35,7 +35,7 @@ export default function EditProfileScreen({ navigation }) {
     setSaving(true);
     try {
       const payload = { name: name.trim() };
-      if (email.trim()) payload.email = email.trim();
+      if (mobile.trim()) payload.mobile = mobile.trim();
       if (gender) payload.gender = gender;
       if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
 
@@ -48,7 +48,7 @@ export default function EditProfileScreen({ navigation }) {
     } finally {
       setSaving(false);
     }
-  }, [name, email, gender, dateOfBirth, user?.id, isValid, saving, loadToken, navigation]);
+  }, [name, mobile, gender, dateOfBirth, user?.id, isValid, saving, loadToken, navigation]);
 
   const pickAndUploadPhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -80,6 +80,7 @@ export default function EditProfileScreen({ navigation }) {
 
       await apiClient.patch(`/users/${user.id}/avatar`, uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000, // image upload — slower than the 20s default, needs its own allowance
       });
 
       await loadToken();
@@ -160,36 +161,34 @@ export default function EditProfileScreen({ navigation }) {
                 autoCapitalize="words"
               />
 
-              {/* Phone — read-only */}
+              {/* Email — read-only, this is the sign-in identity */}
               <View className="mb-4">
                 <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 8 }}>
-                  Mobile Number
+                  Email Address
                 </Text>
                 <View
                   className="flex-row items-center bg-surface-100 border border-border-light rounded-2xl px-4"
                   style={{ height: 50 }}
                 >
-                  <Text className="text-sm font-semibold text-text-tertiary flex-1">
-                    +91 {user?.mobile}
+                  <Mail size={16} color="#94a3b8" />
+                  <Text className="text-sm font-semibold text-text-tertiary flex-1 ml-2">
+                    {user?.email}
                   </Text>
-                  <View className="bg-surface-200 px-2 py-1 rounded-lg">
-                    <Text className="text-xs font-bold text-text-tertiary">Verified</Text>
-                  </View>
                 </View>
                 <Text className="text-xs font-medium text-text-tertiary mt-1.5 ml-1">
-                  Phone number cannot be changed
+                  This is what you sign in with — it can&apos;t be changed here
                 </Text>
               </View>
 
-              {/* Email */}
+              {/* Mobile */}
               <Input
-                label="Email Address"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                leftIcon={<Mail size={16} color="#94a3b8" />}
+                label="Mobile Number"
+                value={mobile}
+                onChangeText={setMobile}
+                placeholder="10-digit mobile number"
+                keyboardType="phone-pad"
+                maxLength={10}
+                leftIcon={<Phone size={16} color="#94a3b8" />}
                 containerStyle={{ marginBottom: 0 }}
               />
             </Card>

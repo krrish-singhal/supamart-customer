@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
 import { AuthContext } from './AuthContext';
@@ -14,6 +14,12 @@ export function CartProvider({ children }) {
   const [couponCode, setCouponCode] = useState(null);
   const [couponDetails, setCouponDetails] = useState(null);
   const [loading, setLoading] = useState(false);
+  // Last time we actually fetched /cart — lets a silent refetch-on-screen-focus skip
+  // the network round trip (and the visible "content settles a second late" flash) if
+  // we already have fresh data, while still resyncing promptly after a real mutation
+  // (add/remove/checkout) via the `force` option.
+  const lastLoadedAtRef = useRef(0);
+  const SILENT_REFRESH_THROTTLE_MS = 15_000;
 
   const computeTotals = (cartItems) => {
     const sub = cartItems.reduce((acc, i) => acc + i.price * i.qty, 0);
@@ -22,17 +28,28 @@ export function CartProvider({ children }) {
     setTotal(rounded);
   };
 
-  const loadCart = useCallback(async (silent = false) => {
+  const loadCart = useCallback(async (silent = false, { force = false } = {}) => {
     if (!token) return;
+    if (silent && !force && Date.now() - lastLoadedAtRef.current < SILENT_REFRESH_THROTTLE_MS) {
+      return;
+    }
     if (!silent) setLoading(true);
     try {
       const { data } = await apiClient.get('/cart');
+      lastLoadedAtRef.current = Date.now();
       setItems(data.items || []);
       setSubtotal(data.subtotal ?? 0);
       setDiscount(data.discount ?? 0);
       setTotal(data.total ?? 0);
       setCouponCode(data.couponCode ?? null);
       setCouponDetails(data.couponDetails ?? null);
+      if (data.removedCount > 0) {
+        Toast.show({
+          type: 'info',
+          text1: `${data.removedCount} item${data.removedCount > 1 ? 's' : ''} removed from cart`,
+          text2: 'No longer available.',
+        });
+      }
     } catch {
       // non-fatal
     } finally {

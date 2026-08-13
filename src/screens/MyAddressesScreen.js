@@ -1,7 +1,7 @@
 import { useState, useCallback, useContext } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, StatusBar } from 'react-native';
+import { View, Text, ScrollView, Pressable, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Plus, Trash2, Star, Navigation } from 'lucide-react-native';
+import { MapPin, Plus, Trash2 } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';

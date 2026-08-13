@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
 
 export default function Skeleton({ width, height, borderRadius = 12, className = '' }) {
@@ -17,6 +16,7 @@ export default function Skeleton({ width, height, borderRadius = 12, className =
         true
       )
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({

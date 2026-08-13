@@ -1,14 +1,13 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, FlatList, Pressable, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
-import { Search as SearchIcon, X, ArrowLeft, Plus, Minus } from 'lucide-react-native';
+import { Search as SearchIcon, X, ArrowLeft } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import apiClient from '../services/api';
 import EmptyState from '../components/EmptyState';
-import { Card, Skeleton } from '../components/ui';
+import { Skeleton, ProductCard } from '../components/ui';
 import { useCart } from '../context/CartContext';
 
 export default function SearchScreen({ navigation }) {
@@ -109,62 +108,16 @@ export default function SearchScreen({ navigation }) {
           contentContainerStyle={{ padding: 16 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.duration(300).delay(Math.min(index * 50, 300))}>
-              <Pressable onPress={() => navigation.navigate('ProductDetail', { id: item.id })}>
-                <Card elevation="sm" className="flex-row items-center mb-3 p-3 border-0 bg-white">
-                  <View className="w-16 h-16 bg-surface-50 rounded-xl items-center justify-center border border-border-light">
-                    <Image
-                      source={{ uri: item.images?.[0] }}
-                      style={{ width: '80%', height: '80%' }}
-                      contentFit="contain"
-                    />
-                  </View>
-                  <View className="flex-1 ml-4">
-                    <Text className="text-sm font-semibold text-text-primary mb-1" numberOfLines={2}>
-                      {item.name}
-                    </Text>
-                    <Text className="text-xs font-medium text-text-secondary">{item.unit}</Text>
-                    {item.variants?.[0] && (
-                      <View className="flex-row items-baseline mt-1">
-                        <Text className="text-sm font-black text-text-primary">
-                          ₹{item.variants[0].offerPrice ?? item.variants[0].price}
-                        </Text>
-                        {item.variants[0].offerPrice && (
-                          <Text className="text-xs text-text-tertiary line-through ml-2">
-                            ₹{item.variants[0].price}
-                          </Text>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                  {getQty(item.id, item.variants?.[0]?.id) === 0 ? (
-                    <Pressable
-                      onPress={() => addItem(item, item.variants?.[0])}
-                      className="w-8 h-8 rounded-full bg-primary-600 items-center justify-center"
-                    >
-                      <Plus size={15} color="#fff" />
-                    </Pressable>
-                  ) : (
-                    <View className="flex-row items-center bg-primary-50 rounded-full border border-primary-100 p-0.5">
-                      <Pressable
-                        onPress={() => updateQty(item.id, item.variants?.[0]?.id, -1)}
-                        className="w-7 h-7 rounded-full bg-white items-center justify-center border border-border-light"
-                      >
-                        <Minus size={12} color="#0f172a" />
-                      </Pressable>
-                      <Text className="w-6 text-center text-sm font-black text-primary-700">
-                        {getQty(item.id, item.variants?.[0]?.id)}
-                      </Text>
-                      <Pressable
-                        onPress={() => addItem(item, item.variants?.[0])}
-                        className="w-7 h-7 rounded-full bg-primary-600 items-center justify-center"
-                      >
-                        <Plus size={12} color="#fff" />
-                      </Pressable>
-                    </View>
-                  )}
-                </Card>
-              </Pressable>
+            <Animated.View entering={FadeInDown.duration(300).delay(Math.min(index * 50, 300))} style={{ marginBottom: 12 }}>
+              <ProductCard
+                item={item}
+                layout="list"
+                onPress={() => navigation.navigate('ProductDetail', { id: item.id })}
+                qty={getQty(item.id, item.variants?.[0]?.id)}
+                onAdd={() => addItem(item, item.variants?.[0])}
+                onIncrement={() => addItem(item, item.variants?.[0])}
+                onDecrement={() => updateQty(item.id, item.variants?.[0]?.id, -1)}
+              />
             </Animated.View>
           )}
         />

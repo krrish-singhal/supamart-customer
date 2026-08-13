@@ -22,7 +22,15 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://supamart-backend-353k.onrender.com/api",
-        "EXPO_PUBLIC_DEMO_MODE": "false"
+        "EXPO_PUBLIC_DEMO_MODE": "false",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDR-BltC2fuUfA76m29S-HXP6ZidlWrW34",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "supamart-b9c9a.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "supamart-b9c9a",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "supamart-b9c9a.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "487281984299",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:487281984299:web:d3c0a096cd8790256fbb6e",
+        "EXPO_PUBLIC_UPI_ID": "SBIBHIM.INSTANT06905003255577185@sbipay",
+        "EXPO_PUBLIC_UPI_PAYEE_NAME": "MS Store"
       }
     },
     "production": {

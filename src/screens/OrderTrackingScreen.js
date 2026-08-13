@@ -3,23 +3,103 @@ import { View, Text, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '../config/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Check, Package, Truck, MapPin, RefreshCcw } from 'lucide-react-native';
+import { Clock, Package, MapPin, RefreshCcw, XCircle } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Header, Card, Skeleton, Button } from '../components/ui';
 import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
+import { useCart } from '../context/CartContext';
 
-const STATUS_STEPS = [
-  { key: 'ORDER_PLACED', label: 'Order Placed', icon: Check },
-  { key: 'ORDER_ACCEPTED', label: 'Order Accepted', icon: Check },
-  { key: 'PACKING', label: 'Packing Items', icon: Package },
-  { key: 'READY_FOR_DELIVERY', label: 'Ready for Pickup', icon: Package },
-  { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: Truck },
-  { key: 'DELIVERED', label: 'Delivered', icon: Check },
-];
+// No step-by-step fulfillment timeline here on purpose — this isn't a warehouse app,
+// the customer only cares about one thing: is my payment confirmed or not. The order's
+// live paymentStatus/status (via onSnapshot below) drives exactly one of three states.
+//
+// Deliberately plain <View style={{...}}> here, NOT <Card className="bg-...">. Card
+// hardcodes `bg-white` in its own className string ahead of whatever the caller passes,
+// and NativeWind resolves conflicting utility classes by stylesheet order (not by
+// position in the string) — so a caller-supplied bg-primary-600/bg-amber-50/bg-red-50
+// silently loses to Card's bg-white, rendering these cards blank with near-invisible
+// text. Inline styles have no such ordering ambiguity, so they're used for every color
+// here (background AND text) to fully sidestep the issue.
+function StatusHeadline({ order }) {
+  const isRejected = order.status === 'CANCELLED';
+  const isPaid = order.paymentStatus === 'PAID';
+
+  if (isRejected) {
+    return (
+      <View style={{ borderRadius: 24, padding: 20, marginBottom: 24, backgroundColor: '#fef2f2' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={{ fontSize: 24, fontWeight: '900', marginBottom: 4, color: '#dc2626' }}>Order Rejected</Text>
+            <Text style={{ fontSize: 14, fontWeight: '500', color: '#f87171' }}>Order #{order.orderNo}</Text>
+          </View>
+          <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fee2e2' }}>
+            <XCircle size={24} color="#dc2626" />
+          </View>
+        </View>
+        {order.paymentRejectionReason ? (
+          <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#fee2e2' }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, color: '#ef4444' }}>Reason</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', lineHeight: 20, color: '#b91c1c' }}>{order.paymentRejectionReason}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
+  if (isPaid) {
+    return (
+      <View
+        style={{
+          borderRadius: 16,
+          padding: 22,
+          marginBottom: 24,
+          backgroundColor: '#ffffff',
+          borderWidth: 1,
+          borderColor: '#dcfce7',
+          shadowColor: '#16a34a',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.1,
+          shadowRadius: 16,
+          elevation: 3,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#16a34a', marginRight: 14 }}>
+            <Package size={26} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: '#16a34a', marginBottom: 2 }}>Order Placed!</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803d' }}>Order #{order.orderNo}</Text>
+          </View>
+        </View>
+        <View style={{ height: 1, backgroundColor: '#f0fdf4', marginVertical: 16 }} />
+        <Text style={{ fontSize: 14, fontWeight: '600', color: '#166534', lineHeight: 20 }}>
+          Our delivery partner will deliver it to your doorstep soon.
+        </Text>
+      </View>
+    );
+  }
+
+  // AWAITING_CONFIRMATION (or still PENDING) — customer claimed payment, shop hasn't verified yet.
+  return (
+    <View style={{ borderRadius: 24, padding: 20, marginBottom: 24, backgroundColor: '#fffbeb', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text style={{ fontSize: 24, fontWeight: '900', marginBottom: 4, color: '#b45309' }}>Waiting for Admin Approval</Text>
+        <Text style={{ fontSize: 14, fontWeight: '500', color: '#d97706' }}>
+          We're verifying your payment — this usually takes just a few minutes. You'll be notified the moment it's confirmed.
+        </Text>
+      </View>
+      <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef3c7' }}>
+        <Clock size={24} color="#b45309" />
+      </View>
+    </View>
+  );
+}
 
 export default function OrderTrackingScreen({ route, navigation }) {
   const { orderId, orderNo } = route.params;
+  const { loadCart } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [repeating, setRepeating] = useState(false);
@@ -32,12 +112,16 @@ export default function OrderTrackingScreen({ route, navigation }) {
         variantId: item.variantId,
         qty: item.qty
       }));
-      
+
       await apiClient.put('/cart', { items });
-      
+      // The PUT above updates the cart server-side, but CartContext's local `items`
+      // state (what CartScreen actually renders) won't reflect it until we force a
+      // refresh — without this, navigating to Cart shows whatever was there before.
+      await loadCart(true, { force: true });
+
       Toast.show({ type: 'success', text1: 'Items added to cart.' });
       navigation.navigate('Main', { screen: 'Cart' });
-    } catch (err) {
+    } catch {
       Toast.show({ type: 'error', text1: 'Could not repeat order.' });
     } finally {
       setRepeating(false);
@@ -54,10 +138,15 @@ export default function OrderTrackingScreen({ route, navigation }) {
     return unsubscribe;
   }, [orderId]);
 
+  // Reached via navigation.replace() from Payment, so goBack() would land back on
+  // Checkout — confusing once an order already exists. Go straight Home instead, so the
+  // customer can freely keep shopping while this order awaits approval.
+  const goHome = () => navigation.navigate('Main');
+
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-surface-50">
-        <Header title={`Order #${orderNo}`} onBack={() => navigation.goBack()} />
+        <Header title={`Order #${orderNo}`} onBack={goHome} />
         <View className="p-4">
           <Skeleton width="100%" height={100} borderRadius={24} className="mb-6" />
           <Skeleton width="100%" height={300} borderRadius={24} className="mb-6" />
@@ -66,71 +155,20 @@ export default function OrderTrackingScreen({ route, navigation }) {
     );
   }
 
-  const currentIndex = STATUS_STEPS.findIndex((s) => s.key === order.status);
-  const isCancelled = order.status === 'CANCELLED';
+  const isRejected = order.status === 'CANCELLED';
 
   return (
     <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-      <Header title="Track Order" onBack={() => navigation.goBack()} />
-      
+      <Header title="Track Order" onBack={goHome} />
+
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-        {/* Status headline */}
         <Animated.View entering={FadeInDown.duration(400)}>
-          <Card elevation="sm" className={`border-0 mb-6 flex-row items-center justify-between p-5 ${isCancelled ? 'bg-red-50' : 'bg-primary-600'}`}>
-            <View>
-              <Text className={`text-2xl font-black mb-1 ${isCancelled ? 'text-red-600' : 'text-white'}`}>
-                {isCancelled ? 'Cancelled' : STATUS_STEPS[currentIndex]?.label || order.status}
-              </Text>
-              <Text className={`text-sm font-medium ${isCancelled ? 'text-red-400' : 'text-primary-100'}`}>
-                Order #{order.orderNo}
-              </Text>
-            </View>
-            <View className={`w-12 h-12 rounded-full items-center justify-center ${isCancelled ? 'bg-red-100' : 'bg-white/20'}`}>
-              {isCancelled ? <Check size={24} color="#dc2626" /> : <Package size={24} color="#fff" />}
-            </View>
-          </Card>
+          <StatusHeadline order={order} />
         </Animated.View>
 
-        {/* Timeline */}
-        {!isCancelled && (
-          <Animated.View entering={FadeInUp.duration(400).delay(100)}>
-            <Card elevation="sm" className="mb-6 p-5 border-0 bg-white">
-              {STATUS_STEPS.map((step, i) => {
-                const done = i <= currentIndex;
-                const isCurrent = i === currentIndex;
-                const Icon = step.icon;
-                return (
-                  <View key={step.key} className="flex-row mb-4">
-                    <View className="items-center mr-4">
-                      <View className={`w-6 h-6 rounded-full items-center justify-center z-10 ${
-                        done ? 'bg-[#059669]' : 'bg-[#e2e8f0]'
-                      }`}>
-                        {done && <Check size={14} color="#fff" />}
-                      </View>
-                      {i < STATUS_STEPS.length - 1 && (
-                        <View className={`absolute top-6 w-0.5 h-12 ${done && !isCurrent ? 'bg-[#059669]' : 'bg-[#e2e8f0]'}`} />
-                      )}
-                    </View>
-                    <View className="flex-1 pb-8">
-                      <Text className={`text-base ${isCurrent ? 'font-bold text-primary-600' : done ? 'font-bold text-text-primary' : 'font-medium text-text-tertiary'}`}>
-                        {step.label}
-                      </Text>
-                      {order.statusHistory?.find((h) => h.status === step.key) && (
-                        <Text className="text-xs font-medium text-text-tertiary mt-1">
-                          {new Date(order.statusHistory.find((h) => h.status === step.key).at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-            </Card>
-          </Animated.View>
-        )}
-
         {/* Order summary */}
-        <Animated.View entering={FadeInUp.duration(400).delay(200)}>
+        <Animated.View entering={FadeInUp.duration(400).delay(100)}>
           <Card elevation="sm" className="p-5 border-0 bg-white mb-6">
             <Text className="text-sm font-bold text-text-primary mb-4 uppercase tracking-wider">Order Summary</Text>
             {order.items?.map((item, i) => (
@@ -152,7 +190,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
         </Animated.View>
 
         {/* Delivery address */}
-        <Animated.View entering={FadeInUp.duration(400).delay(300)}>
+        <Animated.View entering={FadeInUp.duration(400).delay(200)}>
           <Card elevation="sm" className="p-4 border-0 bg-white flex-row items-start">
             <MapPin size={24} color="#059669" className="mr-4 mt-1" />
             <View className="flex-1">
@@ -170,9 +208,9 @@ export default function OrderTrackingScreen({ route, navigation }) {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInUp.duration(400).delay(400)} className="mt-4">
+        <Animated.View entering={FadeInUp.duration(400).delay(300)} className="mt-4">
           <Button
-            title="Repeat Last Order"
+            title={isRejected ? 'Try Again' : 'Repeat Last Order'}
             onPress={handleRepeatOrder}
             loading={repeating}
             icon={!repeating && <RefreshCcw size={18} color="#fff" />}

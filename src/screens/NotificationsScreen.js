@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useCallback, useContext } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, FlatList, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { db } from '../config/firebase';
-import { AuthContext } from '../context/AuthContext';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { useFocusEffect } from '@react-navigation/native';
+import { useNotifications } from '../context/NotificationsContext';
 import EmptyState from '../components/EmptyState';
-import { Header, Card, Skeleton } from '../components/ui';
+import { Header, Card } from '../components/ui';
 
 function timeAgo(ms) {
   const diff = Date.now() - ms;
@@ -20,54 +19,33 @@ function timeAgo(ms) {
 }
 
 export default function NotificationsScreen({ navigation }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { userProfile: user } = useContext(AuthContext);
+  const { notifications, markAllRead } = useNotifications();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const uid = user?.id; // Uses backend ID which aligns with firestore docs if mirrored
-      if (!uid) { setLoading(false); return; }
-      const q = query(
-        collection(db, 'users', uid, 'notifications'),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      );
-      const snap = await getDocs(q);
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  // Live list from NotificationsContext (onSnapshot) — no fetch-on-mount needed, it's
+  // already subscribed at the app root. Just mark everything read while viewing.
+  //
+  // markAllRead must be in the dep array here — NotificationsContext recreates it on
+  // every render (it closes over the current `notifications` array), and locking this
+  // callback to an empty dep array would freeze it to the *first* render's closure,
+  // which captured whatever `notifications` was at mount (often still empty, before the
+  // Firestore listener had returned anything). That stale closure meant "mark unread"
+  // silently no-op'd, so the bell badge count never actually cleared after visiting here.
+  useFocusEffect(
+    React.useCallback(() => {
+      markAllRead();
+    }, [markAllRead])
+  );
 
-  useEffect(() => { load(); }, [load]);
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-surface-50">
-        <Header title="Notifications" onBack={() => navigation.goBack()} />
-        <View className="p-4">
-          <Skeleton width="100%" height={90} borderRadius={16} className="mb-3" />
-          <Skeleton width="100%" height={90} borderRadius={16} className="mb-3" />
-          <Skeleton width="100%" height={90} borderRadius={16} className="mb-3" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!items.length) return <EmptyState icon="bell" message="No notifications yet" />;
+  if (!notifications.length) return <EmptyState icon="bell" message="No notifications yet" />;
 
   return (
     <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <Header title="Notifications" onBack={() => navigation.goBack()} />
-      
+
       <FlatList
         className="flex-1"
-        data={items}
+        data={notifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}

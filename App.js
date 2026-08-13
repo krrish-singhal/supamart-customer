@@ -11,6 +11,8 @@ import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-rean
 import Navigation from './src/navigation/Navigation';
 import { AuthProvider } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
+import { FavoritesProvider } from './src/context/FavoritesContext';
+import { NotificationsProvider } from './src/context/NotificationsContext';
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -40,9 +42,13 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="dark" backgroundColor="#F8F8F8" />
         <AuthProvider>
-          <CartProvider>
-            <Navigation />
-          </CartProvider>
+          <NotificationsProvider>
+            <CartProvider>
+              <FavoritesProvider>
+                <Navigation />
+              </FavoritesProvider>
+            </CartProvider>
+          </NotificationsProvider>
         </AuthProvider>
         <Toast config={toastConfig} topOffset={56} visibilityTime={3500} />
       </SafeAreaProvider>

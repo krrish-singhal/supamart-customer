@@ -1,15 +1,15 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import {
-  View, Text, ScrollView, KeyboardAvoidingView, Platform, StatusBar, Pressable, Linking, Alert
+  View, Text, ScrollView, KeyboardAvoidingView, Platform, StatusBar, Linking, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Navigation } from 'lucide-react-native';
+import { Navigation } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import * as Location from 'expo-location';
 import { AuthContext } from '../context/AuthContext';
 import apiClient from '../services/api';
-import { Input, Button, Card } from '../components/ui';
+import { Input, Button, Card, Header } from '../components/ui';
 
 export default function AddAddressScreen({ navigation }) {
   const { userProfile: user } = useContext(AuthContext);
@@ -93,7 +93,7 @@ export default function AddAddressScreen({ navigation }) {
       }));
       
       Toast.show({ type: 'success', text1: 'Got your location!' });
-    } catch (err) {
+    } catch {
       Toast.show({ type: 'error', text1: 'Could not fetch your location.' });
     } finally {
       setLocating(false);
@@ -128,6 +128,7 @@ export default function AddAddressScreen({ navigation }) {
   return (
     <SafeAreaView className="flex-1 bg-surface-50" edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      <Header title="Add Address" onBack={() => navigation.goBack()} />
 
       <KeyboardAvoidingView
         className="flex-1"
