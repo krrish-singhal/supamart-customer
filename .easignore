@@ -1,0 +1,29 @@
+# Files EAS Build should NOT upload. Same syntax as .gitignore.
+# NOTE: keep the heavy gitignored dirs listed here explicitly too, so this
+# works regardless of whether EAS falls back to .gitignore or not.
+
+# Git history — ~200 MB of image blobs, not needed to build (EAS reads git
+# metadata before archiving; the uploaded tarball never needs .git itself)
+.git/
+
+# Dependencies (reinstalled on the build server)
+node_modules/
+
+# Prior local export / build output — not needed to build the Android app
+dist/
+web-build/
+
+# Expo / Metro caches
+.expo/
+.expo-shared/
+
+# Env files (values come from eas.json `env` / EAS environment variables)
+.env
+.env.*
+!.env.example
+
+# Misc local artifacts
+*.log
+coverage/
+.DS_Store
+output.css
