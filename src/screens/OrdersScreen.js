@@ -11,12 +11,12 @@ import { AuthContext } from '../context/AuthContext';
 import { Skeleton, ProductCard, Dialog } from '../components/ui';
 import apiClient from '../services/api';
 import Toast from 'react-native-toast-message';
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 
+// 5 statuses (PACKING / READY_FOR_DELIVERY dropped) — one shop, one rider, straightforward flow.
 const STATUS_LABEL = {
   ORDER_PLACED:       'Placed',
   ORDER_ACCEPTED:     'Accepted',
-  PACKING:            'Packing',
-  READY_FOR_DELIVERY: 'Ready',
   OUT_FOR_DELIVERY:   'On the way',
   DELIVERED:          'Delivered',
   CANCELLED:          'Cancelled',
@@ -106,7 +106,7 @@ function EmptyOrders({ navigation }) {
                       style={{ backgroundColor: bg }}>
                       {item.image ? (
                         <Image
-                          source={{ uri: item.image }}
+                          source={{ uri: optimizeCloudinaryUrl(item.image, 200) }}
                           style={{ width: '100%', height: '100%' }}
                           contentFit="cover"
                           cachePolicy="memory-disk"

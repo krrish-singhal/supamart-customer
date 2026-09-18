@@ -75,7 +75,7 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
 
 // layout="grid" (default) — compact card for horizontal carousels (recommendations, related items).
 // layout="list" — full-width row for the main product listing screens.
-export default function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, style, layout = 'grid' }) {
+function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, style, layout = 'grid' }) {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -198,3 +198,17 @@ export default function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement
     </AnimatedPressable>
   );
 }
+
+// Memoized so a FlatList of products doesn't re-render every visible card on each parent
+// render (e.g. when one card's cart quantity changes, or during fast scroll). The handler
+// props (onAdd/onPress/...) are recreated by the parent each render but always do the same
+// thing for a given item, so they're intentionally excluded from the comparison — we only
+// re-render when the product data, its cart quantity, or its visual layout actually change.
+export default React.memo(
+  ProductCard,
+  (prev, next) =>
+    prev.item === next.item &&
+    prev.qty === next.qty &&
+    prev.layout === next.layout &&
+    prev.style === next.style
+);

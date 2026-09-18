@@ -15,6 +15,7 @@ import { Header, Card, Button, Input, Skeleton, FreeDeliveryBanner } from '../co
 import { useCart } from '../context/CartContext';
 import { computeBill, DEFAULT_TAX_PERCENT } from '../utils/pricing';
 import { getProductImageSource } from '../utils/productImages';
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 
 export default function CheckoutScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -31,6 +32,7 @@ export default function CheckoutScreen({ navigation }) {
   const [applying, setApplying] = useState(false);
 
   const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState(null);
   const [minOrderValue, setMinOrderValue] = useState(0);
   const [taxPercent, setTaxPercent] = useState(DEFAULT_TAX_PERCENT);
   // One idempotency key per checkout attempt — reused across retries and by
@@ -47,17 +49,22 @@ export default function CheckoutScreen({ navigation }) {
       ]);
       const addrList = addrRes.data.items || [];
       setSelectedAddress(prev => {
+        // Always respect the default address from the backend first
+        const defaultAddr = addrList.find(a => a.isDefault);
+        if (defaultAddr) return defaultAddr;
+        
+        // If no default, fallback to previously selected if it still exists
         if (prev && addrList.find(a => a.id === prev.id)) {
-          const maxTime = Math.max(...addrList.map(a => a.createdAt || 0));
-          const latest = addrList.find(a => a.createdAt === maxTime);
-          if (latest && prev.createdAt && latest.createdAt > prev.createdAt) return latest;
           return addrList.find(a => a.id === prev.id);
         }
-        return addrList.find((a) => a.isDefault) || addrList[addrList.length - 1] || null;
+        
+        // Otherwise, pick the most recently added address
+        return addrList[addrList.length - 1] || null;
       });
 
       const activeSlots = (configRes.data.slots || []).filter((s) => s.active);
       setSelectedSlot(activeSlots[0] || { label: 'ASAP (Within 45 mins)', from: 0, to: 0 });
+      setConfig(configRes.data);
       setMinOrderValue(configRes.data.minOrderValue || 0);
       setTaxPercent(configRes.data.taxPercent ?? DEFAULT_TAX_PERCENT);
     } finally {
@@ -128,7 +135,7 @@ export default function CheckoutScreen({ navigation }) {
 
   if (!items?.length) return <EmptyState icon="cart" message="Cart is empty" onRetry={() => navigation.navigate('Home')} buttonText="Keep Shopping" />;
 
-  const { deliveryFee, tax, toPay: finalToPay } = computeBill(subtotal, discount, taxPercent);
+  const { deliveryFee, tax, toPay: finalToPay, withinRadius } = computeBill(subtotal, discount, taxPercent, config, selectedAddress);
   const belowMinimum = minOrderValue > 0 && subtotal < minOrderValue;
 
   return (
@@ -175,7 +182,7 @@ export default function CheckoutScreen({ navigation }) {
               <View key={`${item.productId}-${item.variantId}`} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: index !== items.length - 1 ? 20 : 0 }}>
                 <View style={{ width: 64, height: 64, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginRight: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', padding: 4, overflow: 'hidden' }}>
                   {(getProductImageSource(item) || item.image) ? (
-                    <Image source={getProductImageSource(item) || { uri: item.image }} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
+                    <Image source={getProductImageSource(item) || { uri: optimizeCloudinaryUrl(item.image, 200) }} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
                   ) : (
                     <ShoppingBag size={24} color="#cbd5e1" />
                   )}
@@ -285,6 +292,17 @@ export default function CheckoutScreen({ navigation }) {
           </Animated.View>
         )}
 
+        {(!withinRadius) && (
+          <Animated.View entering={FadeInUp.duration(400).delay(255)} className="mx-4 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl">
+            <Text className="text-sm font-bold text-red-800">
+              Delivery currently unavailable in your area.
+            </Text>
+            <Text className="text-xs font-medium text-red-700 mt-0.5">
+              Your selected address is outside our {(config?.serviceRadiusKm || 5)} KM delivery radius.
+            </Text>
+          </Animated.View>
+        )}
+
         {/* Payment */}
         <Animated.View entering={FadeInUp.duration(400).delay(280)}>
           <Card className="mx-4 mb-4 p-4 bg-white border border-border-light rounded-2xl flex-row items-center" elevation="sm">
@@ -311,10 +329,10 @@ export default function CheckoutScreen({ navigation }) {
             <Text className="text-2xl font-black text-text-primary">₹{finalToPay.toFixed(2)}</Text>
           </View>
           <Button
-            title={belowMinimum ? `Add ₹${(minOrderValue - subtotal).toFixed(2)} more` : `Proceed to Pay ₹${finalToPay.toFixed(2)}`}
+            title={!withinRadius ? 'Out of Delivery Area' : belowMinimum ? `Add ₹${(minOrderValue - subtotal).toFixed(2)} more` : `Proceed to Pay ₹${finalToPay.toFixed(2)}`}
             onPress={placeOrder}
-            disabled={!selectedAddress || !selectedSlot || belowMinimum}
-            style={{ backgroundColor: '#16a34a', height: 52, borderRadius: 12 }}
+            disabled={!selectedAddress || !selectedSlot || belowMinimum || !withinRadius}
+            style={{ backgroundColor: (!withinRadius) ? '#94a3b8' : '#16a34a', height: 52, borderRadius: 12 }}
             textStyle={{ fontWeight: '800', fontSize: 16 }}
           />
         </Animated.View>

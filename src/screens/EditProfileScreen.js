@@ -12,6 +12,7 @@ import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Header, Input, Button, Card, Avatar } from '../components/ui';
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
@@ -80,7 +81,7 @@ export default function EditProfileScreen({ navigation }) {
 
       await apiClient.patch(`/users/${user.id}/avatar`, uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000, // image upload — slower than the 20s default, needs its own allowance
+        timeout: 120000, // image upload + possible backend cold start — matches global ceiling
       });
 
       await loadToken();
@@ -124,9 +125,10 @@ export default function EditProfileScreen({ navigation }) {
             <View className="relative">
               {photoUri ? (
                 <Image
-                  source={{ uri: photoUri }}
+                  source={{ uri: optimizeCloudinaryUrl(photoUri, 200) }}
                   style={{ width: 96, height: 96, borderRadius: 48 }}
                   contentFit="cover"
+                  cachePolicy="memory-disk"
                 />
               ) : (
                 <Avatar name={user?.name || 'User'} size="xl" />

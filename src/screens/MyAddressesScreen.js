@@ -1,7 +1,7 @@
 import { useState, useCallback, useContext } from 'react';
 import { View, Text, ScrollView, Pressable, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Plus, Trash2 } from 'lucide-react-native';
+import { MapPin, Plus, Trash2, Home, Briefcase } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -9,16 +9,17 @@ import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { Header, Card, Button, Skeleton, Dialog } from '../components/ui';
 
-const TYPE_ICON = { Home: '🏠', Work: '💼', Other: '📍' };
+const TYPE_ICON = { Home, Work: Briefcase, Other: MapPin };
 
 function AddressCard({ addr, onSetDefault, onDelete }) {
   const typeKey = addr.label === 'Home' ? 'Home' : addr.label === 'Work' ? 'Work' : 'Other';
+  const TypeIcon = TYPE_ICON[typeKey] || MapPin;
   return (
     <Card elevation="sm" className="p-4 mb-3 border-0 bg-white">
       <View className="flex-row items-start justify-between">
         <View className="flex-row items-start flex-1 pr-3">
           <View className="w-10 h-10 rounded-2xl bg-surface-100 items-center justify-center mr-3 mt-0.5">
-            <Text style={{ fontSize: 18 }}>{TYPE_ICON[typeKey] || '📍'}</Text>
+            <TypeIcon size={18} color="#16a34a" />
           </View>
           <View className="flex-1">
             <View className="flex-row items-center mb-1">

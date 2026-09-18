@@ -1,3 +1,5 @@
+import { optimizeCloudinaryUrl } from './cloudinaryImage';
+
 // Static require() map for locally-bundled product images, keyed by the exact
 // product `name` string in the Firestore `products` collection. 114 entries are the
 // original catalog's photos (customer/assets/Cleaned_Products, background-removed and
@@ -323,15 +325,22 @@ const GENERIC_STOCK_PHOTO = /res\.cloudinary\.com\/demo\//;
 //  1. A real admin-uploaded photo (item.images[0], if not the generic seed stock photo)
 //     — lets an admin replace a product's picture (e.g. new packaging) without an app
 //     rebuild, since this is just a live Firestore field, unlike the bundled ones below.
+//     Rewritten through optimizeCloudinaryUrl() so the app decodes a ~width-sized image
+//     instead of Cloudinary's raw full-resolution upload — this is the fix for slow image
+//     loading, since most catalog products go through this admin-uploaded path.
 //  2. A locally-bundled require() asset for this exact product name (this file).
 //  3. The (possibly still-generic) remote URL, so something shows rather than nothing.
 //  4. null — caller renders its own empty-state icon.
-export function getProductImageSource(item) {
+//
+// `width` defaults to cover the biggest product-card box in the app (grid/list cards are
+// ~96-150px, but phones commonly run 2-3x pixel density) — pass a larger value for a
+// full-width hero image (e.g. ProductDetailScreen).
+export function getProductImageSource(item, width = 320) {
   const uri = item?.images?.[0];
-  if (uri && !GENERIC_STOCK_PHOTO.test(uri)) return { uri };
+  if (uri && !GENERIC_STOCK_PHOTO.test(uri)) return { uri: optimizeCloudinaryUrl(uri, width) };
   const local = item?.name ? productImages[item.name] : undefined;
   if (local) return local;
-  return uri ? { uri } : null;
+  return uri ? { uri: optimizeCloudinaryUrl(uri, width) } : null;
 }
 
 export default productImages;

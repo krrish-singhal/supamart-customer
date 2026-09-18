@@ -40,7 +40,7 @@ export default function FreeDeliveryBanner({ subtotal, style }) {
         }}
       >
         {unlocked
-          ? "You've unlocked FREE delivery on this order! 🎉"
+          ? "You've unlocked FREE delivery on this order!"
           : `Add ₹${remaining.toFixed(0)} more to get FREE delivery`}
       </Text>
     </View>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, Pressable, ScrollView, StatusBar, Dimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, FlatList, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { ShoppingBag, Search, ChevronRight, Bell, LogOut } from 'lucide-react-native';
@@ -10,12 +10,13 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import apiClient from '../services/api';
 import Toast from 'react-native-toast-message';
-import { Skeleton, BrandLogo, Dialog } from '../components/ui';
+import { Skeleton, BrandLogo, Dialog, CartBar, CART_BAR_SPACER } from '../components/ui';
 import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import categoryImages from '../utils/categoryImages';
 import slugify from '../utils/slugify';
+import { optimizeCloudinaryUrl, THUMB_CARD, THUMB_ICON } from '../utils/cloudinaryImage';
 
 // Banner art is a square (1:1) image supplied by the client — size the box to match
 // exactly so it always renders edge-to-edge with zero cropping.
@@ -45,8 +46,22 @@ export default function HomeScreen({ navigation }) {
     let unsubCats;
     try {
       unsubCats = onSnapshot(query(collection(db, 'categories'), where('isActive', '==', true)), (snap) => {
-        setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0)));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+        setCategories(list);
         setLoading(false);
+
+        // Warm expo-image's cache for category photos in the background, from the
+        // earliest point this data exists — Home is the first screen almost every session
+        // starts on, so by the time the user taps into a category tile (here or later on
+        // the Categories tab), the image is often already cached instead of popping in.
+        // Best-effort/non-blocking: a failed prefetch just falls back to loading normally.
+        const topLevel = list.filter((c) => !c.parentId && c.image);
+        topLevel.slice(0, 6).forEach((c) => {
+          Image.prefetch(optimizeCloudinaryUrl(c.image, THUMB_CARD)).catch(() => {});
+        });
+        topLevel.forEach((c) => {
+          Image.prefetch(optimizeCloudinaryUrl(c.image, THUMB_ICON)).catch(() => {});
+        });
       });
       return () => { if (unsubCats) unsubCats(); };
     } catch (e) {
@@ -57,7 +72,7 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    apiClient.get('/brands')
+    apiClient.get('/brands', { __skipErrorToast: true })
       .then((res) => setBrands(res.data.items || []))
       .catch(() => setBrands([]));
   }, []);
@@ -81,7 +96,7 @@ export default function HomeScreen({ navigation }) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: CART_BAR_SPACER + 16 }}
       >
         {/* Header */}
         <Animated.View
@@ -114,7 +129,7 @@ export default function HomeScreen({ navigation }) {
               style={{ backgroundColor: '#f0fdf4' }}
             >
               {userProfile?.profileImage ? (
-                <Image source={{ uri: userProfile.profileImage }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
+                <Image source={{ uri: optimizeCloudinaryUrl(userProfile.profileImage, 100) }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
               ) : (
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#16a34a' }}>{initial}</Text>
               )}
@@ -150,14 +165,23 @@ export default function HomeScreen({ navigation }) {
             <Text className="text-lg font-black text-text-primary tracking-tight px-5 mb-3">
               Shop by Brand
             </Text>
-            <ScrollView
+            {/* FlatList, not a plain ScrollView — with up to ~80 brands, a ScrollView would
+                mount every logo's <Image> at once, firing that many concurrent
+                downloads/decodes the instant Home mounts and competing with the vertical
+                scroll for the JS/UI thread. FlatList only mounts what's near-visible and
+                loads the rest in as the strip is scrolled. */}
+            <FlatList
               horizontal
+              data={brands}
+              keyExtractor={(brand) => brand.id}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 20, gap: 18 }}
-            >
-              {brands.map((brand) => (
+              initialNumToRender={8}
+              maxToRenderPerBatch={6}
+              windowSize={5}
+              removeClippedSubviews
+              renderItem={({ item: brand }) => (
                 <Pressable
-                  key={brand.id}
                   onPress={() => navigation.navigate('ProductList', { brandId: brand.id, title: brand.name })}
                   className="items-center"
                   style={{ width: 82 }}
@@ -169,8 +193,8 @@ export default function HomeScreen({ navigation }) {
                     {brand.name}
                   </Text>
                 </Pressable>
-              ))}
-            </ScrollView>
+              )}
+            />
           </Animated.View>
         )}
 
@@ -213,37 +237,7 @@ export default function HomeScreen({ navigation }) {
       </ScrollView>
 
       {/* Floating Cart Bar */}
-      {items.length > 0 && (
-        <Animated.View
-          entering={FadeInDown.duration(400)}
-          style={{
-            position: 'absolute', bottom: 20, left: 16, right: 16,
-            backgroundColor: '#16a34a', borderRadius: 8,
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            paddingHorizontal: 16, paddingVertical: 12,
-            shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15, shadowRadius: 8, elevation: 5
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>
-              {items.reduce((sum, item) => sum + item.qty, 0)} Item{items.length > 1 ? 's' : ''}
-            </Text>
-            <View style={{ width: 1, height: 14, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 10 }} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>
-              ₹{items.reduce((sum, item) => sum + ((item.price ?? 0) * item.qty), 0)}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => navigation.navigate('Main', { screen: 'Cart' })}
-            style={{ backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4 }}
-          >
-            <Text style={{ color: '#16a34a', fontSize: 14, fontWeight: '800' }}>
-              View Cart
-            </Text>
-          </Pressable>
-        </Animated.View>
-      )}
+      <CartBar items={items} onPress={() => navigation.navigate('Main', { screen: 'Cart' })} />
 
       <Dialog
         visible={showLogoutDialog}
@@ -272,12 +266,19 @@ function getCategoryIcon(item) {
   return <IconComponent size={34} color="#64748b" />;
 }
 
+// createAnimatedComponent() must run once at module scope, not inside the component body —
+// calling it on every render (as this was) mints a brand-new component TYPE each time,
+// which forces React to fully unmount+remount the native view on every re-render of
+// TopCategoryCard (e.g. whenever the cart badge or notification count changes elsewhere on
+// Home, since that re-renders this whole screen). That's a real, visible source of jank,
+// not just wasted work.
+const AnimPress = Animated.createAnimatedComponent(Pressable);
+
 function TopCategoryCard({ item, onPress, index }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-  const AnimPress = Animated.createAnimatedComponent(Pressable);
 
   // An admin-uploaded photo can be any aspect ratio/size (unlike the bundled defaults,
   // which are pre-cropped square PNGs) -- "cover" would crop it unpredictably, so it
@@ -304,7 +305,7 @@ function TopCategoryCard({ item, onPress, index }) {
             editing a category's image from the admin portal would silently never show up. */}
         {showUpload ? (
           <Image
-            source={{ uri: item.image }}
+            source={{ uri: optimizeCloudinaryUrl(item.image, THUMB_CARD) }}
             style={{ width: '100%', height: '100%' }}
             contentFit="contain"
             cachePolicy="memory-disk"

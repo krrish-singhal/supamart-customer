@@ -12,6 +12,7 @@ import EmptyState from '../components/EmptyState';
 import subCategoryImages from '../utils/subCategoryImages';
 import categoryImages from '../utils/categoryImages';
 import slugify from '../utils/slugify';
+import { optimizeCloudinaryUrl, THUMB_ICON } from '../utils/cloudinaryImage';
 
 const TABS = ['Brands', 'Categories'];
 
@@ -26,7 +27,7 @@ function CatImage({ uri, bundled }) {
   if (uri && !errored) {
     return (
       <Image
-        source={{ uri }}
+        source={{ uri: optimizeCloudinaryUrl(uri, THUMB_ICON) }}
         style={{ width: '100%', height: '100%' }}
         contentFit="contain"
         cachePolicy="memory-disk"
@@ -56,7 +57,21 @@ export default function CategoriesScreen({ navigation }) {
         apiClient.get('/categories'),
         apiClient.get('/brands'),
       ]);
-      if (catRes.status === 'fulfilled') setCategories(catRes.value.data.items || []);
+      if (catRes.status === 'fulfilled') {
+        const items = catRes.value.data.items || [];
+        setCategories(items);
+        // The API returns every category (top-level + sub) up front, even though
+        // sub-category rows only render once their parent accordion is expanded — so
+        // warm expo-image's cache for all of them now, in the background, rather than
+        // waiting for the user to tap "expand" and watch each icon pop in one at a time.
+        // Non-blocking (no await) and best-effort: a failed prefetch just means that one
+        // image loads normally later instead of instantly.
+        items
+          .filter((c) => c.image)
+          .forEach((c) => {
+            Image.prefetch(optimizeCloudinaryUrl(c.image, THUMB_ICON)).catch(() => {});
+          });
+      }
       if (brandRes.status === 'fulfilled') setBrands(brandRes.value.data.items || []);
       setLoading(false);
     };

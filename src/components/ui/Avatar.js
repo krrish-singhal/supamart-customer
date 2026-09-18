@@ -2,6 +2,9 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { User } from 'lucide-react-native';
+import { optimizeCloudinaryUrl } from '../../utils/cloudinaryImage';
+
+const PIXEL_SIZES = { sm: 32, md: 48, lg: 64, xl: 96 };
 
 export default function Avatar({ src, name, size = 'md', className = '' }) {
   const sizes = {
@@ -23,7 +26,12 @@ export default function Avatar({ src, name, size = 'md', className = '' }) {
   return (
     <View className={`bg-primary-100 items-center justify-center overflow-hidden ${sizes[size]} ${className}`}>
       {src ? (
-        <Image source={{ uri: src }} className="w-full h-full" contentFit="cover" />
+        <Image
+          source={{ uri: optimizeCloudinaryUrl(src, (PIXEL_SIZES[size] || 48) * 2) }}
+          className="w-full h-full"
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
       ) : initial ? (
         <Text className={`font-bold text-primary-700 ${textSizes[size]}`}>{initial}</Text>
       ) : (

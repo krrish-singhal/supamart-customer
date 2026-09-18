@@ -35,7 +35,7 @@ export function CartProvider({ children }) {
     }
     if (!silent) setLoading(true);
     try {
-      const { data } = await apiClient.get('/cart');
+      const { data } = await apiClient.get('/cart', { __skipErrorToast: true });
       lastLoadedAtRef.current = Date.now();
       setItems(data.items || []);
       setSubtotal(data.subtotal ?? 0);

@@ -12,6 +12,7 @@ import EmptyState from '../components/EmptyState';
 import { Button, Card, Skeleton, Header, ProductCard, FavoriteButton } from '../components/ui';
 import { useCart } from '../context/CartContext';
 import { getProductImageSource } from '../utils/productImages';
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 
 const { width } = Dimensions.get('window');
 
@@ -164,8 +165,8 @@ export default function ProductDetailScreen({ route, navigation }) {
               // (product.images[0]) overrides the bundled default, so replacing a photo from
               // the admin portal (e.g. packaging changed) actually shows up here too, instead
               // of this screen silently keeping the old bundled photo forever.
-              const primary = getProductImageSource(product);
-              const extras = (product.images || []).slice(1).map((uri) => ({ uri }));
+              const primary = getProductImageSource(product, 800); // full-width hero, needs more than the 320px card default
+              const extras = (product.images || []).slice(1).map((uri) => ({ uri: optimizeCloudinaryUrl(uri, 800) }));
               const gallery = primary ? [primary, ...extras] : (extras.length ? extras : [null]);
               return gallery;
             })().map((img, i) => (

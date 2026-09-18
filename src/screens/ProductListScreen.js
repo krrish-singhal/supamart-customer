@@ -2,9 +2,8 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { View, Text, FlatList, StatusBar, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SlidersHorizontal, ArrowUpDown } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import apiClient from '../services/api';
-import { Skeleton, ProductCard, Header } from '../components/ui';
+import { Skeleton, ProductCard, Header, CartBar, CART_BAR_SPACER } from '../components/ui';
 import EmptyState from '../components/EmptyState';
 import ProductFilterModal from '../components/ProductFilterModal';
 import ProductSortModal from '../components/ProductSortModal';
@@ -28,6 +27,21 @@ export default function ProductListScreen({ navigation, route }) {
   const [sortKey, setSortKey] = useState('popularity');
 
   const screenTitle = title || (featured ? 'Featured' : 'Products');
+
+  const renderProduct = useCallback(
+    ({ item }) => (
+      <ProductCard
+        item={item}
+        layout="list"
+        onPress={() => navigation.navigate('ProductDetail', { id: item.id })}
+        qty={getQty(item.id, item.variants?.[0]?.id)}
+        onAdd={() => addItem(item, item.variants?.[0])}
+        onIncrement={() => addItem(item, item.variants?.[0])}
+        onDecrement={() => updateQty(item.id, item.variants?.[0]?.id, -1)}
+      />
+    ),
+    [navigation, getQty, addItem, updateQty]
+  );
 
   const fetchItems = useCallback(async (nextCursor = null) => {
     if (fetchingRef.current) return;
@@ -125,23 +139,16 @@ export default function ProductListScreen({ navigation, route }) {
         <FlatList
           data={visibleItems}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16, paddingBottom: cartItems.length > 0 ? 100 : 24, gap: 12 }}
+          extraData={cartItems}
+          contentContainerStyle={{ padding: 16, paddingBottom: cartItems.length > 0 ? CART_BAR_SPACER + 16 : 24, gap: 12 }}
           showsVerticalScrollIndicator={false}
           onEndReached={() => cursor && fetchItems(cursor)}
           onEndReachedThreshold={0.4}
-          renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.duration(300).delay(index < 8 ? index * 30 : 0)}>
-              <ProductCard
-                item={item}
-                layout="list"
-                onPress={() => navigation.navigate('ProductDetail', { id: item.id })}
-                qty={getQty(item.id, item.variants?.[0]?.id)}
-                onAdd={() => addItem(item, item.variants?.[0])}
-                onIncrement={() => addItem(item, item.variants?.[0])}
-                onDecrement={() => updateQty(item.id, item.variants?.[0]?.id, -1)}
-              />
-            </Animated.View>
-          )}
+          renderItem={renderProduct}
+          initialNumToRender={6}
+          maxToRenderPerBatch={8}
+          windowSize={9}
+          removeClippedSubviews
           ListFooterComponent={
             loadingMore ? (
               <View className="items-center py-4">
@@ -152,37 +159,7 @@ export default function ProductListScreen({ navigation, route }) {
         />
       )}
 
-      {cartItems.length > 0 && (
-        <Animated.View
-          entering={FadeInDown.duration(400)}
-          style={{
-            position: 'absolute', bottom: 20, left: 16, right: 16,
-            backgroundColor: '#16a34a', borderRadius: 8,
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            paddingHorizontal: 16, paddingVertical: 12,
-            shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15, shadowRadius: 8, elevation: 5
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>
-              {cartItems.reduce((sum, item) => sum + item.qty, 0)} Item{cartItems.length > 1 ? 's' : ''}
-            </Text>
-            <View style={{ width: 1, height: 14, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 10 }} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>
-              ₹{cartItems.reduce((sum, item) => sum + ((item.price ?? 0) * item.qty), 0)}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => navigation.navigate('Main', { screen: 'Cart' })}
-            style={{ backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4 }}
-          >
-            <Text style={{ color: '#16a34a', fontSize: 14, fontWeight: '800' }}>
-              View Cart
-            </Text>
-          </Pressable>
-        </Animated.View>
-      )}
+      <CartBar items={cartItems} onPress={() => navigation.navigate('Main', { screen: 'Cart' })} />
 
       <ProductFilterModal
         visible={filterVisible}

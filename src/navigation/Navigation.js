@@ -32,6 +32,10 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import MyAddressesScreen from '../screens/MyAddressesScreen';
 import Loader from '../components/Loader';
 
+import DeliveryOrdersScreen from '../screens/DeliveryOrdersScreen';
+import DeliveryMapScreen from '../screens/DeliveryMapScreen';
+import DeliveryConfirmationModal from '../components/DeliveryConfirmationModal';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -41,6 +45,10 @@ const TABS = [
   { name: 'Cart',       label: 'Cart',       Icon: ShoppingCart },
   { name: 'Orders',     label: 'Orders',     Icon: Package },
   { name: 'Favorites',  label: 'Favorites',  Icon: Heart },
+];
+
+const DELIVERY_TABS = [
+  { name: 'DeliveryOrders', label: 'Tasks', Icon: Package },
 ];
 
 function TabBarIcon({ Icon, focused }) {
@@ -63,7 +71,7 @@ function TabBarIcon({ Icon, focused }) {
   );
 }
 
-function CustomTabBar({ state, descriptors, navigation }) {
+function CustomTabBar({ state, descriptors, navigation, tabs }) {
   const insets = useSafeAreaInsets();
   const { itemCount } = useCart();
 
@@ -77,7 +85,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
-        const tab = TABS[index];
+        const tab = tabs[index];
 
         const onPress = () => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -183,7 +191,7 @@ function HomeTabs() {
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={(props) => <CustomTabBar {...props} tabs={TABS} />}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Categories" component={CategoriesScreen} />
@@ -194,8 +202,19 @@ function HomeTabs() {
   );
 }
 
+function DeliveryTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <CustomTabBar {...props} tabs={DELIVERY_TABS} />}
+    >
+      <Tab.Screen name="DeliveryOrders" component={DeliveryOrdersScreen} />
+    </Tab.Navigator>
+  );
+}
+
 export default function Navigation() {
-  const { token, loading } = useContext(AuthContext);
+  const { token, userProfile, loading } = useContext(AuthContext);
 
   if (loading) return <Loader />;
 
@@ -203,60 +222,67 @@ export default function Navigation() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {token ? (
-          <>
-            <Stack.Screen name="Main" component={HomeTabs} />
-            <Stack.Screen
-              name="Category"
-              component={CategoryScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ProductDetail"
-              component={ProductDetailScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ProductList"
-              component={ProductListScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen name="Search" component={SearchScreen} />
-            <Stack.Screen
-              name="Notifications"
-              component={NotificationsScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="AddAddress"
-              component={AddAddressScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="EditProfile"
-              component={EditProfileScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="MyAddresses"
-              component={MyAddressesScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Checkout"
-              component={CheckoutScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Payment"
-              component={PaymentScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="OrderTracking"
-              component={OrderTrackingScreen}
-              options={{ headerShown: false }}
-            />
-          </>
+          userProfile?.role === 'PARTNER' ? (
+            <>
+              <Stack.Screen name="DeliveryMain" component={DeliveryTabs} />
+              <Stack.Screen name="DeliveryMap" component={DeliveryMapScreen} />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Main" component={HomeTabs} />
+              <Stack.Screen
+                name="Category"
+                component={CategoryScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ProductDetail"
+                component={ProductDetailScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ProductList"
+                component={ProductListScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen name="Search" component={SearchScreen} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="AddAddress"
+                component={AddAddressScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="EditProfile"
+                component={EditProfileScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="MyAddresses"
+                component={MyAddressesScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Checkout"
+                component={CheckoutScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Payment"
+                component={PaymentScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="OrderTracking"
+                component={OrderTrackingScreen}
+                options={{ headerShown: false }}
+              />
+            </>
+          )
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
@@ -265,6 +291,7 @@ export default function Navigation() {
           </>
         )}
       </Stack.Navigator>
+      <DeliveryConfirmationModal />
     </NavigationContainer>
   );
 }

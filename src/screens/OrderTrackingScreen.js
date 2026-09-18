@@ -87,7 +87,7 @@ function StatusHeadline({ order }) {
       <View style={{ flex: 1, paddingRight: 12 }}>
         <Text style={{ fontSize: 24, fontWeight: '900', marginBottom: 4, color: '#b45309' }}>Waiting for Admin Approval</Text>
         <Text style={{ fontSize: 14, fontWeight: '500', color: '#d97706' }}>
-          We're verifying your payment — this usually takes just a few minutes. You'll be notified the moment it's confirmed.
+          We&apos;re verifying your payment — this usually takes just a few minutes. You&apos;ll be notified the moment it&apos;s confirmed.
         </Text>
       </View>
       <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef3c7' }}>

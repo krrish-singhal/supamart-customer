@@ -1,12 +1,31 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, FlatList, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell } from 'lucide-react-native';
+import { Bell, CheckCircle2, XCircle, Package } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNotifications } from '../context/NotificationsContext';
 import EmptyState from '../components/EmptyState';
 import { Header, Card } from '../components/ui';
+
+// Picks a real icon (never an emoji) for each notification based on the `data.type` /
+// `data.status` the backend writes (see backend/src/services/notificationService.js):
+// payment approved / order delivered -> green check, payment rejected / order cancelled
+// -> red cross, other order updates -> package, everything else -> bell.
+function getNotifIcon(item) {
+  const type = item.data?.type;
+  const status = item.data?.status;
+  if (type === 'PAYMENT_APPROVED' || status === 'DELIVERED') {
+    return { Icon: CheckCircle2, color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
+  }
+  if (type === 'PAYMENT_REJECTED' || status === 'CANCELLED') {
+    return { Icon: XCircle, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+  }
+  if (type === 'ORDER_STATUS') {
+    return { Icon: Package, color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
+  }
+  return { Icon: Bell, color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
+}
 
 function timeAgo(ms) {
   const diff = Date.now() - ms;
@@ -49,11 +68,16 @@ export default function NotificationsScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item, index }) => (
+        renderItem={({ item, index }) => {
+          const { Icon, color, bg, border } = getNotifIcon(item);
+          return (
           <Animated.View entering={FadeInUp.duration(400).delay(Math.min(index * 50, 400))}>
             <Card elevation="sm" className="mb-3 p-4 border-0 bg-white flex-row items-start">
-              <View className="w-12 h-12 rounded-full bg-primary-50 items-center justify-center mr-4 border border-primary-100 shadow-sm">
-                <Bell size={20} color="#16a34a" />
+              <View
+                className="w-12 h-12 rounded-full items-center justify-center mr-4 border shadow-sm"
+                style={{ backgroundColor: bg, borderColor: border }}
+              >
+                <Icon size={20} color={color} />
               </View>
               <View className="flex-1 pt-1">
                 <View className="flex-row justify-between items-start mb-1">
@@ -66,7 +90,8 @@ export default function NotificationsScreen({ navigation }) {
               </View>
             </Card>
           </Animated.View>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );

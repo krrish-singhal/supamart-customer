@@ -14,6 +14,7 @@ import { useCart } from '../context/CartContext';
 import { computeBill, DEFAULT_TAX_PERCENT } from '../utils/pricing';
 import apiClient from '../services/api';
 import { getProductImageSource } from '../utils/productImages';
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 
 // ─── Empty cart ────────────────────────────────────────────────────────────────
 // Deliberately minimal — just the empty state, nothing else. No categories/recs
@@ -146,7 +147,7 @@ export default function CartScreen({ navigation }) {
               {(getProductImageSource(item) || item.image) ? (
                 <View style={{ width: 56, height: 56, borderRadius: 4, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                   <Image
-                    source={getProductImageSource(item) || { uri: item.image }}
+                    source={getProductImageSource(item) || { uri: optimizeCloudinaryUrl(item.image, 200) }}
                     style={{ width: '100%', height: '100%' }}
                     contentFit="contain"
                     cachePolicy="memory-disk"

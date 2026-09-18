@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Image } from 'expo-image';
 import brandLogos from '../../utils/brandLogos';
+import { optimizeCloudinaryUrl } from '../../utils/cloudinaryImage';
 
 const PLACEHOLDER = require('../../../assets/images/brand-placeholder.png');
 
@@ -14,7 +15,11 @@ export default function BrandLogo({ brand, size = 56, style, className = '' }) {
   useEffect(() => { setErrored(false); }, [brand?.logoUrl]);
 
   const bundled = brand?.name ? brandLogos[brand.name] : undefined;
-  const uploaded = brand?.logoUrl && !errored ? { uri: brand.logoUrl } : null;
+  // Scaled to the actual render size (with headroom for 2-3x pixel density) rather than a
+  // fixed width — brand logos render anywhere from a small carousel chip to a larger tile.
+  const uploaded = brand?.logoUrl && !errored
+    ? { uri: optimizeCloudinaryUrl(brand.logoUrl, Math.max(size * 3, 150)) }
+    : null;
   const source = uploaded || bundled || PLACEHOLDER;
 
   return (
