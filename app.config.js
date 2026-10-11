@@ -2,11 +2,11 @@ import 'dotenv/config';
 
 export default {
   "name": "MS Traders",
-  "slug": "supamart-customer",
+  "slug": "ms-traders-customer",
   "version": "1.0.0",
   "orientation": "portrait",
   "icon": "./assets/icon.png",
-  "scheme": "supamart",
+  "scheme": "mstraders",
   "userInterfaceStyle": "automatic",
   "newArchEnabled": true,
   "splash": {
@@ -16,7 +16,7 @@ export default {
   },
   "ios": {
     "supportsTablet": true,
-    "bundleIdentifier": "in.makewithus.supamart",
+    "bundleIdentifier": "in.mstraders.grocery",
     "infoPlist": {
       "NSLocationWhenInUseUsageDescription": "MS Traders uses your location to find stores near you and deliver to your address.",
       "NSLocationAlwaysAndWhenInUseUsageDescription": "MS Traders uses your location to find stores near you and deliver to your address.",
@@ -25,7 +25,7 @@ export default {
     }
   },
   "android": {
-    "package": "in.makewithus.supamart",
+    "package": "in.mstraders.grocery",
     "versionCode": 1,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",

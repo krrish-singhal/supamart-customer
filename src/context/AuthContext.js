@@ -254,8 +254,26 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const deleteAccount = async (password) => {
+    const { data } = await apiClient.delete('/users/me', {
+      data: { password },
+      timeout: 60000,
+    });
+    await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('userProfile');
+    await AsyncStorage.removeItem('authMode');
+    setToken(null);
+    setUserProfile(null);
+    try {
+      await firebaseSignOut(auth);
+    } catch {
+      // best-effort cleanup
+    }
+    return data;
+  };
+
   return (
-    <AuthContext.Provider value={{ token, userProfile, setToken, setUserProfile, login, register, signIn, logout, loading, loadToken }}>
+    <AuthContext.Provider value={{ token, userProfile, setToken, setUserProfile, login, register, signIn, logout, deleteAccount, loading, loadToken }}>
       {children}
     </AuthContext.Provider>
   );

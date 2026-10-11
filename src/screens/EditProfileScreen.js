@@ -1,9 +1,9 @@
 import { useState, useContext, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, StatusBar, Platform, KeyboardAvoidingView, ActivityIndicator,
+  View, Text, ScrollView, Pressable, StatusBar, Platform, KeyboardAvoidingView, ActivityIndicator, Modal, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, User, Mail, Phone, Calendar, ChevronDown } from 'lucide-react-native';
+import { Camera, User, Mail, Phone, Calendar, ChevronDown, Trash2, AlertTriangle, Lock } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -17,7 +17,7 @@ import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
 export default function EditProfileScreen({ navigation }) {
-  const { userProfile: user, loadToken } = useContext(AuthContext);
+  const { userProfile: user, loadToken, deleteAccount } = useContext(AuthContext);
 
   const [name, setName] = useState(user?.name || '');
   const [mobile, setMobile] = useState(user?.mobile || '');
@@ -28,6 +28,40 @@ export default function EditProfileScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [localPhotoUri, setLocalPhotoUri] = useState(null);
+
+  // Account deletion states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword.trim()) {
+      setDeleteError('Please enter your account password to confirm.');
+      return;
+    }
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteAccount(deletePassword.trim());
+      setShowDeleteModal(false);
+      Toast.show({
+        type: 'success',
+        text1: 'Account Deleted',
+        text2: 'Your account and personal data have been removed.',
+      });
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Failed to delete account. Please try again.';
+      setDeleteError(msg);
+      Toast.show({
+        type: 'error',
+        text1: 'Deletion Failed',
+        text2: msg,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const isValid = name.trim().length >= 2;
 
@@ -252,6 +286,34 @@ export default function EditProfileScreen({ navigation }) {
                 />
               )}
             </Card>
+
+            {/* Account Deletion Card */}
+            <Card elevation="sm" className="border border-red-100 bg-white p-5 mb-6">
+              <View className="flex-row items-center mb-2">
+                <View className="w-8 h-8 rounded-full bg-red-50 items-center justify-center mr-3">
+                  <Trash2 size={16} color="#ef4444" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-bold text-red-600">Delete Account</Text>
+                  <Text className="text-xs text-text-tertiary">Permanently remove your profile and personal data</Text>
+                </View>
+              </View>
+
+              <Text className="text-xs leading-5 text-text-secondary mt-2 mb-4">
+                Deleting your account will remove your profile, saved addresses, cart items, notifications, and credentials. Past order records are anonymized and retained only for legal and accounting obligations.
+              </Text>
+
+              <Pressable
+                onPress={() => {
+                  setDeletePassword('');
+                  setDeleteError('');
+                  setShowDeleteModal(true);
+                }}
+                className="py-3 px-4 rounded-xl border border-red-200 bg-red-50/50 items-center justify-center active:bg-red-100"
+              >
+                <Text className="text-sm font-bold text-red-600">Delete Account</Text>
+              </Pressable>
+            </Card>
           </Animated.View>
         </ScrollView>
 
@@ -265,6 +327,94 @@ export default function EditProfileScreen({ navigation }) {
           />
         </View>
       </KeyboardAvoidingView>
+
+      {/* Account Deletion Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setShowDeleteModal(false)}
+      >
+        <View style={StyleSheet.absoluteFill} className="items-center justify-center z-50">
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            className="bg-black/50"
+            onPress={() => !deleting && setShowDeleteModal(false)}
+          />
+
+          <View className="bg-white rounded-3xl w-[90%] max-w-[360px] p-6 shadow-2xl z-10">
+            <View className="w-12 h-12 rounded-full bg-red-100 items-center justify-center self-center mb-3">
+              <AlertTriangle size={24} color="#dc2626" />
+            </View>
+
+            <Text className="text-xl font-black text-text-primary text-center mb-1">
+              Delete Account?
+            </Text>
+            <Text className="text-xs font-semibold text-red-500 text-center mb-4">
+              This action cannot be undone
+            </Text>
+
+            <View className="bg-red-50/70 rounded-2xl p-3.5 mb-4 border border-red-100">
+              <Text className="text-xs leading-5 text-text-secondary font-medium mb-1">
+                • Your profile, phone number, saved addresses, carts, and notifications will be permanently deleted.
+              </Text>
+              <Text className="text-xs leading-5 text-text-secondary font-medium">
+                • Completed orders and invoices will be anonymized and retained solely for statutory accounting and tax compliance.
+              </Text>
+            </View>
+
+            <View className="mb-4">
+              <Input
+                label="Enter Password to Confirm"
+                value={deletePassword}
+                onChangeText={(val) => {
+                  setDeletePassword(val);
+                  if (deleteError) setDeleteError('');
+                }}
+                placeholder="Account password"
+                secureTextEntry
+                leftIcon={<Lock size={16} color="#94a3b8" />}
+                containerStyle={{ marginBottom: 0 }}
+              />
+              {deleteError ? (
+                <Text className="text-xs text-red-500 font-medium mt-1.5 ml-1">
+                  {deleteError}
+                </Text>
+              ) : null}
+            </View>
+
+            <View className="flex-row gap-3 mt-1">
+              <Pressable
+                onPress={() => {
+                  if (!deleting) {
+                    setShowDeleteModal(false);
+                    setDeletePassword('');
+                    setDeleteError('');
+                  }
+                }}
+                disabled={deleting}
+                className="flex-1 py-3.5 rounded-xl bg-surface-50 items-center justify-center border border-border-light active:bg-surface-100"
+              >
+                <Text className="text-sm font-bold text-text-secondary">Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleDeleteAccount}
+                disabled={deleting || !deletePassword.trim()}
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center bg-red-600 active:bg-red-700 ${
+                  deleting || !deletePassword.trim() ? 'opacity-60' : ''
+                }`}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text className="text-sm font-bold text-white">Delete Forever</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
