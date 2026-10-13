@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Alert, StyleSheet, ActivityIndicator, Lin
 import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, CheckCircle, Navigation, Phone, Truck, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, Navigation, Phone, Truck, AlertCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';

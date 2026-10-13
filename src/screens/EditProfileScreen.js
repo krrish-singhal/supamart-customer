@@ -86,12 +86,6 @@ export default function EditProfileScreen({ navigation }) {
   }, [name, mobile, gender, dateOfBirth, user?.id, isValid, saving, loadToken, navigation]);
 
   const pickAndUploadPhoto = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Toast.show({ type: 'info', text1: 'Photo library permission is required.' });
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',
       allowsEditing: true,

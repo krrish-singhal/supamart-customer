@@ -26,7 +26,7 @@ export default {
   },
   "android": {
     "package": "in.mstraders.grocery",
-    "versionCode": 1,
+    "versionCode": 3,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#ffffff"
@@ -34,12 +34,16 @@ export default {
     "edgeToEdgeEnabled": true,
     "permissions": [
       "android.permission.ACCESS_COARSE_LOCATION",
-      "android.permission.ACCESS_FINE_LOCATION",
-      "android.permission.CAMERA",
+      "android.permission.ACCESS_FINE_LOCATION"
+    ],
+    "blockedPermissions": [
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
       "android.permission.READ_EXTERNAL_STORAGE",
       "android.permission.WRITE_EXTERNAL_STORAGE",
-      "android.permission.READ_MEDIA_IMAGES",
-      "android.permission.RECORD_AUDIO"
+      "android.permission.RECORD_AUDIO",
+      "android.permission.CAMERA"
     ],
     "config": {
       "googleMaps": {
@@ -72,7 +76,17 @@ export default {
       "expo-image-picker",
       {
         "photosPermission": "MS Traders accesses your photos to let you update your profile photo.",
-        "cameraPermission": "MS Traders uses your camera to let you update your profile photo."
+        "cameraPermission": false,
+        "microphonePermission": false
+      }
+    ],
+    [
+      "expo-build-properties",
+      {
+        "android": {
+          "enableMinifyInReleaseBuilds": true,
+          "enableShrinkResourcesInReleaseBuilds": true
+        }
       }
     ],
     "@react-native-community/datetimepicker"
