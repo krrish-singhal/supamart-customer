@@ -116,7 +116,7 @@ export default function WelcomeScreen({ navigation, isSplash = false, onFinish, 
       if (onFinishRef.current) {
         onFinishRef.current();
       } else if (navigation?.navigate) {
-        navigation.navigate('LocationPrompt');
+        navigation.navigate('Login');
       }
     }, 850);
   };

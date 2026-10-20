@@ -10,9 +10,9 @@ export default {
   "userInterfaceStyle": "automatic",
   "newArchEnabled": true,
   "splash": {
-    "image": "./assets/logo.png",
+    "image": "./assets/splash.png",
     "resizeMode": "contain",
-    "backgroundColor": "#059669"
+    "backgroundColor": "#ffffff"
   },
   "ios": {
     "supportsTablet": true,
@@ -63,10 +63,9 @@ export default {
     [
       "expo-splash-screen",
       {
-        "image": "./assets/logo.png",
-        "imageWidth": 200,
+        "image": "./assets/splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#059669"
+        "backgroundColor": "#ffffff"
       }
     ],
     [

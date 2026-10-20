@@ -20,7 +20,7 @@ import apiClient from '../services/api';
 import { typography } from '../theme/typography';
 
 export default function LocationPromptScreen({ navigation }) {
-  const { userProfile: user, setNeedsAddressPrompt } = useContext(AuthContext);
+  const { userProfile: user, setNeedsAddressPrompt, setNeedsAddressSelection } = useContext(AuthContext);
   const [locating, setLocating] = useState(false);
 
   const handleUseCurrentLocation = async () => {
@@ -69,47 +69,54 @@ export default function LocationPromptScreen({ navigation }) {
       const { latitude, longitude } = location.coords;
 
       let addressName = 'Current Location';
-      let street = 'Campus / Area';
-      let pincode = '682001';
+      let street = 'Current Location';
+      let area = '';
+      let city = '';
+      let pincode = '';
 
       try {
         const [geo] = await Location.reverseGeocodeAsync({ latitude, longitude });
         if (geo) {
           street = geo.street || geo.name || geo.district || street;
-          pincode = geo.postalCode || pincode;
-          addressName = geo.subregion || geo.city || addressName;
+          area = geo.district || geo.subregion || geo.neighborhood || '';
+          city = geo.city || geo.subregion || '';
+          pincode = geo.postalCode || '';
         }
       } catch {
         // Fallback
       }
 
-      if (user?.id) {
-        try {
-          await apiClient.post(`/users/${user.id}/addresses`, {
-            label: 'Home',
-            houseNo: addressName,
-            street,
-            pincode,
-            lat: latitude,
-            lng: longitude,
-            isDefault: true,
-          });
-        } catch {
-          // Fallback if already exists
-        }
-      }
+      if (!user?.id) throw new Error('Please sign in again to save your delivery location.');
+
+      const addressPayload = {
+        label: 'Current Location',
+        houseNo: addressName,
+        street,
+        area,
+        city,
+        pincode,
+        lat: latitude,
+        lng: longitude,
+        isDefault: true,
+      };
+      const { data: savedAddresses } = await apiClient.get(`/users/${user.id}/addresses`);
+      const existingLocation = (savedAddresses.items || []).find((address) => address.label === 'Current Location');
+      const { data: saved } = existingLocation?.id
+        ? await apiClient.put(`/users/${user.id}/addresses/${existingLocation.id}`, addressPayload)
+        : await apiClient.post(`/users/${user.id}/addresses`, addressPayload);
+      await apiClient.patch(`/users/${user.id}/addresses/${saved.id}/set-default`);
 
       Toast.show({ type: 'success', text1: 'Location updated' });
       setNeedsAddressPrompt?.(false);
-      if (user?.id) {
-        if (navigation.canGoBack()) navigation.goBack();
-        else navigation.replace('Main');
-      } else {
-        navigation.navigate('Register');
-      }
+      setNeedsAddressSelection?.(false);
+      navigation.replace('Main');
     } catch (err) {
       console.warn('Location detection failed:', err);
-      Toast.show({ type: 'error', text1: 'Could not fetch location', text2: 'Please enter your address manually.' });
+      Toast.show({
+        type: 'error',
+        text1: err.response?.data?.error || err.message || 'Could not save your location',
+        text2: 'Please try again or enter your address manually.',
+      });
     } finally {
       setLocating(false);
     }
@@ -133,7 +140,11 @@ export default function LocationPromptScreen({ navigation }) {
           accessibilityLabel="Go back"
           onPress={() => {
             if (navigation.canGoBack()) navigation.goBack();
-            else if (user?.id) navigation.replace('Main');
+            else if (user?.id) {
+              setNeedsAddressPrompt?.(false);
+              setNeedsAddressSelection?.(false);
+              navigation.replace('Main');
+            }
             else navigation.navigate('Login');
           }}
           hitSlop={12}

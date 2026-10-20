@@ -33,7 +33,7 @@ const SAVE_AS_OPTIONS = [
 ];
 
 export default function AddAddressScreen({ route, navigation }) {
-  const { userProfile: user, setNeedsAddressPrompt } = useContext(AuthContext);
+  const { userProfile: user, setNeedsAddressPrompt, setNeedsAddressSelection } = useContext(AuthContext);
   const editingAddress = route.params?.address || null;
   const insets = useSafeAreaInsets();
 
@@ -182,13 +182,20 @@ export default function AddAddressScreen({ route, navigation }) {
         await apiClient.put(`/users/${user.id}/addresses/${editingAddress.id}`, payload);
         Toast.show({ type: 'success', text1: 'Address updated successfully' });
       } else {
-        await apiClient.post(`/users/${user.id}/addresses`, payload);
+        const { data: saved } = await apiClient.post(`/users/${user.id}/addresses`, {
+          ...payload,
+          isDefault: Boolean(route.params?.fromPrompt),
+        });
+        if (route.params?.fromPrompt && saved?.id) {
+          await apiClient.patch(`/users/${user.id}/addresses/${saved.id}/set-default`);
+        }
         Toast.show({ type: 'success', text1: 'Address saved successfully' });
       }
 
       if (route.params?.fromPrompt) {
         setNeedsAddressPrompt?.(false);
-        navigation.replace('Main');
+        setNeedsAddressSelection?.(false);
+        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
       } else {
         navigation.goBack();
       }

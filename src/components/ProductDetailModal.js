@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../context/CartContext';
 import { getProductImageSource } from '../utils/productImages';
 import { fonts } from '../theme/typography';
+import { isProductUnavailable } from '../utils/productAvailability';
 
 function getDiscountPercent(vPrice, vMrp) {
   if (!vMrp || vPrice == null || vPrice >= vMrp) return 0;
@@ -93,9 +94,7 @@ export default function ProductDetailModal({
   const imageSource = getProductImageSource(product, 200);
 
   // A purchase choice is shown only when the admin saved that variant.
-  const sourceVariants = product.variants?.length
-    ? product.variants
-    : [{ id: 'default', label: product.unit || '1 item', price: product.price, offerPrice: product.offerPrice, stock: product.stock }];
+  const sourceVariants = Array.isArray(product.variants) ? product.variants : [];
   const variants = sourceVariants.map((v, i) => {
     const mrp = Number(v.price ?? v.mrp ?? product.price ?? 0);
     const sellingPrice = Number(v.offerPrice ?? v.sellingPrice ?? mrp);
@@ -107,6 +106,7 @@ export default function ProductDetailModal({
       discount: getDiscountPercent(sellingPrice, mrp),
       perUnitPrice: calculatePerUnitPrice(v.label || product.unit, sellingPrice),
       stock: v.stock ?? product.stock ?? 0,
+      unavailable: isProductUnavailable(product, v),
     };
   });
 
@@ -117,6 +117,7 @@ export default function ProductDetailModal({
   }, 0);
 
   const displayTotal = totalItemAmount > 0 ? totalItemAmount : variants[0]?.price || 0;
+  const firstPurchasableVariant = variants.find((variant) => !variant.unavailable);
 
   const handleOpenDetails = () => {
     onClose();
@@ -124,8 +125,8 @@ export default function ProductDetailModal({
   };
 
   const handleConfirm = () => {
-    if (totalItemAmount === 0 && variants[0]) {
-      handleAddItem(product, variants[0]);
+    if (totalItemAmount === 0 && firstPurchasableVariant) {
+      handleAddItem(product, firstPurchasableVariant);
     }
     onClose();
   };
@@ -280,7 +281,11 @@ export default function ProductDetailModal({
                 style={{ maxHeight: 360 }}
                 contentContainerStyle={{ gap: 12, paddingBottom: 6 }}
               >
-                {variants.map((v) => {
+                {variants.length === 0 ? (
+                  <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: '#64748b', paddingVertical: 16 }}>
+                    Pack sizes have not been configured for this product.
+                  </Text>
+                ) : variants.map((v) => {
                   const qty = currentGetQty(product.id, v.id);
                   const inCart = qty > 0;
 
@@ -412,11 +417,16 @@ export default function ProductDetailModal({
                             </Text>
                             <Pressable
                               onPress={() => handleAddItem(product, v)}
+                              disabled={v.unavailable}
                               hitSlop={8}
-                              style={{ width: 24, height: 30, alignItems: 'center', justifyContent: 'center' }}
+                              style={{ width: 24, height: 30, alignItems: 'center', justifyContent: 'center', opacity: v.unavailable ? 0.4 : 1 }}
                             >
                               <Plus size={15} color="#ffffff" strokeWidth={2.8} />
                             </Pressable>
+                          </View>
+                        ) : v.unavailable ? (
+                          <View style={{ borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 8, height: 36, width: 82, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: '#64748b' }}>SOLD OUT</Text>
                           </View>
                         ) : (
                           <Pressable
@@ -454,8 +464,9 @@ export default function ProductDetailModal({
               {/* Bottom Confirm Bar matching Image 5 */}
               <Pressable
                 onPress={handleConfirm}
+                disabled={!firstPurchasableVariant}
                 style={{
-                  backgroundColor: '#047857',
+                  backgroundColor: firstPurchasableVariant ? '#047857' : '#94a3b8',
                   borderRadius: 14,
                   height: 52,
                   marginTop: 14,

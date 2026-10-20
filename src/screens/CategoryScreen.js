@@ -66,7 +66,7 @@ export default function CategoryScreen({ route, navigation }) {
   const [sortDropdownVisible, setSortDropdownVisible] = useState(false);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sortKey, setSortKey] = useState(null);
-  const [quickFilter, setQuickFilter] = useState(null); // 'inStock' | 'under50' | null
+  const [quickFilter, setQuickFilter] = useState(null); // 'bestseller' | 'inStock' | 'under50'
 
 
   // Dynamic Sidebar: displays subcategories first (sorted), followed by sibling top-level categories
@@ -146,26 +146,30 @@ export default function CategoryScreen({ route, navigation }) {
     if (currentCategory) setCurrentCatName(currentCategory.name);
   }, [currentCatId, allCategories]);
 
+  // Keep the product subscription stable when category documents are refreshed but
+  // the actual category/child IDs have not changed.
+  const productCategoryIds = useMemo(() => {
+    const children = allCategories
+      .filter((category) => category.parentId === currentCatId)
+      .map((category) => category.id)
+      .filter(Boolean)
+      .sort();
+    return [currentCatId, ...children].filter(Boolean);
+  }, [allCategories, currentCatId]);
+  const productCategoryIdsKey = productCategoryIds.join('|');
+
   // Real-time synchronization of category products with Firestore & Admin Portal
   useEffect(() => {
     let isCancelled = false;
     let unsubs = [];
-    setProductsLoading(true);
     setError(false);
-    setActiveSubCategory(null);
-    setFilters(EMPTY_FILTERS);
-    setQuickFilter(null);
-    setSortDropdownVisible(false);
-
     if (!currentCatId) {
       setProductsLoading(false);
       setInitialLoading(false);
       return;
     }
 
-    const children = allCategories.filter((c) => c.parentId === currentCatId);
-    const subIds = children.map((c) => c.id);
-    const allTargetIds = [currentCatId, ...subIds];
+    const allTargetIds = productCategoryIdsKey.split('|').filter(Boolean);
 
     const chunks = [];
     for (let i = 0; i < allTargetIds.length; i += 20) {
@@ -173,9 +177,15 @@ export default function CategoryScreen({ route, navigation }) {
     }
 
     const productsMap = new Map();
+    let apiLoadFinished = false;
+    let apiLoadSucceeded = false;
+    let initialSnapshotsReceived = 0;
 
     const updateProductsFromMap = () => {
       if (isCancelled) return;
+      // The API returns every page of the category tree. Don't expose only the
+      // first Firestore category chunk while that complete result is loading.
+      if (!apiLoadFinished || (!apiLoadSucceeded && initialSnapshotsReceived < chunks.length)) return;
       const list = Array.from(productsMap.values());
       list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       setProducts(list);
@@ -184,22 +194,28 @@ export default function CategoryScreen({ route, navigation }) {
     };
 
     // 1. Initial fast load from backend API if available
-    apiClient
-      .get('/products', {
-        params: { categoryId: currentCatId, limit: 50 },
-        __skipErrorToast: true,
-      })
-      .then((res) => {
-        if (isCancelled) return;
-        const items = res.data?.items || [];
-        if (items.length > 0) {
-          items.forEach((p) => {
-            if (!productsMap.has(p.id)) productsMap.set(p.id, p);
+    const fetchCategoryProducts = async () => {
+      try {
+        let cursor = null;
+        do {
+          const { data } = await apiClient.get('/products', {
+            params: { categoryId: currentCatId, limit: 50, ...(cursor ? { cursor } : {}) },
+            __skipErrorToast: true,
           });
-          updateProductsFromMap();
-        }
-      })
-      .catch(() => {});
+          if (isCancelled) return;
+          (data?.items || []).forEach((product) => productsMap.set(product.id, product));
+          cursor = data?.cursor || null;
+        } while (cursor);
+        apiLoadSucceeded = true;
+        apiLoadFinished = true;
+        updateProductsFromMap();
+      } catch {
+        // Once all initial snapshots have arrived, use Firestore as the fallback.
+        apiLoadFinished = true;
+        updateProductsFromMap();
+      }
+    };
+    fetchCategoryProducts();
 
     // 2. Real-time Firestore onSnapshot listeners for live pricing & stock changes
     try {
@@ -209,6 +225,7 @@ export default function CategoryScreen({ route, navigation }) {
           q,
           (snapshot) => {
             if (isCancelled) return;
+            initialSnapshotsReceived += 1;
             snapshot.docChanges().forEach((change) => {
               const docId = change.doc.id;
               if (change.type === 'removed') {
@@ -221,6 +238,8 @@ export default function CategoryScreen({ route, navigation }) {
           },
           (err) => {
             console.error('Category products snapshot error:', err);
+            initialSnapshotsReceived += 1;
+            updateProductsFromMap();
             if (!isCancelled && productsMap.size === 0) {
               setError(true);
               setProductsLoading(false);
@@ -241,7 +260,18 @@ export default function CategoryScreen({ route, navigation }) {
       isCancelled = true;
       unsubs.forEach((u) => u && typeof u === 'function' && u());
     };
-  }, [currentCatId, allCategories]);
+  }, [currentCatId, productCategoryIdsKey]);
+
+  // Reset user-selected filters only when they navigate to a different category,
+  // not when background category snapshots refresh.
+  useEffect(() => {
+    setProducts([]);
+    setProductsLoading(true);
+    setActiveSubCategory(null);
+    setFilters(EMPTY_FILTERS);
+    setQuickFilter(null);
+    setSortDropdownVisible(false);
+  }, [currentCatId]);
 
   const isOutOfStock = useCallback((p) => {
     if (p.availability === 'OUT_OF_STOCK' || p.availability === 'UNAVAILABLE_TODAY' || p.isAvailableToday === false) return true;
@@ -263,6 +293,10 @@ export default function CategoryScreen({ route, navigation }) {
         const pr = p.variants?.[0]?.offerPrice ?? p.variants?.[0]?.price ?? p.price ?? 0;
         return pr <= 50;
       });
+    }
+
+    if (quickFilter === 'bestseller') {
+      list = list.filter((p) => p.isBestseller === true);
     }
 
     list = applyProductFilters(list, filters);
@@ -611,27 +645,27 @@ export default function CategoryScreen({ route, navigation }) {
                 </Text>
               </Pressable>
 
-              {/* Bestsellers Chip matching Mockup */}
+              {/* Bestseller is an admin-managed product flag, not a discount sort. */}
               <Pressable
-                onPress={() => setSortKey((prev) => (prev === 'discount_desc' ? null : 'discount_desc'))}
+                onPress={() => setQuickFilter((prev) => (prev === 'bestseller' ? null : 'bestseller'))}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: sortKey === 'discount_desc' ? '#0f172a' : '#ffffff',
+                  backgroundColor: quickFilter === 'bestseller' ? '#0f172a' : '#ffffff',
                   borderWidth: 1,
-                  borderColor: sortKey === 'discount_desc' ? '#0f172a' : '#e2e8f0',
+                  borderColor: quickFilter === 'bestseller' ? '#0f172a' : '#e2e8f0',
                   borderRadius: 8,
                   paddingHorizontal: 12,
                   height: 34,
                 }}
               >
-                <Star size={13} color={sortKey === 'discount_desc' ? '#ffffff' : '#0f172a'} strokeWidth={2.4} style={{ marginRight: 6 }} />
+                <Star size={13} color={quickFilter === 'bestseller' ? '#ffffff' : '#0f172a'} strokeWidth={2.4} style={{ marginRight: 6 }} />
                 <Text
                   style={{
                     fontFamily: fonts.semiBold,
                     fontSize: 12,
                     fontWeight: 'normal',
-                    color: sortKey === 'discount_desc' ? '#ffffff' : '#0f172a',
+                    color: quickFilter === 'bestseller' ? '#ffffff' : '#0f172a',
                   }}
                 >
                   Bestsellers

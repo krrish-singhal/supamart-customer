@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Plus, Navigation } from 'lucide-react-native';
-import Svg, { Rect, Path } from 'react-native-svg';
+import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import Toast from 'react-native-toast-message';
@@ -107,34 +107,16 @@ function StylizedDeliveryMap({ height, onBack, insets }) {
 
         {/* Green Teardrop Location Pin */}
         <View style={{ alignItems: 'center' }}>
-          <View
-            style={{
-              width: 32,
-              height: 38,
-              backgroundColor: '#047857',
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              borderBottomLeftRadius: 16,
-              borderBottomRightRadius: 2,
-              transform: [{ rotate: '-45deg' }],
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.25,
-              shadowRadius: 4,
-              elevation: 4,
-            }}
-          >
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: '#ffffff',
-              }}
+          <Svg width={42} height={50} viewBox="0 0 24 28" style={{
+            shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
+          }}>
+            <Path
+              d="M12 1.5C6.75 1.5 2.5 5.72 2.5 10.93c0 6.38 8.18 14.73 9.03 15.59a.65.65 0 0 0 .94 0c.85-.86 9.03-9.21 9.03-15.59C21.5 5.72 17.25 1.5 12 1.5Z"
+              fill="#047857"
             />
-          </View>
+            <Circle cx="12" cy="10.5" r="3.6" fill="#ffffff" />
+          </Svg>
 
           {/* Translucent green ground anchor dot */}
           <View
@@ -179,13 +161,20 @@ function StylizedDeliveryMap({ height, onBack, insets }) {
 export default function MyAddressesScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const { userProfile: user, setUserProfile, needsAddressSelection, setNeedsAddressSelection } = useContext(AuthContext);
+  const {
+    userProfile: user,
+    setUserProfile,
+    needsAddressSelection,
+    setNeedsAddressSelection,
+    setNeedsAddressPrompt,
+  } = useContext(AuthContext);
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectingAddressId, setSelectingAddressId] = useState(null);
 
   const mapHeight = Math.max(height * 0.38, 240);
 
@@ -230,6 +219,39 @@ export default function MyAddressesScreen({ navigation }) {
     return `[${parts.join(', ')}]`;
   };
 
+  const selectedAddress = addresses.find((address) => address.id === selectedAddressId);
+
+  const handleSelectAddress = async (address) => {
+    if (!user?.id || !address?.id || selectingAddressId) return;
+    setSelectingAddressId(address.id);
+    try {
+      await apiClient.patch(`/users/${user.id}/addresses/${address.id}/set-default`);
+      setSelectedAddressId(address.id);
+      setAddresses((previous) => previous.map((item) => ({
+        ...item,
+        isDefault: item.id === address.id,
+      })));
+      if (setUserProfile) {
+        setUserProfile((previous) => previous ? {
+          ...previous,
+          defaultAddressId: address.id,
+          addresses: (previous.addresses || addresses).map((item) => ({
+            ...item,
+            isDefault: item.id === address.id,
+          })),
+        } : previous);
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: error.response?.data?.error || 'Could not save this address',
+        text2: 'Please try again.',
+      });
+    } finally {
+      setSelectingAddressId(null);
+    }
+  };
+
   // "Use my current location" handler
   const handleUseCurrentLocation = async () => {
     setLocating(true);
@@ -270,6 +292,13 @@ export default function MyAddressesScreen({ navigation }) {
       const existing = addresses.find((a) => a.label === 'Current Location');
       if (existing) {
         setSelectedAddressId(existing.id);
+        if (needsAddressSelection) {
+          await apiClient.patch(`/users/${user.id}/addresses/${existing.id}/set-default`);
+          setNeedsAddressSelection(false);
+          setNeedsAddressPrompt(false);
+          navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+          return;
+        }
         Toast.show({
           type: 'success',
           text1: 'Location Detected',
@@ -278,7 +307,7 @@ export default function MyAddressesScreen({ navigation }) {
       } else if (user?.id) {
         const payload = {
           label: 'Current Location',
-          houseNo: '',
+          houseNo: 'Current Location',
           street,
           area,
           city,
@@ -291,6 +320,13 @@ export default function MyAddressesScreen({ navigation }) {
         const newAddr = res.data;
         setAddresses((prev) => [newAddr, ...prev]);
         setSelectedAddressId(newAddr.id);
+        if (needsAddressSelection) {
+          await apiClient.patch(`/users/${user.id}/addresses/${newAddr.id}/set-default`);
+          setNeedsAddressSelection(false);
+          setNeedsAddressPrompt(false);
+          navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+          return;
+        }
         Toast.show({
           type: 'success',
           text1: 'Current Location Added',
@@ -357,7 +393,10 @@ export default function MyAddressesScreen({ navigation }) {
       {/* TOP HALF: Interactive Stylized Map matching Image 4 */}
       <StylizedDeliveryMap
         height={mapHeight}
-        onBack={() => navigation.goBack()}
+        onBack={() => {
+          if (navigation.canGoBack()) navigation.goBack();
+          else navigation.replace('Main');
+        }}
         insets={insets}
       />
 
@@ -380,7 +419,7 @@ export default function MyAddressesScreen({ navigation }) {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 70 }}
+          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 108 }}
         >
           {/* Sheet Title matching Image 4 */}
           <Text
@@ -399,23 +438,29 @@ export default function MyAddressesScreen({ navigation }) {
           <Pressable
             onPress={handleUseCurrentLocation}
             disabled={locating}
-            style={({ pressed }) => ({
+            style={{
+              width: '100%',
+              minHeight: 52,
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'flex-start',
               borderWidth: 1.2,
-              borderColor: '#cbd5e1',
+              borderColor: '#cfe5d8',
               borderRadius: 14,
-              paddingVertical: 12,
+              paddingVertical: 10,
               paddingHorizontal: 14,
-              backgroundColor: pressed ? '#f8fafc' : '#ffffff',
+              backgroundColor: '#f3fbf6',
               marginTop: 14,
               marginBottom: 6,
-            })}
+              opacity: locating ? 0.7 : 1,
+            }}
           >
             {locating ? (
-              <ActivityIndicator size="small" color="#047857" style={{ marginRight: 10 }} />
+              <ActivityIndicator size="small" color="#047857" />
             ) : (
-              <Navigation size={18} color="#047857" strokeWidth={2.4} style={{ marginRight: 10 }} />
+              <View style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
+                <Navigation size={18} color="#047857" strokeWidth={2.4} />
+              </View>
             )}
             <Text
               style={{
@@ -423,6 +468,8 @@ export default function MyAddressesScreen({ navigation }) {
                 fontSize: 14,
                 fontWeight: 'normal',
                 color: '#047857',
+                marginLeft: 10,
+                flexShrink: 1,
               }}
             >
               {locating ? 'Detecting current location...' : 'Use my current location'}
@@ -474,7 +521,10 @@ export default function MyAddressesScreen({ navigation }) {
               return (
                 <Pressable
                   key={addr.id}
-                  onPress={() => setSelectedAddressId(addr.id)}
+                  onPress={() => handleSelectAddress(addr)}
+                  disabled={Boolean(selectingAddressId)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected, disabled: Boolean(selectingAddressId) }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -499,7 +549,9 @@ export default function MyAddressesScreen({ navigation }) {
                       marginRight: 14,
                     }}
                   >
-                    {isSelected && (
+                    {selectingAddressId === addr.id ? (
+                      <ActivityIndicator size="small" color="#047857" />
+                    ) : isSelected && (
                       <View
                         style={{
                           width: 11,
@@ -568,55 +620,49 @@ export default function MyAddressesScreen({ navigation }) {
           </Pressable>
         </ScrollView>
 
-        {/* Bottom Full-Width "Deliver here" Button matching Image 4 */}
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: '#ffffff',
-            paddingHorizontal: 20,
-            paddingTop: 10,
-            paddingBottom: Math.max(insets.bottom, 16),
-            borderTopWidth: 1,
-            borderColor: '#f1f5f9',
-          }}
+      </View>
+
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: Math.max(insets.bottom, 12),
+          paddingHorizontal: 20,
+          paddingTop: 12,
+          paddingBottom: 8,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#f1f5f9',
+        }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={selectedAddress ? `Deliver to ${selectedAddress.label || 'this address'}` : 'Select a delivery address'}
+          onPress={handleDeliverHere}
+          disabled={saving || !selectedAddressId}
+          style={({ pressed }) => ({
+            backgroundColor: pressed ? '#065f46' : '#047857',
+            borderRadius: 14,
+            minHeight: 54,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#047857',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 7,
+            elevation: 4,
+            opacity: saving || !selectedAddressId ? 0.62 : 1,
+          })}
         >
-          <Pressable
-            onPress={handleDeliverHere}
-            disabled={saving || !selectedAddressId}
-            style={({ pressed }) => ({
-              backgroundColor: pressed ? '#065f46' : '#047857',
-              borderRadius: 14,
-              height: 52,
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#047857',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.25,
-              shadowRadius: 8,
-              elevation: 4,
-              opacity: saving || !selectedAddressId ? 0.7 : 1,
-            })}
-          >
-            {saving ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text
-                style={{
-                  fontFamily: 'Inter-Bold',
-                  fontSize: 16,
-                  fontWeight: 'normal',
-                  color: '#ffffff',
-                  letterSpacing: -0.2,
-                }}
-              >
-                Deliver here
-              </Text>
-            )}
-          </Pressable>
-        </View>
+          {saving ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text style={{ fontFamily: 'Inter-Bold', fontSize: 15.5, color: '#ffffff' }}>
+              {selectedAddress ? `Deliver to ${selectedAddress.label || 'this address'}` : 'Select an address to continue'}
+            </Text>
+          )}
+        </Pressable>
       </View>
     </View>
   );

@@ -242,7 +242,6 @@ const productImages = {
   "Pond's Talcum Powder Dreamflow 23g": require("../../assets/Cleaned_Products/Pond's Talcum Powder Dreamflow 23g.webp"),
   "Pond's Talcum Powder Dreamflow Magic 20g": require("../../assets/Cleaned_Products/Pond's Talcum Powder Dreamflow Magic 20g.webp"),
   "Ponds Aloe Cool 180g": require("../../assets/Cleaned_Products/Ponds Aloe Cool 180g.webp"),
-  "Potato": require("../../assets/Cleaned_Products/Potato.webp"),
   "Prakrithi Coconut Oil": require("../../assets/Cleaned_Products/Prakrithi Coconut Oil.webp"),
   "Pran Litchi Drink": require("../../assets/Cleaned_Products/Pran Litchi Drink.webp"),
   "Pran Pudding Jar": require("../../assets/Cleaned_Products/Pran Pudding Jar.webp"),

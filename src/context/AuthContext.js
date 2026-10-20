@@ -189,16 +189,6 @@ export function AuthProvider({ children }) {
   const [needsAddressPrompt, setNeedsAddressPrompt] = useState(false);
   const [needsAddressSelection, setNeedsAddressSelection] = useState(false);
 
-  const checkAddressPromptNeeded = async (userId) => {
-    try {
-      const { data } = await apiClient.get(`/users/${userId}/addresses`, { __skipErrorToast: true });
-      const items = data.items || [];
-      return items.length === 0 ? 'location' : 'select';
-    } catch {
-      return null;
-    }
-  };
-
   const register = async ({ name, email, mobile, password }) => {
     const { data } = await apiClient.post('/auth/register', { name, email, mobile, password });
     const { token: newToken, ...profile } = data;
@@ -229,9 +219,8 @@ export function AuthProvider({ children }) {
           await AsyncStorage.setItem('authMode', 'firebase');
           await AsyncStorage.removeItem('userToken');
           if (result.role !== 'PARTNER') {
-            const addressState = await checkAddressPromptNeeded(result.id);
-            setNeedsAddressPrompt(addressState === 'location');
-            setNeedsAddressSelection(addressState === 'select');
+            setNeedsAddressPrompt(true);
+            setNeedsAddressSelection(false);
           }
           setToken(FIREBASE_NATIVE_MARKER);
           setUserProfile(result);
@@ -249,9 +238,8 @@ export function AuthProvider({ children }) {
     const { token: newToken, ...profile } = data;
     await login(newToken, profile, { deferState: true });
     if (profile.role !== 'PARTNER') {
-      const addressState = await checkAddressPromptNeeded(profile.id);
-      setNeedsAddressPrompt(addressState === 'location');
-      setNeedsAddressSelection(addressState === 'select');
+      setNeedsAddressPrompt(true);
+      setNeedsAddressSelection(false);
     }
     setToken(newToken);
     setUserProfile(profile);

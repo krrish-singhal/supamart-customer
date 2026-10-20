@@ -20,10 +20,10 @@ import {
   Plus,
   Minus,
   Tag,
-  Clock,
   LayoutGrid,
   Bell,
 } from 'lucide-react-native';
+import { useIsFocused } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import apiClient from '../services/api';
 import BrandBadge from '../components/BrandBadge';
@@ -140,83 +140,6 @@ const ROTATING_SEARCH_TERMS = [
   '"atta"',
 ];
 
-const TODAYS_BEST_PRICES = [
-  {
-    id: 'toor-dal-1kg',
-    name: 'Toor Dal (Unpolished)',
-    packSize: '1 kg',
-    price: 158,
-    mrp: 185,
-    discount: '14%',
-    time: '18 MINS',
-    image: require('../../assets/Cleaned_Products/Cheru Paruppu Moong Dal.webp'),
-  },
-  {
-    id: 'sunflower-oil-1l',
-    name: 'Refined Sunflower Oil',
-    packSize: '1 L',
-    price: 132,
-    mrp: 155,
-    discount: '15%',
-    time: '18 MINS',
-    image: require('../../assets/Cleaned_Products/Ruchi Gold Palm Oil.webp'),
-  },
-  {
-    id: 'sona-masoori-5kg',
-    name: 'Sona Masoori Rice',
-    packSize: '5 kg',
-    price: 340,
-    mrp: 399,
-    discount: '13%',
-    time: '18 MINS',
-    image: require('../../assets/Cleaned_Products/SSK Ponni Rice 1st.webp'),
-  },
-  {
-    id: 'aashirvaad-atta-5kg',
-    name: 'Aashirvaad Chakki Atta',
-    packSize: '5 kg',
-    price: 245,
-    mrp: 280,
-    discount: '12%',
-    time: '18 MINS',
-    image: require('../../assets/Cleaned_Products/Elite Atta.webp'),
-  },
-];
-
-
-const DEFAULT_FALLBACK_CATEGORIES = [
-  {
-    id: 'fresh-vegetables',
-    name: 'Fresh Vegetables',
-    image: require('../../assets/categories/home/fresh-vegetables.webp'),
-  },
-  {
-    id: 'rice-atta-grains',
-    name: 'Rice, Atta & Grains',
-    image: require('../../assets/Cleaned_Products/SSK Ponni Rice 1st.webp'),
-  },
-  {
-    id: 'dairy',
-    name: 'Dairy',
-    image: require('../../assets/Cleaned_Products/Milma Ghee.webp'),
-  },
-  {
-    id: 'cooking-oils-ghee',
-    name: 'Cooking Oils & Ghee',
-    image: require('../../assets/Cleaned_Products/Milma Ghee.webp'),
-  },
-  {
-    id: 'snacks-confectionery',
-    name: 'Snacks & Confectionery',
-    image: require('../../assets/Cleaned_Products/50-50 Biscuits.webp'),
-  },
-  {
-    id: 'household-cleaning',
-    name: 'Household & Cleaning',
-    image: require('../../assets/Cleaned_Products/Power Soap.webp'),
-  },
-];
-
 export default function HomeScreen({ navigation }) {
   const { width: screenWidth } = useWindowDimensions();
   const { items: cartItems, addItem, updateQty, getQty, subtotal } = useCart();
@@ -235,6 +158,31 @@ export default function HomeScreen({ navigation }) {
   const [showClubModal, setShowClubModal] = useState(false);
 
   const bannerScrollRef = useRef(null);
+  const bannerIndexRef = useRef(0);
+  const isDraggingBannerRef = useRef(false);
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    bannerIndexRef.current = activeBannerIndex;
+  }, [activeBannerIndex]);
+
+  // Automatic & continuous hero banner slideshow
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const bannerTimer = setInterval(() => {
+      if (isDraggingBannerRef.current) return;
+      const nextIndex = (bannerIndexRef.current + 1) % 3;
+      bannerIndexRef.current = nextIndex;
+      setActiveBannerIndex(nextIndex);
+      bannerScrollRef.current?.scrollTo({
+        x: nextIndex * (bannerCardWidth + 14),
+        animated: true,
+      });
+    }, 3500);
+
+    return () => clearInterval(bannerTimer);
+  }, [bannerCardWidth, isFocused]);
 
   // Rotating search term
   useEffect(() => {
@@ -290,9 +238,6 @@ export default function HomeScreen({ navigation }) {
       image: require('../../assets/categories/home/fresh-fruits.webp'),
     };
 
-    if (topLevel.length === 0) {
-      return [allItem, ...DEFAULT_FALLBACK_CATEGORIES];
-    }
     return [allItem, ...topLevel];
   }, [allCategories]);
 
@@ -307,7 +252,7 @@ export default function HomeScreen({ navigation }) {
       return orderA - orderB;
     });
 
-    return topLevel.length > 0 ? topLevel : DEFAULT_FALLBACK_CATEGORIES;
+    return topLevel;
   }, [allCategories]);
 
   // Fetch category-specific products dynamically from backend when category pill is selected
@@ -317,23 +262,28 @@ export default function HomeScreen({ navigation }) {
 
     let isCancelled = false;
     setLoadingCategoryProducts(true);
-    apiClient
-      .get('/products', {
-        params: { categoryId: activeCategory, limit: 30 },
-        __skipErrorToast: true,
-      })
-      .then(({ data }) => {
-        if (!isCancelled && data?.items) {
-          setCategoryProductsMap((prev) => ({
-            ...prev,
-            [activeCategory]: data.items,
-          }));
+    const fetchCategoryProducts = async () => {
+      try {
+        const items = [];
+        let cursor = null;
+        do {
+          const { data } = await apiClient.get('/products', {
+            params: { categoryId: activeCategory, limit: 50, ...(cursor ? { cursor } : {}) },
+            __skipErrorToast: true,
+          });
+          items.push(...(data?.items || []));
+          cursor = data?.cursor || null;
+        } while (cursor && !isCancelled);
+        if (!isCancelled) {
+          setCategoryProductsMap((prev) => ({ ...prev, [activeCategory]: items }));
         }
-      })
-      .catch(() => {})
-      .finally(() => {
+      } catch {
+        // Keep the products already loaded on Home when the category request fails.
+      } finally {
         if (!isCancelled) setLoadingCategoryProducts(false);
-      });
+      }
+    };
+    fetchCategoryProducts();
 
     return () => {
       isCancelled = true;
@@ -364,53 +314,20 @@ export default function HomeScreen({ navigation }) {
   const filteredProducts = useMemo(() => {
     if (activeCategory === 'all') return products;
 
-    const selectedCat = allCategories.find((c) => c.id === activeCategory);
-    const childIds = allCategories
-      .filter((c) => c.parentId === activeCategory)
-      .map((c) => c.id);
-    const targetCategoryIds = new Set([activeCategory, ...childIds]);
-    const catNameLower = (selectedCat?.name || activeCategory || '').toLowerCase();
-
-    const matches = products.filter((p) => {
-      if (p.categoryId && targetCategoryIds.has(p.categoryId)) return true;
-      if (catNameLower) {
-        const pName = (p.name || '').toLowerCase();
-        const pCat = (p.categoryName || p.category || '').toLowerCase();
-        if (pCat && (pCat === catNameLower || pCat.includes(catNameLower) || catNameLower.includes(pCat))) {
-          return true;
-        }
-        if (catNameLower.includes('fresh') || catNameLower.includes('vegetable')) {
-          if (pName.includes('vegetable') || pName.includes('tomato') || pName.includes('onion') || pName.includes('potato') || pName.includes('carrot') || pName.includes('beans') || pName.includes('cucumber')) return true;
-        }
-        if (catNameLower.includes('oil') || catNameLower.includes('ghee')) {
-          if (pName.includes('oil') || pName.includes('ghee')) return true;
-        }
-        if (catNameLower.includes('dairy')) {
-          if (pName.includes('milk') || pName.includes('butter') || pName.includes('paneer') || pName.includes('ghee')) return true;
-        }
-        if (catNameLower.includes('spice') || catNameLower.includes('masala')) {
-          if (pName.includes('masala') || pName.includes('powder') || pName.includes('chilli') || pName.includes('turmeric') || pName.includes('pepper')) return true;
-        }
-        if (catNameLower.includes('rice') || catNameLower.includes('grain') || catNameLower.includes('atta') || catNameLower.includes('staple')) {
-          if (pName.includes('rice') || pName.includes('atta') || pName.includes('dal') || pName.includes('flour') || pName.includes('rava') || pName.includes('maida')) return true;
-        }
-        if (catNameLower.includes('snack') || catNameLower.includes('confectionery')) {
-          if (pName.includes('biscuit') || pName.includes('noodle') || pName.includes('wafer') || pName.includes('snack') || pName.includes('rusk') || pName.includes('cookie') || pName.includes('chocolate')) return true;
-        }
-        if (catNameLower.includes('clean') || catNameLower.includes('home') || catNameLower.includes('detergent')) {
-          if (pName.includes('soap') || pName.includes('detergent') || pName.includes('liquid') || pName.includes('wash') || pName.includes('clean') || pName.includes('coil')) return true;
-        }
-        if (catNameLower.includes('beverage') || catNameLower.includes('tea') || catNameLower.includes('coffee')) {
-          if (pName.includes('tea') || pName.includes('coffee') || pName.includes('drink') || pName.includes('nescafe')) return true;
-        }
-        if (catNameLower.includes('personal') || catNameLower.includes('care')) {
-          if (pName.includes('soap') || pName.includes('paste') || pName.includes('brush') || pName.includes('shampoo') || pName.includes('talc') || pName.includes('oil')) return true;
-        }
-      }
-      return false;
-    });
-
-    return matches;
+    const targetCategoryIds = new Set([activeCategory]);
+    const categoryQueue = [activeCategory];
+    for (let index = 0; index < categoryQueue.length; index += 1) {
+      const parentId = categoryQueue[index];
+      allCategories
+        .filter((category) => category.parentId === parentId)
+        .forEach((category) => {
+          if (!targetCategoryIds.has(category.id)) {
+            targetCategoryIds.add(category.id);
+            categoryQueue.push(category.id);
+          }
+        });
+    }
+    return products.filter((product) => targetCategoryIds.has(product.categoryId));
   }, [products, activeCategory, allCategories]);
 
   const displayProducts = useMemo(() => {
@@ -420,6 +337,24 @@ export default function HomeScreen({ navigation }) {
     }
     return filteredProducts;
   }, [activeCategory, products, categoryProductsMap, filteredProducts]);
+
+  const bestPriceProducts = useMemo(() => products.flatMap((product) =>
+    (product.variants || []).flatMap((variant) => {
+      const mrp = Number(variant.price ?? variant.mrp ?? 0);
+      const price = Number(variant.offerPrice ?? variant.sellingPrice ?? mrp);
+      if (!(mrp > 0 && price > 0 && price < mrp) || isProductUnavailable(product, variant)) return [];
+      return [{
+        id: `${product.id}-${variant.id}`,
+        product,
+        variant,
+        name: product.name,
+        packSize: variant.label || product.unit || '1 item',
+        price,
+        mrp,
+        discount: Math.round(((mrp - price) / mrp) * 100),
+      }];
+    })
+  ).sort((a, b) => b.discount - a.discount).slice(0, 8), [products]);
 
   const cartItemCount = cartItems.reduce((sum, item) => sum + (item.qty || 1), 0);
   const firstCartItem = cartItems[0];
@@ -646,7 +581,14 @@ export default function HomeScreen({ navigation }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
           >
-            {homeCategories.map((cat) => {
+            {loading && allCategories.length === 0 ? (
+              Array.from({ length: 6 }, (_, index) => (
+                <View key={`home-category-skeleton-${index}`} style={{ alignItems: 'center', width: 52 }}>
+                  <Skeleton width={48} height={48} borderRadius={24} />
+                  <Skeleton width={42} height={10} borderRadius={4} className="mt-2" />
+                </View>
+              ))
+            ) : homeCategories.map((cat) => {
               const isActive = activeCategory === cat.id;
               const imgSource = getHomeScreenCategoryVisual(cat);
               const categoryLabel = getCategoryShortLabel(cat);
@@ -733,11 +675,25 @@ export default function HomeScreen({ navigation }) {
             snapToAlignment="start"
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={16}
+            onScrollBeginDrag={() => {
+              isDraggingBannerRef.current = true;
+            }}
+            onScrollEndDrag={() => {
+              isDraggingBannerRef.current = false;
+            }}
+            onMomentumScrollEnd={(e) => {
+              isDraggingBannerRef.current = false;
+              const x = e.nativeEvent.contentOffset.x;
+              const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + 14))));
+              bannerIndexRef.current = idx;
+              setActiveBannerIndex(idx);
+            }}
             onScroll={(e) => {
               const x = e.nativeEvent.contentOffset.x;
               const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + 14))));
               if (idx !== activeBannerIndex) {
                 setActiveBannerIndex(idx);
+                bannerIndexRef.current = idx;
               }
             }}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
@@ -1057,8 +1013,17 @@ export default function HomeScreen({ navigation }) {
             {[0, 1, 2].map((i) => {
               const isActive = activeBannerIndex === i;
               return (
-                <View
+                <Pressable
                   key={i}
+                  hitSlop={8}
+                  onPress={() => {
+                    bannerIndexRef.current = i;
+                    setActiveBannerIndex(i);
+                    bannerScrollRef.current?.scrollTo({
+                      x: i * (bannerCardWidth + 14),
+                      animated: true,
+                    });
+                  }}
                   style={{
                     width: isActive ? 20 : 5.5,
                     height: 5.5,
@@ -1512,22 +1477,8 @@ export default function HomeScreen({ navigation }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
           >
-            {TODAYS_BEST_PRICES.map((item) => {
-              const qty = getQty(item.id, item.id);
-              const cartItem = {
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                image: item.image,
-                variants: [
-                  {
-                    id: item.id,
-                    label: item.packSize,
-                    price: item.price,
-                    offerPrice: item.price,
-                  },
-                ],
-              };
+            {bestPriceProducts.map((item) => {
+              const qty = getQty(item.product.id, item.variant.id);
 
               return (
                 <View
@@ -1542,8 +1493,8 @@ export default function HomeScreen({ navigation }) {
                     position: 'relative',
                   }}
                 >
-                  {/* Yellow Discount badge top-left matching Image 4 */}
-                  <View
+                  {/* Discount is calculated only from this saved variant's MRP and offer price. */}
+                  {item.discount > 0 && <View
                     style={{
                       position: 'absolute',
                       top: 8,
@@ -1567,44 +1518,15 @@ export default function HomeScreen({ navigation }) {
                     >
                       {item.discount}{'\n'}OFF
                     </Text>
-                  </View>
+                  </View>}
 
                   {/* Product Image */}
                   <View style={{ width: '100%', height: 104, alignItems: 'center', justifyContent: 'center' }}>
                     <Image
-                      source={item.image}
+                      source={getProductImageSource(item.product, 200)}
                       style={{ width: '80%', height: '80%' }}
                       contentFit="contain"
                     />
-                  </View>
-
-                  {/* 18 MINS floating pill matching Image 4 */}
-                  <View
-                    style={{
-                      alignSelf: 'flex-start',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: '#ffffff',
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: '#e2e8f0',
-                      paddingHorizontal: 7,
-                      paddingVertical: 2.5,
-                      marginTop: 4,
-                    }}
-                  >
-                    <Clock size={11} color="#047857" strokeWidth={2.4} style={{ marginRight: 3 }} />
-                    <Text
-                      style={{
-                        fontFamily: 'Inter-ExtraBold',
-                        fontSize: 9.5,
-                        fontWeight: 'normal',
-                        color: '#0f172a',
-                        letterSpacing: 0.4,
-                      }}
-                    >
-                      {item.time}
-                    </Text>
                   </View>
 
                   {/* Pack Size */}
@@ -1669,7 +1591,7 @@ export default function HomeScreen({ navigation }) {
 
                     {qty === 0 ? (
                       <Pressable
-                        onPress={() => addItem(cartItem, cartItem.variants[0])}
+                        onPress={() => addItem(item.product, item.variant)}
                         style={{
                           borderWidth: 1.2,
                           borderColor: '#047857',
@@ -1702,7 +1624,7 @@ export default function HomeScreen({ navigation }) {
                         }}
                       >
                         <Pressable
-                          onPress={() => updateQty(item.id, item.id, -1)}
+                          onPress={() => updateQty(item.product.id, item.variant.id, -1)}
                           hitSlop={6}
                           style={{ paddingHorizontal: 5 }}
                         >
@@ -1720,7 +1642,7 @@ export default function HomeScreen({ navigation }) {
                           {qty}
                         </Text>
                         <Pressable
-                          onPress={() => addItem(cartItem, cartItem.variants[0])}
+                          onPress={() => addItem(item.product, item.variant)}
                           hitSlop={6}
                           style={{ paddingHorizontal: 5 }}
                         >
@@ -1775,7 +1697,17 @@ export default function HomeScreen({ navigation }) {
               rowGap: 16,
             }}
           >
-            {shopByCategories.map((cat) => {
+            {loading && allCategories.length === 0 ? (
+              Array.from({ length: 8 }, (_, index) => {
+                const cardW = Math.floor((screenWidth - 32 - 30) / 4);
+                return (
+                  <View key={`shop-category-skeleton-${index}`} style={{ width: cardW, alignItems: 'center' }}>
+                    <Skeleton width={cardW} height={cardW} borderRadius={18} />
+                    <Skeleton width="76%" height={12} borderRadius={4} className="mt-2" />
+                  </View>
+                );
+              })
+            ) : shopByCategories.map((cat) => {
               const cardW = Math.floor((screenWidth - 32 - 30) / 4);
               const visualSource = getHomeScreenCategoryVisual(cat);
 

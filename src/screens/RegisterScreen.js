@@ -106,8 +106,8 @@ export default function RegisterScreen({ route, navigation }) {
   const rowItemSize = Math.floor((contentWidth - 40 - 24) / 4);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#e2ece4' }} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#e2ece4" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -116,6 +116,7 @@ export default function RegisterScreen({ route, navigation }) {
           ref={scrollViewRef}
           contentContainerStyle={{
             flexGrow: 1,
+            backgroundColor: '#ffffff',
             paddingBottom: keyboardVisible ? 260 : Math.max(insets.bottom, 16) + 16,
             width: '100%',
             maxWidth: 480,

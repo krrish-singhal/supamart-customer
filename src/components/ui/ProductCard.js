@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Image } from 'expo-image';
-import { Plus, Minus, ShoppingBag, Clock } from 'lucide-react-native';
+import { Plus, Minus, ShoppingBag, Star } from 'lucide-react-native';
 import FavoriteButton from './FavoriteButton';
 import { getProductImageSource } from '../../utils/productImages';
 import { fonts } from '../../theme/typography';
@@ -189,6 +189,27 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             </View>
           )}
 
+          {item.isBestseller === true && (
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 7,
+                left: 7,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 3,
+                paddingHorizontal: 6,
+                paddingVertical: 3,
+                borderRadius: 8,
+                backgroundColor: '#fff7d6',
+                zIndex: 5,
+              }}
+            >
+              <Star size={9} color="#a16207" fill="#facc15" />
+              <Text style={{ fontFamily: fonts.bold, fontSize: 8.5, color: '#713f12' }}>Bestseller</Text>
+            </View>
+          )}
+
           {/* Top-Left Discount Badge matching Image 3 & 4 (e.g. 21% OFF / 15% OFF) */}
           {hasDiscount && discount > 0 ? (
             <View
@@ -231,30 +252,6 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             }}
           >
             <View style={{ width: 6.5, height: 6.5, borderRadius: 3.5, backgroundColor: '#16a34a' }} />
-          </View>
-
-          {/* Bottom-Left 18 MINS ETA Pill matching Image 3 & 4 */}
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 6,
-              left: 6,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#ffffff',
-              borderRadius: 12,
-              paddingHorizontal: 6,
-              paddingVertical: 2.5,
-              zIndex: 5,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.12,
-              shadowRadius: 2,
-              elevation: 2,
-            }}
-          >
-            <Clock size={10} color="#0f172a" strokeWidth={2.4} style={{ marginRight: 3.5 }} />
-            <Text style={{ fontFamily: fonts.bold, fontSize: 9.5, fontWeight: 'normal', color: '#0f172a' }}>18 MINS</Text>
           </View>
 
           {/* Stamped Red "SOLD OUT" badge */}

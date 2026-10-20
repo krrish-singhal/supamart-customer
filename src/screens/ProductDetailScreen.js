@@ -7,12 +7,10 @@ import {
   StatusBar,
   StyleSheet,
   Dimensions,
-  Share,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
   ChevronLeft,
-  Share2,
   Clock,
   Plus,
   Minus,
@@ -91,9 +89,33 @@ export default function ProductDetailScreen({ route, navigation }) {
     transform: [{ scale: addScale.value }],
   }));
 
-  // Fetch product snapshot
+  // Prefer the live Firestore record, then fall back to the backend catalog if
+  // this device cannot read that document directly. Product cards are sourced
+  // from the API too, so an API-backed item must still be openable here.
   useEffect(() => {
     setLoading(true);
+    setError(false);
+    let isCancelled = false;
+    let fallbackStarted = false;
+    const loadFromApi = async () => {
+      if (fallbackStarted) return;
+      fallbackStarted = true;
+      try {
+        const { data } = await apiClient.get(`/products/${currentId}`, { __skipErrorToast: true });
+        if (!isCancelled && data?.id) {
+          setProduct(data);
+          setSelectedVariant(data.variants?.[0] || null);
+          setActiveImageIndex(0);
+          setError(false);
+        } else if (!isCancelled) {
+          setError(true);
+        }
+      } catch {
+        if (!isCancelled) setError(true);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
     const unsub = onSnapshot(
       doc(db, 'products', currentId),
       (snap) => {
@@ -104,16 +126,15 @@ export default function ProductDetailScreen({ route, navigation }) {
           setActiveImageIndex(0);
           setLoading(false);
         } else {
-          setError(true);
-          setLoading(false);
+          loadFromApi();
         }
       },
-      () => {
-        setError(true);
-        setLoading(false);
-      }
+      loadFromApi
     );
-    return () => unsub();
+    return () => {
+      isCancelled = true;
+      unsub();
+    };
   }, [currentId]);
 
   const recommendationProductId = product?.id;
@@ -137,16 +158,6 @@ export default function ProductDetailScreen({ route, navigation }) {
     fetchRecs();
   }, [recommendationProductId, recommendationCategoryId]);
 
-  const handleShare = async () => {
-    if (!product) return;
-    try {
-      await Share.share({
-        message: `Check out ${product.name} on MS Traders!`,
-      });
-    } catch {
-      // Ignore
-    }
-  };
 
   const triggerAddAnimation = () => {
     addScale.value = withSequence(
@@ -159,18 +170,11 @@ export default function ProductDetailScreen({ route, navigation }) {
   // one purchasable item; the customer app must not invent larger pack prices.
   const variants = useMemo(() => {
     if (!product) return [];
-    if (product.variants?.length) return product.variants;
-    return [{
-      id: 'default',
-      label: product.unit || '1 item',
-      price: product.price ?? 0,
-      offerPrice: product.offerPrice ?? null,
-      stock: product.stock ?? 0,
-    }];
+    return Array.isArray(product.variants) ? product.variants : [];
   }, [product]);
 
   const currentVariant = selectedVariant || (variants.length > 1 ? variants[1] : variants[0]);
-  const currentVariantUnavailable = isProductUnavailable(product, currentVariant);
+  const currentVariantUnavailable = !currentVariant || isProductUnavailable(product, currentVariant);
   const price = currentVariant?.offerPrice ?? currentVariant?.price ?? 0;
   const mrp = currentVariant?.price ?? 0;
   const discount = getDiscountPercent(currentVariant);
@@ -242,7 +246,7 @@ export default function ProductDetailScreen({ route, navigation }) {
     product?.availability === 'OUT_OF_STOCK' ||
     product?.availability === 'UNAVAILABLE_TODAY' ||
     product?.isAvailableToday === false ||
-    (variants.length > 0 && variants.every((variant) => isProductUnavailable(product, variant)))
+    (variants.length === 0 || variants.every((variant) => isProductUnavailable(product, variant)))
   );
 
   if (isOutOfStock) {
@@ -641,39 +645,21 @@ export default function ProductDetailScreen({ route, navigation }) {
           <ChevronLeft size={24} color="#0f172a" strokeWidth={2.4} />
         </Pressable>
 
-        {/* Right Actions: Favorite Bookmark & Share */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <FavoriteButton
-            productId={product.id}
-            size={20}
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 21,
-              backgroundColor: '#ffffff',
-              borderWidth: 1,
-              borderColor: '#e2e8f0',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          />
-          <Pressable
-            onPress={handleShare}
-            hitSlop={10}
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 21,
-              backgroundColor: '#ffffff',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: '#e2e8f0',
-            }}
-          >
-            <Share2 size={19} color="#0f172a" strokeWidth={2.2} />
-          </Pressable>
-        </View>
+        {/* Right Actions: Favorite Bookmark */}
+        <FavoriteButton
+          productId={product.id}
+          size={20}
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: '#ffffff',
+            borderWidth: 1,
+            borderColor: '#e2e8f0',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        />
       </View>
 
       {/* Scrollable Content */}
@@ -726,24 +712,8 @@ export default function ProductDetailScreen({ route, navigation }) {
 
         {/* Product Details Section matching Image 2 */}
         <View style={{ paddingHorizontal: 18, paddingTop: 10 }}>
-          {/* Delivery pill & Category breadcrumb */}
+          {/* Category breadcrumb */}
           <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#ecfdf5',
-                paddingHorizontal: 10,
-                paddingVertical: 4.5,
-                borderRadius: 8,
-              }}
-            >
-              <Clock size={13} color="#047857" strokeWidth={2.4} style={{ marginRight: 5 }} />
-              <Text style={{ fontFamily: 'Inter-Bold', fontSize: 11.5, fontWeight: 'normal', color: '#047857' }}>
-                18 MINS
-              </Text>
-            </View>
-
             {product.categoryName || product.category ? (
               <Pressable
                 onPress={() => {

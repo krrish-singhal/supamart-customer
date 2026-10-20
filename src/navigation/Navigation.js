@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useEffect, useContext } from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -236,36 +236,24 @@ function DeliveryTabs() {
 }
 
 export default function Navigation() {
-  const { token, userProfile, needsAddressPrompt, needsAddressSelection } = useContext(AuthContext);
-  const [splashDismissed, setSplashDismissed] = useState(false);
+  const { token, userProfile, loading, needsAddressPrompt, needsAddressSelection } = useContext(AuthContext);
 
-  const handleSplashFinish = () => {
-    setSplashDismissed(true);
-    if (!token || needsAddressPrompt) {
-      if (navigationRef.isReady()) {
-        navigationRef.navigate('LocationPrompt');
-      }
-    } else if (needsAddressSelection && navigationRef.isReady()) {
-      navigationRef.navigate('MyAddresses', { afterLogin: true });
-    }
-  };
-
-  const handleSplashLogin = () => {
-    setSplashDismissed(true);
-    if (!token) {
-      if (navigationRef.isReady()) {
-        navigationRef.navigate('Login');
-      }
-    }
-  };
+  if (loading) return null;
 
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
+        key={token ? (userProfile?.role === 'PARTNER' ? 'partner-session' : 'customer-session') : 'guest-session'}
         screenOptions={{ headerShown: false }}
-        initialRouteName={
-          needsAddressPrompt ? 'LocationPrompt' : needsAddressSelection ? 'MyAddresses' : undefined
-        }
+        initialRouteName={token
+          ? userProfile?.role === 'PARTNER'
+            ? 'DeliveryMain'
+            : needsAddressPrompt
+              ? 'LocationPrompt'
+              : needsAddressSelection
+                ? 'MyAddresses'
+                : 'Main'
+          : 'Welcome'}
       >
         {token ? (
           userProfile?.role === 'PARTNER' ? (
@@ -428,15 +416,6 @@ export default function Navigation() {
           </>
         )}
       </Stack.Navigator>
-      {!splashDismissed && (
-        <View style={StyleSheet.absoluteFill}>
-          <WelcomeScreen
-            isSplash={true}
-            onFinish={handleSplashFinish}
-            onLogin={handleSplashLogin}
-          />
-        </View>
-      )}
       <DeliveryConfirmationModal />
     </NavigationContainer>
   );
