@@ -3,7 +3,7 @@ import 'dotenv/config';
 export default {
   "name": "MS Traders",
   "slug": "supamart-customer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "orientation": "portrait",
   "icon": "./assets/icon.png",
   "scheme": "mstraders",
@@ -12,7 +12,7 @@ export default {
   "splash": {
     "image": "./assets/logo.png",
     "resizeMode": "contain",
-    "backgroundColor": "#ffffff"
+    "backgroundColor": "#059669"
   },
   "ios": {
     "supportsTablet": true,
@@ -26,7 +26,7 @@ export default {
   },
   "android": {
     "package": "in.mstraders.grocery",
-    "versionCode": 3,
+    "versionCode": 4,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#ffffff"
@@ -34,7 +34,10 @@ export default {
     "edgeToEdgeEnabled": true,
     "permissions": [
       "android.permission.ACCESS_COARSE_LOCATION",
-      "android.permission.ACCESS_FINE_LOCATION"
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.ACCESS_BACKGROUND_LOCATION",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_LOCATION"
     ],
     "blockedPermissions": [
       "android.permission.READ_MEDIA_IMAGES",
@@ -63,13 +66,15 @@ export default {
         "image": "./assets/logo.png",
         "imageWidth": 200,
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#059669"
       }
     ],
     [
       "expo-location",
       {
-        "locationAlwaysAndWhenInUsePermission": "MS Traders uses your location to find stores near you and deliver to your address."
+        "locationAlwaysAndWhenInUsePermission": "MS Traders uses your location to find stores near you and deliver to your address.",
+        "isAndroidForegroundServiceEnabled": true,
+        "isAndroidBackgroundLocationEnabled": true
       }
     ],
     [

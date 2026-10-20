@@ -13,6 +13,12 @@ node_modules/
 dist/
 web-build/
 
+# CNG regenerates native projects from app.config.js on EAS. Local measurement
+# prebuilds use a debug signing key and must not override that production process.
+/android/
+/ios/
+reports/
+
 # Expo / Metro caches
 .expo/
 .expo-shared/

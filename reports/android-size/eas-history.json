@@ -1,0 +1,66 @@
+[
+  {
+    "id": "fc3fac68-f06e-4163-bb2c-0e195bdfc6b6",
+    "status": "FINISHED",
+    "buildProfile": "production",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "3",
+    "createdAt": "2026-10-13T14:31:07.474Z"
+  },
+  {
+    "id": "102746c2-3c2a-4ee2-a911-8ff7de769fe6",
+    "status": "ERRORED",
+    "buildProfile": "production",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "3",
+    "createdAt": "2026-10-13T11:18:05.295Z"
+  },
+  {
+    "id": "72d38c19-484f-476e-aa66-ac48bfb12d63",
+    "status": "ERRORED",
+    "buildProfile": "production",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "3",
+    "createdAt": "2026-10-13T10:52:15.724Z"
+  },
+  {
+    "id": "62039649-7714-450d-8527-035b4d946748",
+    "status": "FINISHED",
+    "buildProfile": "production",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "2",
+    "createdAt": "2026-10-11T19:27:37.283Z"
+  },
+  {
+    "id": "f09f24c0-034b-49ee-ae83-5d2586b774a6",
+    "status": "FINISHED",
+    "buildProfile": "production",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "1",
+    "createdAt": "2026-10-11T18:15:17.635Z"
+  },
+  {
+    "id": "3dd01d1f-fc5d-473c-af21-420c36b39c55",
+    "status": "ERRORED",
+    "buildProfile": "production",
+    "appVersion": null,
+    "appBuildVersion": null,
+    "createdAt": "2026-10-11T17:41:48.849Z"
+  },
+  {
+    "id": "bb212cdc-1f89-41e4-b8d8-d968151b0472",
+    "status": "ERRORED",
+    "buildProfile": "production",
+    "appVersion": null,
+    "appBuildVersion": null,
+    "createdAt": "2026-10-11T17:25:16.986Z"
+  },
+  {
+    "id": "64cd0eec-34dd-4893-92bd-c4a2fd4b13dc",
+    "status": "FINISHED",
+    "buildProfile": "preview",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "1",
+    "createdAt": "2026-09-18T05:10:25.610Z"
+  }
+]

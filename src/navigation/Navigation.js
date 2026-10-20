@@ -1,16 +1,19 @@
-import { useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { navigationRef } from './navigationRef';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, LayoutGrid, ShoppingCart, Package, Heart } from 'lucide-react-native';
+import { Home, LayoutGrid, Tag, ShoppingBag, Package } from 'lucide-react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring,
 } from 'react-native-reanimated';
 import { AuthContext } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { fonts } from '../theme/typography';
 
+import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -19,6 +22,7 @@ import CategoryScreen from '../screens/CategoryScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import ProductListScreen from '../screens/ProductListScreen';
+import MonthlyStockUpScreen from '../screens/MonthlyStockUpScreen';
 import SearchScreen from '../screens/SearchScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import CartScreen from '../screens/CartScreen';
@@ -28,13 +32,23 @@ import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import AddAddressScreen from '../screens/AddAddressScreen';
+import AccountScreen from '../screens/AccountScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import MyAddressesScreen from '../screens/MyAddressesScreen';
-import Loader from '../components/Loader';
+import LocationPromptScreen from '../screens/LocationPromptScreen';
+import ApplyCouponScreen from '../screens/ApplyCouponScreen';
+import OrderConfirmationScreen from '../screens/OrderConfirmationScreen';
+import OrderDetailScreen from '../screens/OrderDetailScreen';
+import RefundStatusScreen from '../screens/RefundStatusScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
+import ReportIssueScreen from '../screens/ReportIssueScreen';
+import OfflineScreen from '../screens/OfflineScreen';
 
 import DeliveryOrdersScreen from '../screens/DeliveryOrdersScreen';
 import DeliveryMapScreen from '../screens/DeliveryMapScreen';
 import DeliveryConfirmationModal from '../components/DeliveryConfirmationModal';
+
+export { navigationRef };
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,9 +56,9 @@ const Tab = createBottomTabNavigator();
 const TABS = [
   { name: 'Home',       label: 'Home',       Icon: Home },
   { name: 'Categories', label: 'Categories', Icon: LayoutGrid },
-  { name: 'Cart',       label: 'Cart',       Icon: ShoppingCart },
   { name: 'Orders',     label: 'Orders',     Icon: Package },
-  { name: 'Favorites',  label: 'Favorites',  Icon: Heart },
+  { name: 'Offers',     label: 'Offers',     Icon: Tag },
+  { name: 'Cart',       label: 'Cart',       Icon: ShoppingBag },
 ];
 
 const DELIVERY_TABS = [
@@ -59,14 +73,14 @@ function TabBarIcon({ Icon, focused }) {
 
   useEffect(() => {
     scale.value = focused
-      ? withSpring(1.15, { damping: 10, stiffness: 200 })
-      : withSpring(1, { damping: 10, stiffness: 200 });
+      ? withSpring(1.12, { damping: 12, stiffness: 220 })
+      : withSpring(1, { damping: 12, stiffness: 220 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focused]);
 
   return (
     <Animated.View style={animStyle}>
-      <Icon size={22} color={focused ? '#16a34a' : '#94a3b8'} strokeWidth={focused ? 2.2 : 1.8} />
+      <Icon size={22} color={focused ? '#047857' : '#64748b'} strokeWidth={focused ? 2.3 : 1.8} />
     </Animated.View>
   );
 }
@@ -74,12 +88,18 @@ function TabBarIcon({ Icon, focused }) {
 function CustomTabBar({ state, descriptors, navigation, tabs }) {
   const insets = useSafeAreaInsets();
   const { itemCount } = useCart();
+  const currentRoute = state.routes[state.index];
+  const currentOptions = descriptors[currentRoute?.key]?.options;
+
+  if (currentRoute?.name === 'Cart' || currentOptions?.tabBarStyle?.display === 'none') {
+    return null;
+  }
 
   return (
     <View
       style={[
         styles.tabBar,
-        { paddingBottom: insets.bottom, height: 60 + insets.bottom },
+        { paddingBottom: insets.bottom > 0 ? insets.bottom : 8, height: 60 + (insets.bottom > 0 ? insets.bottom : 8) },
       ]}
     >
       {state.routes.map((route, index) => {
@@ -101,13 +121,6 @@ function CustomTabBar({ state, descriptors, navigation, tabs }) {
             accessibilityLabel={options.tabBarAccessibilityLabel}
             style={styles.tabItem}
           >
-            {/* Active background pill */}
-            {isFocused && (
-              <Animated.View
-                entering={undefined}
-                style={styles.activePill}
-              />
-            )}
             <View style={{ position: 'relative' }}>
               <TabBarIcon Icon={tab.Icon} focused={isFocused} />
               {tab.name === 'Cart' && itemCount > 0 && (
@@ -119,7 +132,11 @@ function CustomTabBar({ state, descriptors, navigation, tabs }) {
             <Text
               style={[
                 styles.tabLabel,
-                { color: isFocused ? '#16a34a' : '#94a3b8', fontWeight: isFocused ? '700' : '500' },
+                {
+                  fontFamily: isFocused ? fonts.bold : fonts.medium,
+                  color: isFocused ? '#047857' : '#64748b',
+                  fontWeight: 'normal',
+                },
               ]}
             >
               {tab.label}
@@ -161,7 +178,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#16a34a',
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 11.5,
     marginTop: 4,
     letterSpacing: 0.1,
   },
@@ -172,7 +189,7 @@ const styles = StyleSheet.create({
     minWidth: 17,
     height: 17,
     borderRadius: 9,
-    backgroundColor: '#ef4444',
+    backgroundColor: '#047857',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
@@ -180,8 +197,9 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
   },
   badgeText: {
-    fontSize: 9,
-    fontWeight: '800',
+    fontFamily: fonts.bold,
+    fontSize: 9.5,
+    fontWeight: 'normal',
     color: '#ffffff',
     lineHeight: 12,
   },
@@ -195,9 +213,13 @@ function HomeTabs() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Categories" component={CategoriesScreen} />
-      <Tab.Screen name="Cart" component={CartScreen} />
       <Tab.Screen name="Orders" component={OrdersScreen} />
-      <Tab.Screen name="Favorites" component={FavoritesScreen} />
+      <Tab.Screen name="Offers" component={MonthlyStockUpScreen} />
+      <Tab.Screen
+        name="Cart"
+        component={CartScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
     </Tab.Navigator>
   );
 }
@@ -214,13 +236,37 @@ function DeliveryTabs() {
 }
 
 export default function Navigation() {
-  const { token, userProfile, loading } = useContext(AuthContext);
+  const { token, userProfile, needsAddressPrompt, needsAddressSelection } = useContext(AuthContext);
+  const [splashDismissed, setSplashDismissed] = useState(false);
 
-  if (loading) return <Loader />;
+  const handleSplashFinish = () => {
+    setSplashDismissed(true);
+    if (!token || needsAddressPrompt) {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('LocationPrompt');
+      }
+    } else if (needsAddressSelection && navigationRef.isReady()) {
+      navigationRef.navigate('MyAddresses', { afterLogin: true });
+    }
+  };
+
+  const handleSplashLogin = () => {
+    setSplashDismissed(true);
+    if (!token) {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('Login');
+      }
+    }
+  };
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer ref={navigationRef}>
+      <Stack.Navigator
+        screenOptions={{ headerShown: false }}
+        initialRouteName={
+          needsAddressPrompt ? 'LocationPrompt' : needsAddressSelection ? 'MyAddresses' : undefined
+        }
+      >
         {token ? (
           userProfile?.role === 'PARTNER' ? (
             <>
@@ -245,7 +291,16 @@ export default function Navigation() {
                 component={ProductListScreen}
                 options={{ headerShown: false }}
               />
-              <Stack.Screen name="Search" component={SearchScreen} />
+              <Stack.Screen
+                name="MonthlyStockUp"
+                component={MonthlyStockUpScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Search"
+                component={SearchScreen}
+                options={{ headerShown: false }}
+              />
               <Stack.Screen
                 name="Notifications"
                 component={NotificationsScreen}
@@ -257,6 +312,11 @@ export default function Navigation() {
                 options={{ headerShown: false }}
               />
               <Stack.Screen
+                name="Account"
+                component={AccountScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
                 name="EditProfile"
                 component={EditProfileScreen}
                 options={{ headerShown: false }}
@@ -264,6 +324,11 @@ export default function Navigation() {
               <Stack.Screen
                 name="MyAddresses"
                 component={MyAddressesScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="LocationPrompt"
+                component={LocationPromptScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
@@ -281,16 +346,97 @@ export default function Navigation() {
                 component={OrderTrackingScreen}
                 options={{ headerShown: false }}
               />
+              <Stack.Screen
+                name="Orders"
+                component={OrdersScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Favorites"
+                component={FavoritesScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ApplyCoupon"
+                component={ApplyCouponScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="OrderConfirmation"
+                component={OrderConfirmationScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="OrderDetail"
+                component={OrderDetailScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="RefundStatus"
+                component={RefundStatusScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="HelpSupport"
+                component={HelpSupportScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ReportIssue"
+                component={ReportIssueScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Offline"
+                component={OfflineScreen}
+                options={{ headerShown: false }}
+              />
             </>
           )
         ) : (
           <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen
+              name="Welcome"
+              component={WelcomeScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Register"
+              component={RegisterScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="LocationPrompt"
+              component={LocationPromptScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="AddAddress"
+              component={AddAddressScreen}
+              options={{ headerShown: false }}
+            />
           </>
         )}
       </Stack.Navigator>
+      {!splashDismissed && (
+        <View style={StyleSheet.absoluteFill}>
+          <WelcomeScreen
+            isSplash={true}
+            onFinish={handleSplashFinish}
+            onLogin={handleSplashLogin}
+          />
+        </View>
+      )}
       <DeliveryConfirmationModal />
     </NavigationContainer>
   );

@@ -35,13 +35,21 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
+let networkErrorListener = null;
+export function setNetworkErrorListener(listener) {
+  networkErrorListener = listener;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Prefer the server's own message (e.g. "Incorrect password", "No account found
-    // with this email…") whenever the request actually reached the backend. Only fall
-    // back to a generic message for genuine transport failures — never surface raw
-    // axios strings like "Network Error" / "timeout of 20000ms exceeded" to the user.
+    // Notify network context if device had transport failure
+    if (!error.response && (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message?.includes('Network Error'))) {
+      if (typeof networkErrorListener === 'function') {
+        networkErrorListener();
+      }
+    }
+
     let message;
     if (error.response) {
       message =
@@ -63,3 +71,4 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+

@@ -15,3 +15,4 @@ export { default as BrandLogo } from './BrandLogo';
 export { default as FavoriteButton } from './FavoriteButton';
 export { default as FreeDeliveryBanner } from './FreeDeliveryBanner';
 export { default as CartBar, CART_BAR_SPACER } from './CartBar';
+export { default as ProductDetailModal } from '../ProductDetailModal';

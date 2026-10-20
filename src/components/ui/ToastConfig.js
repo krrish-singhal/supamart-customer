@@ -1,122 +1,138 @@
-import { View, Text } from 'react-native';
-import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
-import { CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react-native';
+import React from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react-native';
 
 const VARIANTS = {
   success: {
     Icon: CheckCircle2,
-    iconColor: '#16a34a',
-    iconBg: 'rgba(22,163,74,0.12)',
-    borderColor: 'rgba(22,163,74,0.2)',
-    accentColor: '#16a34a',
-    bg: 'rgba(240,253,244,0.96)',
-    textColor: '#14532d',
+    iconColor: '#047857',
+    badgeBg: '#ecfdf5',
   },
   error: {
-    Icon: XCircle,
+    Icon: AlertCircle,
     iconColor: '#dc2626',
-    iconBg: 'rgba(220,38,38,0.1)',
-    borderColor: 'rgba(220,38,38,0.2)',
-    accentColor: '#dc2626',
-    bg: 'rgba(254,242,242,0.96)',
-    textColor: '#7f1d1d',
+    badgeBg: '#fef2f2',
   },
   warning: {
     Icon: AlertTriangle,
     iconColor: '#d97706',
-    iconBg: 'rgba(217,119,6,0.1)',
-    borderColor: 'rgba(217,119,6,0.2)',
-    accentColor: '#d97706',
-    bg: 'rgba(255,251,235,0.96)',
-    textColor: '#78350f',
+    badgeBg: '#fffbeb',
   },
   info: {
     Icon: Info,
-    iconColor: '#2563eb',
-    iconBg: 'rgba(37,99,235,0.1)',
-    borderColor: 'rgba(37,99,235,0.2)',
-    accentColor: '#2563eb',
-    bg: 'rgba(239,246,255,0.96)',
-    textColor: '#1e3a5f',
+    iconColor: '#047857',
+    badgeBg: '#ecfdf5',
   },
 };
 
-function ToastCard({ type = 'info', text1, text2 }) {
+function ToastCard({ type = 'info', text1, text2, hide, onPress }) {
   const v = VARIANTS[type] || VARIANTS.info;
   const { Icon } = v;
 
+  const handlePress = () => {
+    if (onPress) onPress();
+    if (hide) hide();
+  };
+
+  // Keep message concise and remove raw code or JSON dump if any leaked through
+  const cleanText1 = typeof text1 === 'string'
+    ? text1.replace(/(\r\n|\n|\r)/gm, ' ').trim()
+    : text1;
+  const cleanText2 = typeof text2 === 'string'
+    ? text2.replace(/(\r\n|\n|\r)/gm, ' ').trim()
+    : text2;
+
   return (
-    <Animated.View
-      entering={FadeInDown.duration(260).springify().damping(20).stiffness(220)}
-      exiting={FadeOutUp.duration(180)}
+    <Pressable
+      onPress={handlePress}
       style={{
         alignSelf: 'flex-end',
         marginRight: 16,
-        marginLeft: 64,
-        backgroundColor: v.bg,
-        borderRadius: 18,
+        width: 'auto',
+        minWidth: 260,
+        maxWidth: 340,
+        backgroundColor: '#ffffff',
+        borderRadius: 14,
         borderWidth: 1,
-        borderColor: v.borderColor,
-        borderLeftWidth: 3.5,
-        borderLeftColor: v.accentColor,
-        paddingVertical: 11,
-        paddingRight: 14,
-        paddingLeft: 11,
+        borderColor: '#e2e8f0',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: v.accentColor,
+        shadowColor: '#000000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 12,
-        minWidth: 240,
-        maxWidth: 320,
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+        elevation: 9999,
+        zIndex: 9999,
       }}
     >
+      {/* Icon Badge */}
       <View
         style={{
-          width: 34,
-          height: 34,
+          width: 32,
+          height: 32,
           borderRadius: 10,
-          backgroundColor: v.iconBg,
+          backgroundColor: v.badgeBg,
           alignItems: 'center',
           justifyContent: 'center',
-          marginRight: 10,
+          marginRight: 12,
           flexShrink: 0,
         }}
       >
-        <Icon size={17} color={v.iconColor} />
+        <Icon size={18} color={v.iconColor} strokeWidth={2.4} />
       </View>
-      <View style={{ flex: 1 }}>
-        {text1 ? (
+
+      {/* Concise Notification Message */}
+      <View style={{ flex: 1, paddingRight: 8 }}>
+        {cleanText1 ? (
           <Text
             style={{
-              fontSize: 13,
+              fontSize: 13.5,
               fontWeight: '700',
-              color: v.textColor,
+              color: '#0f172a',
               lineHeight: 18,
-              marginBottom: text2 ? 2 : 0,
             }}
             numberOfLines={2}
           >
-            {text1}
+            {cleanText1}
           </Text>
         ) : null}
-        {text2 ? (
+        {cleanText2 ? (
           <Text
             style={{
               fontSize: 12,
               fontWeight: '500',
               color: '#64748b',
               lineHeight: 16,
+              marginTop: cleanText1 ? 2 : 0,
             }}
-            numberOfLines={2}
+            numberOfLines={1}
           >
-            {text2}
+            {cleanText2}
           </Text>
         ) : null}
       </View>
-    </Animated.View>
+
+      {/* Close button */}
+      <Pressable
+        onPress={(e) => {
+          e.stopPropagation?.();
+          if (hide) hide();
+        }}
+        hitSlop={8}
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f1f5f9',
+        }}
+      >
+        <X size={13} color="#64748b" strokeWidth={2.4} />
+      </Pressable>
+    </Pressable>
   );
 }
 

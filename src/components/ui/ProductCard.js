@@ -1,107 +1,469 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Image } from 'expo-image';
-import { Plus, Minus, ShoppingBag } from 'lucide-react-native';
-import Animated, { useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated';
+import { Plus, Minus, ShoppingBag, Clock } from 'lucide-react-native';
 import FavoriteButton from './FavoriteButton';
 import { getProductImageSource } from '../../utils/productImages';
+import { fonts } from '../../theme/typography';
+import { isProductUnavailable } from '../../utils/productAvailability';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function getDiscountPercent(variant) {
-  if (!variant?.price || variant.offerPrice == null || variant.offerPrice >= variant.price) return 0;
-  return Math.round(((variant.price - variant.offerPrice) / variant.price) * 100);
-}
 
 function getStockStatus(item, variant) {
   const stock = variant?.stock ?? 0;
-  if (item.availability === 'OUT_OF_STOCK' || stock <= 0) return { label: 'Out of Stock', color: '#ef4444' };
+  if (isProductUnavailable(item, variant)) return { label: 'Out of Stock', color: '#ef4444' };
   if (stock <= 10) return { label: 'Limited Stock', color: '#d97706' };
   return { label: 'In Stock', color: '#16a34a' };
 }
 
+function getProductShortNote(item) {
+  if (item?.shortNote) return item.shortNote;
+  if (item?.description && item.description.length < 28) return item.description;
+  const lower = (item?.name || '').toLowerCase();
+  if (lower.includes('tomato')) return 'Tangy, for curries';
+  if (lower.includes('corn')) return 'Sweet, juicy kernels';
+  if (lower.includes('chilli') || lower.includes('chili')) return 'Medium spice';
+  if (lower.includes('gourd')) return 'Tender';
+  if (lower.includes('onion')) return 'Medium size';
+  if (lower.includes('potato')) return 'All-purpose';
+  if (lower.includes('apple')) return 'Crisp & sweet';
+  if (lower.includes('banana')) return 'Naturally ripened';
+  if (lower.includes('milk')) return 'Fresh & pasteurized';
+  if (lower.includes('paneer')) return 'Soft & fresh';
+  if (lower.includes('bread')) return 'Freshly baked daily';
+  if (lower.includes('dal') || lower.includes('pulse')) return 'High protein, unpolished';
+  if (lower.includes('rice')) return 'Aged & aromatic';
+  if (lower.includes('atta') || lower.includes('flour')) return '100% whole wheat';
+  if (lower.includes('oil')) return 'Pure & cold pressed';
+  if (lower.includes('ghee')) return 'Traditional aroma';
+  return 'Fresh & handpicked';
+}
 
-// layout="list" buttons are sharp-cornered, white/outlined — matches the client's
-// reference boxes exactly ("Register to add to cart" style). layout="grid" buttons
-// stay small filled pills since they live in tight horizontal carousels.
 function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fullWidth }) {
   if (outOfStock) {
     return (
       <View
         style={{
-          height: fullWidth ? 40 : 34, borderRadius: fullWidth ? 0 : 4,
-          backgroundColor: fullWidth ? '#fff' : '#f1f5f9',
-          borderWidth: fullWidth ? 1.5 : 0, borderColor: '#e2e8f0',
-          alignItems: 'center', justifyContent: 'center', width: fullWidth ? '100%' : 64, paddingHorizontal: 4,
+          height: fullWidth ? 40 : 34,
+          borderRadius: fullWidth ? 0 : 6,
+          backgroundColor: '#fff',
+          borderWidth: 1.5,
+          borderColor: '#ef4444',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: fullWidth ? '100%' : 64,
+          paddingHorizontal: 4,
         }}
       >
-        <Text style={{ fontSize: fullWidth ? 13 : 10, fontWeight: '700', color: '#94a3b8' }} numberOfLines={1}>
-          {fullWidth ? 'Unavailable' : 'Sold Out'}
+        <Text style={{ fontFamily: 'Inter-Bold', fontSize: fullWidth ? 13 : 10, fontWeight: 'normal', color: '#ef4444' }} numberOfLines={1}>
+          Sold Out
         </Text>
       </View>
     );
   }
+
   if (qty === 0) {
     return (
       <Pressable
-        onPress={onAdd || onIncrement}
+        onPress={(e) => {
+          e?.stopPropagation?.();
+          (onAdd || onIncrement)?.();
+        }}
         style={
           fullWidth
             ? { height: 40, borderRadius: 0, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#16a34a', alignItems: 'center', justifyContent: 'center', width: '100%' }
-            : { height: 34, borderRadius: 4, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center', width: 64 }
+            : { height: 34, borderRadius: 6, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center', width: 64 }
         }
       >
-        <Text style={{ color: fullWidth ? '#16a34a' : '#fff', fontSize: fullWidth ? 13 : 11, fontWeight: '800' }} numberOfLines={1}>
+        <Text style={{ fontFamily: 'Inter-Bold', color: fullWidth ? '#16a34a' : '#fff', fontSize: fullWidth ? 13 : 11, fontWeight: 'normal' }} numberOfLines={1}>
           {fullWidth ? 'Add to Cart' : 'ADD'}
         </Text>
       </Pressable>
     );
   }
+
   return (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff',
-      borderRadius: fullWidth ? 0 : 4, height: fullWidth ? 40 : 34, borderWidth: fullWidth ? 1.5 : 1, borderColor: '#16a34a', width: fullWidth ? '100%' : 84,
-    }}>
-      <Pressable onPress={onDecrement} style={{ width: 36, height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#fff',
+        borderRadius: fullWidth ? 0 : 6,
+        height: fullWidth ? 40 : 34,
+        borderWidth: fullWidth ? 1.5 : 1,
+        borderColor: '#16a34a',
+        width: fullWidth ? '100%' : 84,
+      }}
+    >
+      <Pressable
+        onPress={(e) => {
+          e?.stopPropagation?.();
+          onDecrement?.();
+        }}
+        style={{ width: 34, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+      >
         <Minus size={14} color="#16a34a" strokeWidth={3} />
       </Pressable>
-      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0f172a' }}>{qty}</Text>
-      <Pressable onPress={onIncrement} style={{ width: 36, height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ fontFamily: 'Inter-Bold', fontSize: 13, fontWeight: 'normal', color: '#0f172a' }}>{qty}</Text>
+      <Pressable
+        onPress={(e) => {
+          e?.stopPropagation?.();
+          onIncrement?.();
+        }}
+        style={{ width: 34, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+      >
         <Plus size={14} color="#16a34a" strokeWidth={3} />
       </Pressable>
     </View>
   );
 }
 
-// layout="grid" (default) — compact card for horizontal carousels (recommendations, related items).
-// layout="list" — full-width row for the main product listing screens.
-function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, style, layout = 'grid' }) {
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
+// layout="categoryGrid" — 2-column grid card matching screenshots 1 & 5
+// layout="grid" — compact card for horizontal carousels (150px fixed)
+// layout="list" — full-width row for lists
+function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, style, layout = 'grid', cardWidth }) {
   const variant = item.variants?.[0];
-  const mrp = variant?.price ?? 0;
-  const offerPrice = variant?.offerPrice ?? null;
-  const discount = getDiscountPercent(variant);
+  const mrp = Number(variant?.mrp ?? variant?.price ?? item.mrp ?? item.price ?? 0);
+  const rawOffer = variant ? variant.offerPrice : item.offerPrice;
+  const offerPrice = (rawOffer != null && rawOffer !== '' && !isNaN(Number(rawOffer)) && Number(rawOffer) > 0)
+    ? Number(rawOffer)
+    : null;
+  const sellingPrice = offerPrice != null ? offerPrice : mrp;
+  const hasDiscount = mrp > 0 && offerPrice != null && offerPrice < mrp;
+  const discount = hasDiscount ? Math.round(((mrp - offerPrice) / mrp) * 100) : 0;
+  const strikeMrp = hasDiscount ? mrp : null;
+
   const stockStatus = getStockStatus(item, variant);
   const outOfStock = stockStatus.label === 'Out of Stock';
   const imageSource = getProductImageSource(item);
+  const unitLabel = variant?.label || item?.unit || '1 Unit';
 
+  // Compact category card: square image, aligned details, price and cart control.
+  if (layout === 'categoryGrid') {
+    const shortNote = getProductShortNote(item);
+
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityLabel={item.name}
+        style={({ pressed }) => [
+          {
+            width: cardWidth ?? style?.width ?? '48%',
+            maxWidth: cardWidth ?? style?.maxWidth ?? '48%',
+            flexGrow: 0,
+            flexShrink: 0,
+            backgroundColor: 'transparent',
+            marginBottom: 18,
+            overflow: 'hidden',
+            opacity: outOfStock ? 0.78 : (pressed ? 0.94 : 1),
+          },
+          style,
+        ]}
+      >
+        {/* Top Image area with discount tag, veg icon, and ETA pill matching Screenshots 3 & 4 */}
+        <View
+          style={{
+            width: '100%',
+            aspectRatio: 1,
+            height: cardWidth,
+            borderRadius: 14,
+            backgroundColor: '#f8fafc',
+            overflow: 'hidden',
+            position: 'relative',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+          }}
+        >
+          {imageSource ? (
+            <Image
+              source={imageSource}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <ShoppingBag size={28} color="#cbd5e1" />
+            </View>
+          )}
+
+          {/* Top-Left Discount Badge matching Image 3 & 4 (e.g. 21% OFF / 15% OFF) */}
+          {hasDiscount && discount > 0 ? (
+            <View
+              style={{
+                position: 'absolute',
+                top: 6,
+                left: 6,
+                backgroundColor: '#f59e0b',
+                borderRadius: 6,
+                paddingHorizontal: 6,
+                paddingVertical: 2.5,
+                alignItems: 'center',
+                zIndex: 5,
+              }}
+            >
+              <Text style={{ fontFamily: fonts.extraBold, fontSize: 9.5, fontWeight: 'normal', color: '#451a03', lineHeight: 11 }}>
+                {discount}%
+              </Text>
+              <Text style={{ fontFamily: fonts.extraBold, fontSize: 8.5, fontWeight: 'normal', color: '#451a03', lineHeight: 10 }}>
+                OFF
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Top-Right Veg Symbol matching Image 3 & 4 */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              width: 15,
+              height: 15,
+              borderWidth: 1.2,
+              borderColor: '#16a34a',
+              borderRadius: 3.5,
+              backgroundColor: '#ffffff',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 5,
+            }}
+          >
+            <View style={{ width: 6.5, height: 6.5, borderRadius: 3.5, backgroundColor: '#16a34a' }} />
+          </View>
+
+          {/* Bottom-Left 18 MINS ETA Pill matching Image 3 & 4 */}
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 6,
+              left: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#ffffff',
+              borderRadius: 12,
+              paddingHorizontal: 6,
+              paddingVertical: 2.5,
+              zIndex: 5,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.12,
+              shadowRadius: 2,
+              elevation: 2,
+            }}
+          >
+            <Clock size={10} color="#0f172a" strokeWidth={2.4} style={{ marginRight: 3.5 }} />
+            <Text style={{ fontFamily: fonts.bold, fontSize: 9.5, fontWeight: 'normal', color: '#0f172a' }}>18 MINS</Text>
+          </View>
+
+          {/* Stamped Red "SOLD OUT" badge */}
+          {outOfStock && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.55)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 6,
+              }}
+            >
+              <View
+                style={{
+                  borderWidth: 2,
+                  borderColor: '#ef4444',
+                  borderRadius: 4,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  transform: [{ rotate: '-12deg' }],
+                  backgroundColor: 'rgba(254, 242, 242, 0.95)',
+                }}
+              >
+                <Text style={{ fontFamily: fonts.extraBold, fontSize: 13, fontWeight: 'normal', color: '#ef4444', letterSpacing: 1.2 }}>
+                  SOLD OUT
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Product Details Section directly on screen background matching Image 3 & 4 */}
+        <View style={{ paddingTop: 6, paddingHorizontal: 1, width: '100%', minWidth: 0 }}>
+          {/* Unit / Weight Label */}
+          <Text
+            style={{ fontFamily: fonts.regular, fontSize: 11, fontWeight: 'normal', color: '#64748b', height: 15 }}
+            numberOfLines={1}
+          >
+            {unitLabel}
+          </Text>
+
+          {/* Product Title */}
+          <Text
+            style={{
+              fontFamily: fonts.bold,
+              fontSize: 13,
+              fontWeight: 'normal',
+              color: '#0f172a',
+              marginTop: 1,
+              lineHeight: 17,
+              height: 17,
+              width: cardWidth ? cardWidth - 2 : '100%',
+              maxWidth: '100%',
+              minWidth: 0,
+              flexShrink: 1,
+            }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.name}
+          </Text>
+
+          {/* Short Note / Subtitle */}
+          <Text
+            style={{
+              fontFamily: fonts.regular,
+              fontSize: 11,
+              fontWeight: 'normal',
+              color: '#64748b',
+              marginTop: 1,
+              height: 14,
+            }}
+            numberOfLines={1}
+          >
+            {shortNote}
+          </Text>
+
+          {/* Bottom Row: Price & Action Control matching Image 3 & 4 */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 5,
+              height: 34,
+            }}
+          >
+            {/* Price Column */}
+            <View style={{ justifyContent: 'center', flexShrink: 1, marginRight: 4 }}>
+              <Text style={{ fontFamily: fonts.extraBold, fontSize: 15, fontWeight: '800', color: '#0f172a', lineHeight: 18 }}>
+                ₹{sellingPrice.toFixed(0)}
+              </Text>
+              {hasDiscount && strikeMrp != null ? (
+                <Text
+                  style={{
+                    fontFamily: fonts.regular,
+                    fontSize: 10.5,
+                    fontWeight: 'normal',
+                    color: '#94a3b8',
+                    textDecorationLine: 'line-through',
+                    lineHeight: 12,
+                  }}
+                >
+                  ₹{strikeMrp.toFixed(0)}
+                </Text>
+              ) : (
+                <View style={{ height: 12 }} />
+              )}
+            </View>
+
+            {/* Action Button: ADD or Stepper matching Image 3 & 4 */}
+            {outOfStock ? (
+              <View
+                style={{
+                  height: 32,
+                  paddingHorizontal: 8,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#ef4444',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Text style={{ fontFamily: fonts.bold, fontSize: 10.5, fontWeight: '700', color: '#ef4444' }}>Sold out</Text>
+              </View>
+            ) : qty === 0 ? (
+              <Pressable
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  (onAdd || onIncrement)?.();
+                }}
+                style={{
+                  height: 32,
+                  width: 62,
+                  borderRadius: 8,
+                  borderWidth: 1.5,
+                  borderColor: '#059669',
+                  backgroundColor: '#ffffff',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Text style={{ fontFamily: fonts.extraBold, fontSize: 12.5, fontWeight: '800', color: '#059669' }}>ADD</Text>
+              </Pressable>
+            ) : (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#059669',
+                  borderRadius: 8,
+                  height: 32,
+                  width: 62,
+                  paddingHorizontal: 4,
+                  justifyContent: 'space-between',
+                  flexShrink: 0,
+                }}
+              >
+                <Pressable
+                  onPress={(e) => {
+                    e?.stopPropagation?.();
+                    onDecrement?.();
+                  }}
+                  style={{ width: 22, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+                  hitSlop={6}
+                >
+                  <Minus size={13} color="#ffffff" strokeWidth={3} />
+                </Pressable>
+                <Text style={{ fontFamily: fonts.extraBold, fontSize: 13, fontWeight: '800', color: '#ffffff' }}>
+                  {qty}
+                </Text>
+                <Pressable
+                  onPress={(e) => {
+                    e?.stopPropagation?.();
+                    onIncrement?.();
+                  }}
+                  style={{ width: 22, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+                  hitSlop={6}
+                >
+                  <Plus size={13} color="#ffffff" strokeWidth={3} />
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
+
+  // --- Full-width row (layout="list") ---
   if (layout === 'list') {
     return (
-      <AnimatedPressable
+      <Pressable
         onPress={onPress}
-        onPressIn={() => { scale.value = withSpring(0.98, { damping: 15 }); }}
-        onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
         style={[
-          animatedStyle,
-          { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', padding: 12 },
+          { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', padding: 12, opacity: outOfStock ? 0.78 : 1 },
           style,
         ]}
       >
         <View style={{ width: 96, height: 96, borderRadius: 4, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           {imageSource ? (
-            <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={200} cachePolicy="memory-disk" />
+            <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
           ) : (
             <ShoppingBag size={28} color="#cbd5e1" />
           )}
@@ -109,7 +471,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
 
         <View style={{ flex: 1, marginLeft: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#0f172a', lineHeight: 19 }} numberOfLines={2}>
+            <Text style={{ flex: 1, fontFamily: 'Inter-Bold', fontSize: 14, fontWeight: 'normal', color: '#0f172a', lineHeight: 19 }} numberOfLines={2}>
               {item.name}
             </Text>
             <FavoriteButton productId={item.id} style={{ marginLeft: 6, marginTop: -4 }} />
@@ -117,19 +479,19 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
 
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 8 }}>
             <View style={{ marginRight: discount > 0 ? 14 : 0 }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: '#94a3b8' }}>MRP</Text>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+              <Text style={{ fontFamily: 'Inter-Regular', fontSize: 10, fontWeight: 'normal', color: '#94a3b8' }}>MRP</Text>
+              <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 15, fontWeight: 'normal', color: '#0f172a' }}>
                 ₹{(offerPrice ?? mrp).toFixed(0)}
               </Text>
             </View>
             {discount > 0 && (
               <View style={{ backgroundColor: '#f0fdf4', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 2 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#16a34a' }}>{discount}% OFF</Text>
+                <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 11, fontWeight: 'normal', color: '#16a34a' }}>{discount}% OFF</Text>
               </View>
             )}
           </View>
 
-          <Text style={{ fontSize: 11, fontWeight: '700', color: stockStatus.color, marginTop: 4 }}>
+          <Text style={{ fontFamily: 'Inter-Bold', fontSize: 11, fontWeight: 'normal', color: stockStatus.color, marginTop: 4 }}>
             {stockStatus.label}
           </Text>
 
@@ -137,31 +499,31 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             <AddToCartControl outOfStock={outOfStock} qty={qty} onAdd={onAdd} onIncrement={onIncrement} onDecrement={onDecrement} fullWidth />
           </View>
         </View>
-      </AnimatedPressable>
+      </Pressable>
     );
   }
 
+  // --- Horizontal Carousel (layout="grid") ---
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
+      delayPressIn={75}
       style={[
-        animatedStyle,
         {
           backgroundColor: '#ffffff',
           width: 150,
           borderRadius: 8,
           borderWidth: 1,
           borderColor: '#e2e8f0',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          opacity: outOfStock ? 0.78 : 1,
         },
         style,
       ]}
     >
       <View style={{ width: '100%', height: 110, backgroundColor: '#f8fafc' }}>
         {imageSource ? (
-          <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="contain" transition={300} cachePolicy="memory-disk" />
+          <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ShoppingBag size={28} color="#cbd5e1" />
@@ -169,25 +531,25 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
         )}
         <FavoriteButton productId={item.id} size={14} style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 14, width: 26, height: 26 }} />
         {outOfStock && (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.78)', alignItems: 'center', justifyContent: 'center' }}>
-            <View style={{ backgroundColor: '#fff', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#0f172a' }}>Out of Stock</Text>
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ borderWidth: 1.5, borderColor: '#ef4444', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, transform: [{ rotate: '-10deg' }], backgroundColor: '#fff' }}>
+              <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 11, fontWeight: 'normal', color: '#ef4444' }}>SOLD OUT</Text>
             </View>
           </View>
         )}
       </View>
 
       <View style={{ padding: 10 }}>
-        <Text style={{ fontSize: 13, fontWeight: '600', color: '#0f172a', lineHeight: 18, height: 36 }} numberOfLines={2}>
+        <Text style={{ fontFamily: 'Inter-Bold', fontSize: 13, fontWeight: 'normal', color: '#0f172a', lineHeight: 18, minHeight: 36 }} numberOfLines={2}>
           {item.name}
         </Text>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+          <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 15, fontWeight: 'normal', color: '#0f172a' }}>
             ₹{(offerPrice ?? mrp).toFixed(0)}
           </Text>
           {discount > 0 && (
-            <Text style={{ fontSize: 10, fontWeight: '800', color: '#16a34a', marginLeft: 6 }}>{discount}% OFF</Text>
+            <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 10, fontWeight: 'normal', color: '#16a34a', marginLeft: 6 }}>{discount}% OFF</Text>
           )}
         </View>
 
@@ -195,20 +557,8 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
           <AddToCartControl outOfStock={outOfStock} qty={qty} onAdd={onAdd} onIncrement={onIncrement} onDecrement={onDecrement} />
         </View>
       </View>
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 
-// Memoized so a FlatList of products doesn't re-render every visible card on each parent
-// render (e.g. when one card's cart quantity changes, or during fast scroll). The handler
-// props (onAdd/onPress/...) are recreated by the parent each render but always do the same
-// thing for a given item, so they're intentionally excluded from the comparison — we only
-// re-render when the product data, its cart quantity, or its visual layout actually change.
-export default React.memo(
-  ProductCard,
-  (prev, next) =>
-    prev.item === next.item &&
-    prev.qty === next.qty &&
-    prev.layout === next.layout &&
-    prev.style === next.style
-);
+export default React.memo(ProductCard);

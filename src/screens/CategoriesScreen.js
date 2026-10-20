@@ -1,265 +1,390 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, StatusBar } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { ChevronDown, ChevronUp, Search } from 'lucide-react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { Search, ShoppingBag, Utensils, Coffee, Sparkles, Layers } from 'lucide-react-native';
 import apiClient from '../services/api';
-import { Header, Skeleton, BrandLogo } from '../components/ui';
-import EmptyState from '../components/EmptyState';
-import subCategoryImages from '../utils/subCategoryImages';
-import categoryImages from '../utils/categoryImages';
+import { Skeleton } from '../components/ui';
+import { getCategoryVisual } from '../utils/categoryImages';
 import slugify from '../utils/slugify';
-import { optimizeCloudinaryUrl, THUMB_ICON } from '../utils/cloudinaryImage';
-
-const TABS = ['Brands', 'Categories'];
-
-// An admin-uploaded photo can be any aspect ratio/size (unlike the bundled defaults,
-// which are pre-cropped square PNGs) -- "cover" would crop it unpredictably, so it gets
-// "contain" instead (always shows the whole photo) plus an onError fallback in case the
-// URL is ever unreachable, so an admin's upload never renders as a broken image.
-function CatImage({ uri, bundled }) {
-  const [errored, setErrored] = useState(false);
-  useEffect(() => { setErrored(false); }, [uri]);
-
-  if (uri && !errored) {
-    return (
-      <Image
-        source={{ uri: optimizeCloudinaryUrl(uri, THUMB_ICON) }}
-        style={{ width: '100%', height: '100%' }}
-        contentFit="contain"
-        cachePolicy="memory-disk"
-        transition={150}
-        onError={() => setErrored(true)}
-      />
-    );
-  }
-  if (bundled) {
-    return <Image source={bundled} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" transition={150} />;
-  }
-  return null;
-}
 
 export default function CategoriesScreen({ navigation }) {
-  const [activeTab, setActiveTab] = useState('Brands');
-  const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const { width } = useWindowDimensions();
+  const [allCategories, setAllCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
-  const [categoryBrands, setCategoryBrands] = useState({}); // { [categoryId]: brand[] | 'loading' }
+
+  // 4 columns calculation for clean grid layout matching reference design
+  const paddingH = 16;
+  const colGap = 10;
+  const cardWidth = Math.floor((width - paddingH * 2 - colGap * 3) / 4);
 
   useEffect(() => {
+    let isCancelled = false;
     const load = async () => {
       setLoading(true);
-      const [catRes, brandRes] = await Promise.allSettled([
-        apiClient.get('/categories'),
-        apiClient.get('/brands'),
-      ]);
-      if (catRes.status === 'fulfilled') {
-        const items = catRes.value.data.items || [];
-        setCategories(items);
-        // The API returns every category (top-level + sub) up front, even though
-        // sub-category rows only render once their parent accordion is expanded — so
-        // warm expo-image's cache for all of them now, in the background, rather than
-        // waiting for the user to tap "expand" and watch each icon pop in one at a time.
-        // Non-blocking (no await) and best-effort: a failed prefetch just means that one
-        // image loads normally later instead of instantly.
-        items
-          .filter((c) => c.image)
-          .forEach((c) => {
-            Image.prefetch(optimizeCloudinaryUrl(c.image, THUMB_ICON)).catch(() => {});
-          });
+      try {
+        const { data } = await apiClient.get('/categories', { __skipErrorToast: true });
+        if (isCancelled) return;
+        setAllCategories(data.items || []);
+      } catch {
+        // Fallbacks
+      } finally {
+        if (!isCancelled) setLoading(false);
       }
-      if (brandRes.status === 'fulfilled') setBrands(brandRes.value.data.items || []);
-      setLoading(false);
     };
     load();
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
-  const topCategories = categories.filter((c) => !c.parentId);
-  const subCategoriesOf = useCallback(
-    (id) => categories.filter((c) => c.parentId === id),
-    [categories]
+  // Top level categories sorted by admin order
+  const topLevelCategories = useMemo(() => {
+    const list = allCategories.filter((c) => !c.parentId && c.isActive !== false);
+    list.sort((a, b) => {
+      const orderA = a.order != null ? Number(a.order) : 999;
+      const orderB = b.order != null ? Number(b.order) : 999;
+      return orderA - orderB;
+    });
+    return list;
+  }, [allCategories]);
+
+  // Grouped departments matching the store layout
+  const { popularList, staplesList, snacksList, homeList } = useMemo(() => {
+    const popular = [];
+    const staples = [];
+    const snacks = [];
+    const home = [];
+
+    topLevelCategories.forEach((cat) => {
+      const slug = slugify(cat.name || '');
+      if (
+        slug.includes('fresh') ||
+        slug.includes('vegetable') ||
+        slug.includes('dairy') ||
+        slug.includes('bakery')
+      ) {
+        popular.push(cat);
+      } else if (
+        slug.includes('rice') ||
+        slug.includes('atta') ||
+        slug.includes('grain') ||
+        slug.includes('oil') ||
+        slug.includes('spice') ||
+        slug.includes('masala') ||
+        slug.includes('dry-fruit') ||
+        slug.includes('sauce')
+      ) {
+        staples.push(cat);
+      } else if (
+        slug.includes('snack') ||
+        slug.includes('beverage') ||
+        slug.includes('drink') ||
+        slug.includes('instant')
+      ) {
+        snacks.push(cat);
+      } else {
+        home.push(cat);
+      }
+    });
+
+    return {
+      popularList: popular.length > 0 ? popular : topLevelCategories.slice(0, 4),
+      staplesList: staples.length > 0 ? staples : topLevelCategories.slice(4, 8),
+      snacksList: snacks.length > 0 ? snacks : topLevelCategories.slice(8, 12),
+      homeList: home.length > 0 ? home : topLevelCategories.slice(12),
+    };
+  }, [topLevelCategories]);
+
+  const handleCategoryPress = useCallback(
+    (cat) => {
+      navigation.navigate('Category', {
+        id: cat.id,
+        name: cat.name,
+        image: cat.image,
+      });
+    },
+    [navigation]
   );
 
-  const toggleExpand = async (cat) => {
-    if (expandedId === cat.id) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId(cat.id);
-    if (categoryBrands[cat.id]) return;
-
-    setCategoryBrands((prev) => ({ ...prev, [cat.id]: 'loading' }));
-    try {
-      const ids = [cat.id, ...subCategoriesOf(cat.id).map((c) => c.id)].slice(0, 10);
-      const snap = await getDocs(query(collection(db, 'products'), where('categoryId', 'in', ids)));
-      const brandIds = new Set(snap.docs.map((d) => d.data().brandId).filter(Boolean));
-      setCategoryBrands((prev) => ({ ...prev, [cat.id]: brands.filter((b) => brandIds.has(b.id)) }));
-    } catch {
-      setCategoryBrands((prev) => ({ ...prev, [cat.id]: [] }));
-    }
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-surface-50" edges={['top', 'bottom']}>
-        <Header title="Categories" showBack={false} />
-        <View className="p-4">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} width="100%" height={64} borderRadius={16} className="mb-3" />
-          ))}
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView className="flex-1 bg-surface-50" edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-      <Header title="Categories" showBack={false} />
-
-      <Pressable
-        onPress={() => navigation.navigate('Search')}
-        className="flex-row items-center bg-white border border-border rounded-2xl px-4 mx-4 mt-3 mb-2 shadow-soft"
-        style={{ height: 48 }}
-      >
-        <Search size={18} color="#94a3b8" />
-        <Text className="ml-3 text-sm font-medium text-text-tertiary flex-1">Search Products</Text>
-      </Pressable>
-
-      <View className="flex-row px-4 border-b border-border-light">
-        {TABS.map((tab) => (
+  const renderCategoryGrid = (items) => (
+    <View
+      style={{
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-start',
+        columnGap: colGap,
+        rowGap: 16,
+      }}
+    >
+      {items.map((cat) => {
+        const visualSource = getCategoryVisual(cat, 120);
+        return (
           <Pressable
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            className="mr-6 pb-3"
-            style={{ borderBottomWidth: 2, borderBottomColor: activeTab === tab ? '#16a34a' : 'transparent' }}
+            key={cat.id}
+            onPress={() => handleCategoryPress(cat)}
+            style={{ width: cardWidth, alignItems: 'center' }}
           >
-            <Text
-              className={`text-sm ${activeTab === tab ? 'font-black text-primary-600' : 'font-semibold text-text-tertiary'}`}
+            <View
+              style={{
+                width: cardWidth,
+                height: cardWidth,
+                borderRadius: 18,
+                backgroundColor: '#ffffff',
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: '#e2e8f0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 3,
+                elevation: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 4,
+              }}
             >
-              {tab}
+              {visualSource ? (
+                <Image
+                  source={visualSource}
+                  style={{ width: '100%', height: '100%', borderRadius: 14 }}
+                  contentFit="cover"
+                  transition={150}
+                />
+              ) : (
+                <ShoppingBag size={24} color="#94a3b8" />
+              )}
+            </View>
+            <Text
+              numberOfLines={2}
+              style={{
+                fontFamily: 'Inter-Bold',
+                fontSize: 11.5,
+                fontWeight: 'normal',
+                color: '#0f172a',
+                marginTop: 6,
+                textAlign: 'center',
+                lineHeight: 14,
+              }}
+            >
+              {cat.name}
             </Text>
           </Pressable>
-        ))}
+        );
+      })}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      {/* Header: Bold Categories title + Search Icon */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: paddingH,
+          paddingTop: 12,
+          paddingBottom: 14,
+          backgroundColor: '#ffffff',
+          borderBottomWidth: 1,
+          borderColor: '#f1f5f9',
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: 'Inter-ExtraBold',
+            fontSize: 26,
+            fontWeight: 'normal',
+            color: '#0f172a',
+            letterSpacing: -0.5,
+          }}
+        >
+          Categories
+        </Text>
+        <Pressable
+          onPress={() => navigation.navigate('Search')}
+          hitSlop={10}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: '#ffffff',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Search size={22} color="#0f172a" strokeWidth={2.4} />
+        </Pressable>
       </View>
 
-      {activeTab === 'Brands' ? (
-        brands.length === 0 ? (
-          <EmptyState icon="box" message="No brands yet" />
-        ) : (
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-            <View className="flex-row flex-wrap justify-between">
-              {brands.map((brand) => (
-                <Pressable
-                  key={brand.id}
-                  onPress={() => navigation.navigate('ProductList', { brandId: brand.id, title: brand.name })}
-                  style={{ width: '31.5%', marginBottom: 16 }}
-                  className="items-center"
-                >
-                  <BrandLogo brand={brand} size={78} style={{ marginBottom: 6 }} />
-                  <Text className="text-xs font-semibold text-text-primary text-center" numberOfLines={2}>
-                    {brand.name}
-                  </Text>
-                </Pressable>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: paddingH, paddingTop: 16, paddingBottom: 40 }}
+      >
+        {loading ? (
+          <View style={{ gap: 20 }}>
+            <View style={{ flexDirection: 'row', columnGap: colGap }}>
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} width={cardWidth} height={cardWidth} borderRadius={18} />
               ))}
             </View>
-          </ScrollView>
-        )
-      ) : topCategories.length === 0 ? (
-        <EmptyState icon="box" message="No categories yet" />
-      ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-          {topCategories.map((cat) => {
-            const expanded = expandedId === cat.id;
-            const subCats = subCategoriesOf(cat.id);
-            const catBrandsState = categoryBrands[cat.id];
-
-            return (
-              <View key={cat.id} className="border-b border-border-light">
-                <Pressable
-                  onPress={() => toggleExpand(cat)}
-                  className="flex-row items-center px-4 py-3.5"
-                >
-                  <View className="w-11 h-11 rounded-xl overflow-hidden bg-surface-100 mr-3">
-                    {/* An admin-uploaded photo (cat.image, a live Firestore field) always
-                        overrides the bundled default -- otherwise editing a category's image
-                        from the admin portal would silently never show up here. */}
-                    <CatImage uri={cat.image} bundled={categoryImages[slugify(cat.name)]} />
-                  </View>
-                  <Text className="flex-1 text-sm font-bold text-text-primary">{cat.name}</Text>
-                  <View className="w-8 h-8 rounded-full bg-surface-100 items-center justify-center">
-                    {expanded ? <ChevronUp size={16} color="#0f172a" /> : <ChevronDown size={16} color="#0f172a" />}
-                  </View>
-                </Pressable>
-
-                {expanded && (
-                  <Animated.View entering={FadeIn.duration(200)} className="px-4 pb-4">
-                    <Text className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Brands</Text>
-                    {catBrandsState === 'loading' ? (
-                      <View className="flex-row" style={{ gap: 10 }}>
-                        {[0, 1, 2].map((i) => (
-                          <Skeleton key={i} width={68} height={68} borderRadius={12} />
-                        ))}
-                      </View>
-                    ) : catBrandsState && catBrandsState.length > 0 ? (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                        {catBrandsState.map((brand) => (
-                          <Pressable
-                            key={brand.id}
-                            onPress={() => navigation.navigate('ProductList', { brandId: brand.id, title: brand.name })}
-                            className="items-center"
-                            style={{ width: 76 }}
-                          >
-                            <BrandLogo brand={brand} size={68} style={{ marginBottom: 4 }} />
-                            <Text className="text-[11px] font-medium text-text-secondary text-center" numberOfLines={1}>
-                              {brand.name}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                    ) : (
-                      <Text className="text-xs font-medium text-text-tertiary mb-1">No brands yet</Text>
-                    )}
-
-                    {subCats.length > 0 && (
-                      <>
-                        <Text className="text-xs font-bold text-text-tertiary uppercase tracking-wider mt-4 mb-2">
-                          Sub-Categories
-                        </Text>
-                        <View className="flex-row flex-wrap" style={{ gap: 12 }}>
-                          {subCats.map((sub) => (
-                            <Pressable
-                              key={sub.id}
-                              onPress={() => navigation.navigate('Category', { id: sub.id, name: sub.name })}
-                              style={{ width: 84 }}
-                              className="items-center"
-                            >
-                              <View className="w-16 h-16 rounded-2xl overflow-hidden bg-surface-100 mb-1.5">
-                                {/* An admin-uploaded photo (sub.image, a live Firestore field)
-                                    always overrides the bundled default -- otherwise editing a
-                                    sub-category's image from the admin portal would silently
-                                    never show up here. */}
-                                <CatImage uri={sub.image} bundled={subCategoryImages[`${slugify(cat.name)}-${slugify(sub.name)}`]} />
-                              </View>
-                              <Text className="text-[11px] font-semibold text-text-primary text-center" numberOfLines={2}>
-                                {sub.name}
-                              </Text>
-                            </Pressable>
-                          ))}
-                        </View>
-                      </>
-                    )}
-                  </Animated.View>
-                )}
+            <View style={{ flexDirection: 'row', columnGap: colGap }}>
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} width={cardWidth} height={cardWidth} borderRadius={18} />
+              ))}
+            </View>
+          </View>
+        ) : (
+          <>
+            {/* TOP ROW / POPULAR CATEGORIES */}
+            {popularList.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                {renderCategoryGrid(popularList)}
               </View>
-            );
-          })}
-        </ScrollView>
-      )}
+            )}
+
+            {/* SECTION 1: Staples & Cooking Essentials */}
+            {staplesList.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      backgroundColor: '#e6f4ea',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 10,
+                    }}
+                  >
+                    <Utensils size={16} color="#059669" strokeWidth={2.2} />
+                  </View>
+                  <Text
+                    style={{
+                      fontFamily: 'Inter-ExtraBold',
+                      fontSize: 18,
+                      fontWeight: 'normal',
+                      color: '#0f172a',
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    Staples & Cooking Essentials
+                  </Text>
+                </View>
+                {renderCategoryGrid(staplesList)}
+              </View>
+            )}
+
+            {/* SECTION 2: Snacks & Drinks */}
+            {snacksList.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      backgroundColor: '#e6f4ea',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 10,
+                    }}
+                  >
+                    <Coffee size={16} color="#059669" strokeWidth={2.2} />
+                  </View>
+                  <Text
+                    style={{
+                      fontFamily: 'Inter-ExtraBold',
+                      fontSize: 18,
+                      fontWeight: 'normal',
+                      color: '#0f172a',
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    Snacks & Drinks
+                  </Text>
+                </View>
+                {renderCategoryGrid(snacksList)}
+              </View>
+            )}
+
+            {/* SECTION 3: Home & Personal Care */}
+            {homeList.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      backgroundColor: '#e6f4ea',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 10,
+                    }}
+                  >
+                    <Sparkles size={16} color="#059669" strokeWidth={2.2} />
+                  </View>
+                  <Text
+                    style={{
+                      fontFamily: 'Inter-ExtraBold',
+                      fontSize: 18,
+                      fontWeight: 'normal',
+                      color: '#0f172a',
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    Home & Personal Care
+                  </Text>
+                </View>
+                {renderCategoryGrid(homeList)}
+              </View>
+            )}
+
+            {/* SECTION 4: All Store Categories */}
+            <View style={{ marginTop: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    backgroundColor: '#ecfdf5',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 10,
+                  }}
+                >
+                  <Layers size={16} color="#047857" strokeWidth={2.2} />
+                </View>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-ExtraBold',
+                    fontSize: 18,
+                    fontWeight: 'normal',
+                    color: '#0f172a',
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  All Categories ({topLevelCategories.length})
+                </Text>
+              </View>
+              {renderCategoryGrid(topLevelCategories)}
+            </View>
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }

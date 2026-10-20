@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
 import { AuthContext } from './AuthContext';
+import { isProductUnavailable } from '../utils/productAvailability';
 
 const CartContext = createContext();
 
@@ -14,10 +16,6 @@ export function CartProvider({ children }) {
   const [couponCode, setCouponCode] = useState(null);
   const [couponDetails, setCouponDetails] = useState(null);
   const [loading, setLoading] = useState(false);
-  // Last time we actually fetched /cart — lets a silent refetch-on-screen-focus skip
-  // the network round trip (and the visible "content settles a second late" flash) if
-  // we already have fresh data, while still resyncing promptly after a real mutation
-  // (add/remove/checkout) via the `force` option.
   const lastLoadedAtRef = useRef(0);
   const SILENT_REFRESH_THROTTLE_MS = 15_000;
 
@@ -29,7 +27,21 @@ export function CartProvider({ children }) {
   };
 
   const loadCart = useCallback(async (silent = false, { force = false } = {}) => {
-    if (!token) return;
+    // 1. If not logged in, restore from local cache instantly
+    if (!token) {
+      try {
+        const local = await AsyncStorage.getItem('localCart');
+        if (local) {
+          const parsed = JSON.parse(local);
+          setItems(parsed);
+          computeTotals(parsed);
+        }
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
     if (silent && !force && Date.now() - lastLoadedAtRef.current < SILENT_REFRESH_THROTTLE_MS) {
       return;
     }
@@ -37,12 +49,14 @@ export function CartProvider({ children }) {
     try {
       const { data } = await apiClient.get('/cart', { __skipErrorToast: true });
       lastLoadedAtRef.current = Date.now();
-      setItems(data.items || []);
-      setSubtotal(data.subtotal ?? 0);
+      const serverItems = data.items || [];
+      setItems(serverItems);
+      computeTotals(serverItems);
       setDiscount(data.discount ?? 0);
       setTotal(data.total ?? 0);
       setCouponCode(data.couponCode ?? null);
       setCouponDetails(data.couponDetails ?? null);
+      await AsyncStorage.setItem('localCart', JSON.stringify(serverItems));
       if (data.removedCount > 0) {
         Toast.show({
           type: 'info',
@@ -51,37 +65,76 @@ export function CartProvider({ children }) {
         });
       }
     } catch {
-      // non-fatal
+      // Non-fatal: fall back to local cart
+      try {
+        const local = await AsyncStorage.getItem('localCart');
+        if (local) {
+          const parsed = JSON.parse(local);
+          setItems(parsed);
+          computeTotals(parsed);
+        }
+      } catch {
+        // ignore
+      }
     } finally {
       if (!silent) setLoading(false);
     }
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      loadCart();
-    } else {
-      setItems([]);
-      setSubtotal(0);
-      setDiscount(0);
-      setTotal(0);
-      setCouponCode(null);
-      setCouponDetails(null);
-    }
+    loadCart();
   }, [token, loadCart]);
 
   const putCart = async (newItems) => {
-    await apiClient.put('/cart', {
-      items: newItems.map(({ productId, variantId, qty }) => ({ productId, variantId, qty })),
-    });
+    // Always persist to local cache first so user never loses items
+    try {
+      await AsyncStorage.setItem('localCart', JSON.stringify(newItems));
+    } catch {
+      // ignore
+    }
+
+    // If not authenticated, do not make backend request (prevents 401 error toast)
+    if (!token) return;
+
+    try {
+      await apiClient.put(
+        '/cart',
+        {
+          items: newItems.map(({ productId, variantId, qty }) => ({
+            productId,
+            variantId: variantId || 'default',
+            qty,
+          })),
+        },
+        { __skipErrorToast: true }
+      );
+    } catch (err) {
+      // Silent catch on session/network hiccup — local cart remains intact
+      console.warn('Backend cart sync note:', err.message);
+      if (err.response?.status === 409) {
+        try {
+          const { data } = await apiClient.get('/cart', { __skipErrorToast: true });
+          const serverItems = data.items || [];
+          setItems(serverItems);
+          computeTotals(serverItems);
+          await AsyncStorage.setItem('localCart', JSON.stringify(serverItems));
+        } catch {
+          // Keep the local cache if the follow-up refresh is also unavailable.
+        }
+        Toast.show({ type: 'error', text1: 'Item is out of stock or unavailable' });
+      }
+    }
   };
 
   const addItem = async (product, variant) => {
+    if (isProductUnavailable(product, variant)) {
+      Toast.show({ type: 'error', text1: 'This item is out of stock' });
+      return;
+    }
     const productId = product.id;
-    const variantId = variant.id;
-    const price = variant.offerPrice ?? variant.price ?? 0;
+    const variantId = variant?.id || 'default';
+    const price = variant?.offerPrice ?? variant?.price ?? product?.price ?? 0;
 
-    const prevItems = [...items];
     const existingIdx = items.findIndex(
       (i) => i.productId === productId && i.variantId === variantId
     );
@@ -91,7 +144,7 @@ export function CartProvider({ children }) {
       newItems = items.map((i, idx) =>
         idx === existingIdx ? { ...i, qty: i.qty + 1 } : i
       );
-      Toast.show({ type: 'success', text1: 'Quantity updated.' });
+      Toast.show({ type: 'success', text1: 'Quantity updated' });
     } else {
       newItems = [
         ...items,
@@ -100,43 +153,32 @@ export function CartProvider({ children }) {
           variantId,
           qty: 1,
           name: product.name,
-          variantLabel: variant.label,
+          variantLabel: variant?.label || '1 Unit',
           price,
           images: product.images,
+          availability: product.availability || 'AVAILABLE',
+          isAvailableToday: product.isAvailableToday !== false,
+          variantAvailability: variant?.availability || 'AVAILABLE',
+          stock: variant?.stock,
         },
       ];
-      Toast.show({ type: 'success', text1: 'Added to cart.' });
+      Toast.show({ type: 'success', text1: 'Added to cart' });
     }
 
     setItems(newItems);
     computeTotals(newItems);
-
-    try {
-      await putCart(newItems);
-    } catch {
-      setItems(prevItems);
-      computeTotals(prevItems);
-      Toast.show({ type: 'error', text1: 'Failed to update cart.' });
-    }
+    await putCart(newItems);
   };
 
   const removeItem = async (productId, variantId) => {
-    const prevItems = [...items];
     const newItems = items.filter(
       (i) => !(i.productId === productId && i.variantId === variantId)
     );
 
     setItems(newItems);
     computeTotals(newItems);
-    Toast.show({ type: 'success', text1: 'Removed from cart.' });
-
-    try {
-      await putCart(newItems);
-    } catch {
-      setItems(prevItems);
-      computeTotals(prevItems);
-      Toast.show({ type: 'error', text1: 'Failed to update cart.' });
-    }
+    Toast.show({ type: 'success', text1: 'Removed from cart' });
+    await putCart(newItems);
   };
 
   const updateQty = async (productId, variantId, delta) => {
@@ -144,9 +186,17 @@ export function CartProvider({ children }) {
       (i) => i.productId === productId && i.variantId === variantId
     );
     if (!item) return;
+    if (delta > 0 && (
+      (item.availability && item.availability !== 'AVAILABLE') ||
+      item.isAvailableToday === false ||
+      (item.variantAvailability && item.variantAvailability !== 'AVAILABLE') ||
+      (item.stock != null && item.qty + delta > item.stock)
+    )) {
+      Toast.show({ type: 'error', text1: 'This item is out of stock' });
+      return;
+    }
     if (item.qty + delta <= 0) return removeItem(productId, variantId);
 
-    const prevItems = [...items];
     const newItems = items.map((i) =>
       i.productId === productId && i.variantId === variantId
         ? { ...i, qty: i.qty + delta }
@@ -155,15 +205,8 @@ export function CartProvider({ children }) {
 
     setItems(newItems);
     computeTotals(newItems);
-    Toast.show({ type: 'success', text1: 'Quantity updated.' });
-
-    try {
-      await putCart(newItems);
-    } catch {
-      setItems(prevItems);
-      computeTotals(prevItems);
-      Toast.show({ type: 'error', text1: 'Failed to update cart.' });
-    }
+    Toast.show({ type: 'success', text1: 'Quantity updated' });
+    await putCart(newItems);
   };
 
   const clearCart = async () => {
@@ -183,31 +226,72 @@ export function CartProvider({ children }) {
   };
 
   const applyCoupon = async (code) => {
+    const cleanCode = code ? code.trim().toUpperCase() : '';
+    if (!cleanCode) {
+      Toast.show({ type: 'error', text1: 'Please enter a coupon code' });
+      return;
+    }
+
     try {
-      await apiClient.post('/offers/validate', { code: code.trim().toUpperCase(), subtotal, items });
-      await apiClient.patch('/cart/coupon', { code: code.trim().toUpperCase() });
-      await loadCart();
-      Toast.show({ type: 'success', text1: 'Coupon applied.' });
+      // Validate coupon with backend (supports both authenticated & guest sessions)
+      const { data: valData } = await apiClient.post('/offers/validate', {
+        code: cleanCode,
+        subtotal,
+        items,
+      });
+
+      if (token) {
+        await apiClient.patch('/cart/coupon', { code: cleanCode });
+        await loadCart(false, { force: true });
+        Toast.show({
+          type: 'success',
+          text1: 'Coupon applied',
+          text2: `Saved ₹${valData.evaluatedDiscount}!`,
+        });
+        return;
+      }
+
+      // Local/guest cart mode
+      const disc = valData.evaluatedDiscount || 0;
+      setCouponCode(cleanCode);
+      setCouponDetails(valData);
+      setDiscount(disc);
+      setTotal(Math.max(0, Number((subtotal - disc).toFixed(2))));
+      Toast.show({
+        type: 'success',
+        text1: 'Coupon applied',
+        text2: `Saved ₹${disc}!`,
+      });
     } catch (err) {
-      const msg = err.response?.data?.error || 'Invalid coupon code.';
+      const msg = err.response?.data?.error || err.message || 'Could not apply coupon';
       Toast.show({ type: 'error', text1: msg });
+      throw err;
     }
   };
 
   const removeCoupon = async () => {
-    await apiClient.patch('/cart/coupon', { code: null });
+    if (token) {
+      try {
+        await apiClient.patch('/cart/coupon', { code: null });
+        await loadCart();
+      } catch {}
+    }
     setCouponCode(null);
     setCouponDetails(null);
-    await loadCart();
-    Toast.show({ type: 'success', text1: 'Coupon removed.' });
+    setDiscount(0);
+    setTotal(subtotal);
+    Toast.show({ type: 'success', text1: 'Coupon removed' });
   };
 
-  const getQty = (productId, variantId) => {
-    const item = items.find(
-      (i) => i.productId === productId && i.variantId === variantId
-    );
-    return item?.qty ?? 0;
-  };
+  const getQty = useCallback(
+    (productId, variantId) => {
+      const item = items.find(
+        (i) => i.productId === productId && i.variantId === variantId
+      );
+      return item?.qty ?? 0;
+    },
+    [items]
+  );
 
   const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
 

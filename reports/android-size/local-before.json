@@ -1,0 +1,4143 @@
+{
+  "assetBytes": 215906399,
+  "assetGroups": {
+    "assets/Brand_Logos": 12219865,
+    "assets/Cleaned_Products": 188201643,
+    "assets": 740436,
+    "assets/categories": 3301499,
+    "assets/fonts": 378140,
+    "assets/images": 3220185,
+    "assets/sub-categories": 7844631
+  },
+  "assets": [
+    {
+      "path": "assets/images/banner.png",
+      "bytes": 2450585,
+      "references": [
+        "src/screens/HomeScreen.js"
+      ],
+      "sha256": "e61c1b2cfda0f917a1e26970a9b815c497eed1d07a790d2ea77fcdd5ba3e9c58"
+    },
+    {
+      "path": "assets/Cleaned_Products/QK Multigrain Oats.png",
+      "bytes": 2049675,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "290e0ab53e30dd7f3e861bfaa9828d34a3867cf1aafc6525dc3574775da8b1c6"
+    },
+    {
+      "path": "assets/Cleaned_Products/Long Beans Payeru.png",
+      "bytes": 1959841,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e2ab1cf27bf17f3382d4f1da4db131af151983713c86fcae650df973d951c73b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Mix Vegetable 18g.png",
+      "bytes": 1678613,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "322b908a4ba674b75377a75ef658b6f8956828744b8805de618f48bae7e2c6c6"
+    },
+    {
+      "path": "assets/Cleaned_Products/Cashew Split.png",
+      "bytes": 1583404,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "08d40558a1b849914dbb2f6e069bc33d2028c6bfbd5fc4f0fd7869f262cd057e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Coriander Powder.png",
+      "bytes": 1495641,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "2eb57913793a7a4629b07ab63ed2d90fd0705afd13bd2fdb6013f8989b5cfd31"
+    },
+    {
+      "path": "assets/Cleaned_Products/Cheru Paruppu Moong Dal.png",
+      "bytes": 1413662,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ecfae7f5aa2c1324c2914601eb607656045acb563eb0a09fad77ac4b20d12ebb"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Roast Ragi Powder.png",
+      "bytes": 1317683,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "ac49e3f39f1645be3982925c33e9b9c2d1ea19ebd072439d50ebe57d7c4b131e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pears Bathing Soap Oil Clear and Glow 75g.png",
+      "bytes": 1297213,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "19c5263ecb29fececd1aa3d64f76e4e237950af8a485e05c50602eb0617ce9ab"
+    },
+    {
+      "path": "assets/Cleaned_Products/Coriander Leaves Malli.png",
+      "bytes": 1248114,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "27ee818d47db775d10c417e8ee9c6531f59e939f92617634ab7e6dfa1d645eef"
+    },
+    {
+      "path": "assets/Cleaned_Products/Mint Leaves Puthina.png",
+      "bytes": 1238688,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "cd69ef3071a74ae43fcb5cf921315d2606cde827adc336cdae9253486b7e3bf4"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kitchen King BT Rice.png",
+      "bytes": 1234401,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "99d88ef05a2d98056c1188a418acc0421dec7711d6c4b4e31472f36e692802b8"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kadala Paruppu Chana Dal.png",
+      "bytes": 1223000,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "0bb8308041a518019ffe3d87b71353c52c063116768219511d4a05f46d7c2e1f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Gold Walnut.png",
+      "bytes": 1215844,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "125b040f572b722d263f82ca0701d773ec7eccd01afc456c15406f1316c9f8ac"
+    },
+    {
+      "path": "assets/Cleaned_Products/Cumin Jeera Powder.png",
+      "bytes": 1209881,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7fbb4a56be8d8ece29a46f713ca3a4aab5011d486e26c261e1bbe86964d93a64"
+    },
+    {
+      "path": "assets/Cleaned_Products/Garam Masala Powder.png",
+      "bytes": 1168034,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "19e0c8ad46676e381bb45c5c4f3c9bd3e51b2d0394c2e177540b27ba4c1d4f96"
+    },
+    {
+      "path": "assets/Cleaned_Products/Flowers assorted, for pooja.png",
+      "bytes": 1163185,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "62ca33545fb2551dcfc1253a21cca549cdf92554ff7538d42d3c5614c9df0feb"
+    },
+    {
+      "path": "assets/Cleaned_Products/Red Masoor Dal.png",
+      "bytes": 1145241,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "bcad891ea1e9875362eb77e998b34c40c15130ce0508de222c91198d024ff599"
+    },
+    {
+      "path": "assets/Cleaned_Products/Green Peas 1st.png",
+      "bytes": 1127631,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6effe86f7bdbe8b8abbdb86a7fd94abe40dae941fd168d06e6bec72dc27ad4c1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pran Pudding Jar.png",
+      "bytes": 1122911,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6a5e8139e91a694e540efe029add5a2065f69ede80182cbfa56d949a052a155f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Bharath Doppi Rice.png",
+      "bytes": 1085444,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "269b874a97471e96b91e93f3f7c17a84c258c499a80af787d4835c37ea40e7e4"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Palada Payasam Mix.png",
+      "bytes": 1083965,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "923d722e6746ae152145e6ec2f9df88d99209f6b871279f21ada4593e34b426e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Bakers Kasuri Methi.png",
+      "bytes": 1069069,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8349482fe640a69c6174c322daf8fce649e8d5b39247f5dbbd864b6058df6f43"
+    },
+    {
+      "path": "assets/Cleaned_Products/Mutton Masala Powder.png",
+      "bytes": 1066755,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "03ca4c3d03aa6c4ebb8b5cf188a4032d0ae7db0cc49435bdb5b9e0d86f8e4dc7"
+    },
+    {
+      "path": "assets/Cleaned_Products/Black Pepper Powder.png",
+      "bytes": 1053518,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1d1ca6066bb48ecd9a2159e7b8f53e210ecfce19830b7a96789acab4e18273d6"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Mango Pickle.png",
+      "bytes": 1046802,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "c134594f459a9b87ff9f3a7513d05e19cc26422f03ff3f22c6e0641fd8d4480c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Elite Atta.png",
+      "bytes": 1038607,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "89c737e2b41f09198f3d77a1a42543bb5bcfefdbd83fa5856890d4a44346a4b8"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kellogg's Corn Flakes.png",
+      "bytes": 1037006,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "2994c3f64ded0f0b34e35124a69d9a1258a321e4dc67e6e30f4e4dd2adf2491d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kismiss Medium Raisins Seedless.png",
+      "bytes": 1034849,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3884d1e160da19e30929db5025020d13f7c0185f073f50179dee635c4c5133b8"
+    },
+    {
+      "path": "assets/Cleaned_Products/S S K Doppi Rice 1st.png",
+      "bytes": 1029700,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1f23651cef11a2679d3a2fbeed66416b87f7a8399f68c4167fbb3b82589ae8b2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milma Butter.png",
+      "bytes": 1013596,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "e6233e20255d7130a51ba07d8e00ac4f30adeadabfb4b658bd6d69378deb3416"
+    },
+    {
+      "path": "assets/Cleaned_Products/Rin Detergent Powder 1kg.png",
+      "bytes": 997798,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ee98d4c64171dce8d7fc32f57bc2da45cef8e4e5d9377b9ec669288fd397fec4"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pulari Rice Bran Oil.png",
+      "bytes": 996571,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "469df45a7759f2c663fc6a9ea64ff2948df43062d802278153404a5ac26f64c8"
+    },
+    {
+      "path": "assets/Cleaned_Products/Premium Bake Rusk.png",
+      "bytes": 993459,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "b797d4feb8d1dda143819cf58d8f68b27d16746694a9f08ebddb699ebececa16"
+    },
+    {
+      "path": "assets/Cleaned_Products/UT Puttu Podi.png",
+      "bytes": 991088,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "fc23d67b6dd504095180d9350569e22906901637b058a101a9d031a94587f6f2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sara Soap Podi washing powder.png",
+      "bytes": 988599,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "07237b4dfd839747f68db5f413cf7bb5603cd1fae28aa3a3afacafcfa58659c0"
+    },
+    {
+      "path": "assets/Cleaned_Products/NC Thin Arrowroot Biscuit.png",
+      "bytes": 975280,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "401f83774f353e22e1a202ae49467d61ed0100f63f3b6731dbd276e0d81e44e1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Neem and Aloe Soap.png",
+      "bytes": 974815,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "52f44a5bf3a00a832a9ddcdeef02ca3d4c9b4b2b4f169405f0cdc795ca53f461"
+    },
+    {
+      "path": "assets/Cleaned_Products/Meat Masala Powder.png",
+      "bytes": 966217,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "19eb9709f960721f9742d4c96bc2813b5e8376a94fbb2efbcca6932c77f28cd5"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Macroni.png",
+      "bytes": 957957,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "fe05a80af9f417eddbbce820b2aa131f42c42182099f184880a79591a1e40654"
+    },
+    {
+      "path": "assets/Cleaned_Products/Elite Maida.png",
+      "bytes": 955916,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "5f877cc140a63fe48ffe256dd41ccbaed5cf2db78406b08cfde7f7d9d48524f2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Local Greens Bal Chambu.png",
+      "bytes": 947585,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1cb26ac631e33b6ca80ef8e18e3d80a58be7b37b33da45931443a84b99b8386d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Devon Coriander Powder.png",
+      "bytes": 942769,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "c01b98a31a3be016c6f248e7f8b86975bc1f5e249e2b7ca573cfe6b1f4b809e3"
+    },
+    {
+      "path": "assets/Cleaned_Products/Quaker Oats.png",
+      "bytes": 934978,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "90b34f382c15690958f815b664d82abff797397d1f14b8302b6ec75b6f593fa7"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lemon.png",
+      "bytes": 926951,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "fede373718fec94eb5b03d156dda1d9bde18692b2dfcbfd06ae68dae89babe2d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Devon Corn Starch household cooking use.png",
+      "bytes": 925733,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9e83db2818c59a6e66a4209193d46dcbe3f46d0039fbad6ad8bb6e03be7fdf79"
+    },
+    {
+      "path": "assets/Cleaned_Products/Exo Dishwash Bar.png",
+      "bytes": 907543,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d3d75d16b117603f672780efe6dc5edd76ae716519bc64c45ac54fea30e0f533"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lia Agarbathy Apple Rose Lavender Jasmine.png",
+      "bytes": 899683,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "5c7dd9e3dbcb9d90ab7cbebb9d7af5a728d0c20f6aed200c4cdf891b46b92151"
+    },
+    {
+      "path": "assets/Cleaned_Products/Banana Flower Ullie Poo.png",
+      "bytes": 898085,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "92dd00b20d3076c66aa97cdfa8feb3b42269da070fb9b3d7afcaae2cd0f87f0a"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milk Rusk Restage.png",
+      "bytes": 894365,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "a4b56d76b44e242b6bc0cc3abf4bf1f3fc6f0c5074e456a55956d659871b7f85"
+    },
+    {
+      "path": "assets/Cleaned_Products/AVT Premium Tea.png",
+      "bytes": 886989,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "35198ac86435af8954983a9ceaff5fd54911e059c33ef744c8988b1943b82802"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vim Bar 3x190g MPO.png",
+      "bytes": 885863,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7cb2d05c323b46cc782d981b4c3215a9489a652b356c175fb624a61071555da8"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Lemon Pickle.png",
+      "bytes": 881035,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6d94d637bc49ff686cab2e95d361aafd2a3a21982d9639865fff52d00162be3b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Chicken Masala Powder.png",
+      "bytes": 860040,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "cea14675e4ed2facc5e90a24bf92d8a1f6d5e18ca31e457603bee395455b44af"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lipton Clear And Light J and A 100g.png",
+      "bytes": 852707,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d45a98c64cfc226c607625e063a18f0f492d6728191571a94654235b2da48056"
+    },
+    {
+      "path": "assets/Cleaned_Products/Beet Root.png",
+      "bytes": 850974,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1c34421ad1415b4028977c1ad06413e7fe8ef860a0c89ba5e548fe603addc11f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sambar Powder.png",
+      "bytes": 842821,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "37a19d486c5d97b2386f79441e5efd536e8fbdedfd739aa63644f4878d07f071"
+    },
+    {
+      "path": "assets/Cleaned_Products/UT Uppuma Rava.png",
+      "bytes": 842121,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "e0b6a4e754f12e9ac7c77db2ea1f39b667c123212dcf99c0016f8255a76dfa53"
+    },
+    {
+      "path": "assets/Cleaned_Products/KPR Jaya Rice.png",
+      "bytes": 841939,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "956d6d3018b711b35dcdbc58cd846a1c730328e46c6fb4064540e0c0ae50b7ce"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Idiyappam Appam Podi.png",
+      "bytes": 834569,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "30990f791e8f6680ce92d916050d0fe8b31b6500622f780212e1a7fc07dd4b52"
+    },
+    {
+      "path": "assets/Cleaned_Products/R.G. Palm Oil.png",
+      "bytes": 831197,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7af958df7fc807db7e3f12ff383c0148e390a9c3339a99675bc50f123d0b2b1b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Manchow 12g.png",
+      "bytes": 830058,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "949e010f29ed8250d8ffb3479a0ce21d128f9920c3b4cbdf33435ad1531eff91"
+    },
+    {
+      "path": "assets/Cleaned_Products/Cucumber.png",
+      "bytes": 823760,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d66d987331c5b2fe0876143c73684a1adf71899ee83500bde037835ac35cc20f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milk Rusk Premium Bake Rusk.png",
+      "bytes": 819590,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "55767e8042621acc9b70008df1478851805c59b2de238c395d59ba243c444eb3"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kissan Lehsun Mirch Chutney 100g Doy.png",
+      "bytes": 818893,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "af83c480f36ea2b891756f343b1d91702eccc1e365295274a474b97c353cbcb6"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ginger Pickle.png",
+      "bytes": 818511,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "fb0f7059270cff167268132a19eccf8ae488e34a7b29f4dbe10fa197e041993d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Brinjal.png",
+      "bytes": 817249,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "46266e856638476015e0cc06bf27a248b6116b3063167f507b841f4f252b51db"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kissan Imli Khajoor Chutney 100g Doy.png",
+      "bytes": 812271,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3655b1c64231baaeb986ad79d506a1dace8dca9c2f2ec9f2764e8fd23bacc3c5"
+    },
+    {
+      "path": "assets/Cleaned_Products/Maggi 2-Minute Noodles.png",
+      "bytes": 806685,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "7f8b8cb9e37c4751a52e59c31845df2a1b11305fe4c4f2719f34553f213a9eac"
+    },
+    {
+      "path": "assets/Cleaned_Products/Maxo Genius Combi.png",
+      "bytes": 804942,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "61a82e0caee10edfb84d927e318cc1d0318b0807d8268d6733aa24dfa065c25c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Medimix Soap.png",
+      "bytes": 803490,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "c5298708b3f3cb89754c2b185dda0bce8a6f8df7843a926d1f8b1c427d65cb85"
+    },
+    {
+      "path": "assets/Cleaned_Products/Nescafe Sunrise.png",
+      "bytes": 798823,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9a4639f08d4b97353603736cbe696c3bdbcfcec72f049299a0c7080c4671e7bb"
+    },
+    {
+      "path": "assets/Cleaned_Products/Devon Chilly Powder.png",
+      "bytes": 798390,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "68983b8a68ade5990fbd9a8084c7ced15314a584f9ddc7293a3ad91f82786078"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunfeast Golden Bakery.png",
+      "bytes": 798390,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "68983b8a68ade5990fbd9a8084c7ced15314a584f9ddc7293a3ad91f82786078"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ginger.png",
+      "bytes": 798097,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "188399a2a0552684271c9870afcd3d63d589fb351d4da27e413d29d434f80ea9"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milma Ghee Cake Choco Brownie.png",
+      "bytes": 797034,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "61e2fb7022521f046ebf8eac271360352e579eb862477b3a70fe99d3f09957e1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Elite Rice Puttu Podi.png",
+      "bytes": 796156,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8dc11a5c8e3e4d085d523799ff9be4856faad47f8c684254976d848c17c5a1eb"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kissan Hari Chutney 100g Doy.png",
+      "bytes": 795430,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "116ef54d10a5f007140f158d259750874f3bbb762e49ae802ddd38f65b42df56"
+    },
+    {
+      "path": "assets/Cleaned_Products/Rexona Bathing Soap Coconut And Olive Oil.png",
+      "bytes": 795224,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "28b60d7521db6251e4a3939d710c2fc28231926100fe3be718358e27cff29fda"
+    },
+    {
+      "path": "assets/Cleaned_Products/Bru Coffee Pure.png",
+      "bytes": 788501,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d5b558c626ac6e14a3cc2cf521f3b3c38399b30f7b36527ffe6ac615cc2bd7f7"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Turmeric Powder.png",
+      "bytes": 787927,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "b54978eaab5336fcee7114ff96adb0c0c59e942e56b1f25c201cfb2bd8b333e4"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dabur Red Toothpaste.png",
+      "bytes": 786947,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "5318aa8218c9894ff2b1bcd39c9439ac2d75c2b79a032373b01a95c15287823b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dabur Vatika Hair Oil.png",
+      "bytes": 781966,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e0b9e8a98e173c430a6d18c477334b5b1b06e0a21f6a870d63a25b7c5566ebc4"
+    },
+    {
+      "path": "assets/Cleaned_Products/Yippee Magic Masala Noodles.png",
+      "bytes": 780624,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7d6943199797372a700cd90376e56156ab41f187a6f0dc225072c01abb94121e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunfeast Marie Light.png",
+      "bytes": 776044,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f249681bef6656278b20ae5f16407f67540c01b3cb425133adc29b224d5fcf93"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dabur Glucose.png",
+      "bytes": 775761,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "248116242f1bf30d38b4e33ba47009f8e85c98dd0e62d290078013ba5300fd75"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vivel Fiama products assorted.png",
+      "bytes": 774234,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1f9ec4bcac9fb3885b6dc6092d254efea565cf4efe1d8518c87fdd7f628ddf8b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kellogg's Chocos.png",
+      "bytes": 772782,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1185b79dadcca31ed52a66526960d5416e9646ba70ccb6c34c72c25cb13c63ba"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lipton Green Tea Bags Honey Lemon 10 Pcs.png",
+      "bytes": 771080,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3c7c2f66dde9198bab2cf787c4fa0d83878a52030c6f5d0f5927e0ae38b24963"
+    },
+    {
+      "path": "assets/Cleaned_Products/SSK Ponni Rice 1st.png",
+      "bytes": 765105,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "0c758613501bfc553bcfec6fb3bbf5de714100e90e2c2a803952683fa10a3257"
+    },
+    {
+      "path": "assets/Cleaned_Products/Rose Kaima Rice.png",
+      "bytes": 764726,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f8b507f821b557a0872f5ecdcede505593728ea231689d4efa1201b3d2aba587"
+    },
+    {
+      "path": "assets/Cleaned_Products/Knorr Cream of Broccoli Cup-A-Soup 12.5g.png",
+      "bytes": 761742,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "0f6527afc1682eecf3e807ff435920bd857373e429506de5f3ec7dc0387f4d67"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH White Puttu Podi.png",
+      "bytes": 759353,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "fd40be35a996dfe19eff2edb3c700805275750dec7260456b478d78caa1929b7"
+    },
+    {
+      "path": "assets/Cleaned_Products/Raw Mango Amrai.png",
+      "bytes": 757422,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e02ac313baf2f1d46aee0e5b4a6d923148e9bbf5df769771c6f04f9980103ad2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Capsicum Green.png",
+      "bytes": 751755,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "912fc3435fb11bc2523dd928429d1f36aed793a6040e1dc7b85bfd5daaf9f880"
+    },
+    {
+      "path": "assets/Cleaned_Products/Wheel L and O Powder A Plus 4kg Blue.png",
+      "bytes": 747597,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d16ab57c89cf6261385ea1c97f5f6c9b14acc309027fe8238cdd6474b9402173"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lux Bathing Soap International Creamy Perfume.png",
+      "bytes": 747557,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3680dc38d8575bd0fe6cdfbecd227e4bedfe6de3381324471ef80e44339b8112"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunfeast Marie Glucose.png",
+      "bytes": 747197,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "788b51fa187d2b8179b7c1280103aa54de1e68ff7fd75cefab42a778b3337263"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunlight Detergent Powder.png",
+      "bytes": 744506,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "fe9dcf94e35bc3a9ec318b3ac043cd3344f1c998df17157b9d913f2629ffe358"
+    },
+    {
+      "path": "assets/Cleaned_Products/Gooseberry Nelli Kai.png",
+      "bytes": 743801,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9e9c0ba3c88745299376bcacfe1e4d85a68f45dfa1cfed0397615c8db151c489"
+    },
+    {
+      "path": "assets/Cleaned_Products/50-50 Biscuits.png",
+      "bytes": 738198,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9848a0c5791b8a802af362ef9ba0f47be656ec11821a4d6744225597d352ffc1"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Corn Flour.png",
+      "bytes": 737545,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6a1614cba8f42a3a41f79dad635de99ee7af19382c1e6ba226c55c9c5ef0d688"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lux Glow Bar Collection.png",
+      "bytes": 735218,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "563f3c57fb6569d9bfdfd2f06a653ece768ba211320468f7fc680015d98c38fb"
+    },
+    {
+      "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Tomato Chatpata 16g.png",
+      "bytes": 733128,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d5193611f179c6517f99e48799a7a8c360bee80f2c6025e15937030c7d9fec39"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milma Paneer.png",
+      "bytes": 728201,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "2cfd4d9ebff9d6f8608ce827112f924160d439d379bf3d86cf2774ebb333e0be"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dabur Almond Hair Oil.png",
+      "bytes": 727329,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "5bd06bf979bc5d9d9b58944273ed2b3065b1fce4f0c023ea9a691ff9a68ab8ba"
+    },
+    {
+      "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Hot and Sour 11g.png",
+      "bytes": 726186,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "346146c35ef525a0045f8dc87ce972e2df6d52c16a0aaeae4d5f7c8001099c03"
+    },
+    {
+      "path": "assets/Cleaned_Products/Egg Masala Powder.png",
+      "bytes": 721204,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "bf45a08d8ca5ab272a8df13c953dc1c9096ac854ce78f43d49aba814dff59ba1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ginger Garlic Paste.png",
+      "bytes": 720851,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "79fd53cec7ff25a49ba56b79a75483ba7ed0f1966ef173dc478ac6694b1abde8"
+    },
+    {
+      "path": "assets/Cleaned_Products/Maxo Coil Mosquito Repellent.png",
+      "bytes": 716160,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "810f31c9ce437a1f49367530613d8d0c7bc1dfbd58cd6cd687de3e0eb2f0ba4e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kashmiri Chilli Powder.png",
+      "bytes": 710703,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3eb54cb4edf4b7ecc27ccc49b8ca257e3b5a449ce20b4291ed70a72173309092"
+    },
+    {
+      "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Sweet Corn 10g.png",
+      "bytes": 706315,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7788670652e3282a8462b40642682b803c9e5f85d772f05e3aa042a517718b98"
+    },
+    {
+      "path": "assets/Cleaned_Products/Turmeric Powder.png",
+      "bytes": 700458,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "a20b50bdbb987cce0f00c214c1c997067a1cac6577529deaa674d142dbb90170"
+    },
+    {
+      "path": "assets/Cleaned_Products/Red Label Tea Natural Care A Blend 250g.png",
+      "bytes": 681654,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "467c90f93a5956cbcfd377be9fa0efc7be1a162007af7da170fb74969ae7fb96"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kit Kat Miniatures.png",
+      "bytes": 680270,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "ffc45b2fdd6867f16bc56b3d66135d1fef2d310b18be08cb9b4018827df81fc3"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milma Ghee Cake.png",
+      "bytes": 678432,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f3e1ec64d2320746f20b1d5e6e8f815fd8588e8a4140345d16c8fe5aa628bb5f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Santoor Soap White Set.png",
+      "bytes": 676269,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "2328299e05852e249e6b7141dfd5f7706b3db98f48c8ca7a6a1150ac636b2dfe"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dabur Amla Hair Oil.png",
+      "bytes": 667064,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e917dd8bce49bd919ddb5e7e730e6aa773e0d2f71b104ba3104e277ff083630e"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Easy Idiyappam.png",
+      "bytes": 663914,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "4dfb7787b3660d800cacbf4e9da8c28590ad1df6bba0033fbd7cd3d968aa4858"
+    },
+    {
+      "path": "assets/Cleaned_Products/Chilli Powder.png",
+      "bytes": 662124,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "34242d86190c7d10a03221acde81984076a19484a6eeda09197bf2d98baa8542"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lipton Green Tea Clear and Light 10s TB.png",
+      "bytes": 659318,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ef419f3ffd77a91bac67a3132a773b622d9f6ae13dd78b0e58a258afc8006ae3"
+    },
+    {
+      "path": "assets/Cleaned_Products/Boost 200 gm Pouch.png",
+      "bytes": 658066,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f49bae6b03eac9360d1bbf7db61818176344c8a4081e737023013fd22fb0230d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Taaza Tea Masala Chaska Elaichi 250g.png",
+      "bytes": 653095,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "c7f32ebad10bb674dbc40f4a8dff82d33141654450e4645360db9d2cfeb658a5"
+    },
+    {
+      "path": "assets/Cleaned_Products/UT Appam Podi.png",
+      "bytes": 650911,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "120848bdac65ce61aab6abfaffe05fb6f4fb417eab2b68323ab0d72753668302"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dream Cream Orange Cashewnut.png",
+      "bytes": 648399,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1cb2111c1688d3a2a9390cd1930989043383b37036f1278ec38b7d1c782b466d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kadala Mavu Chickpea Flour.png",
+      "bytes": 647421,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "be7b051bb0c99c8b697c02239972461923c36ee085a90cde88b090579bc97450"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vada Paruppu Urad Dal.png",
+      "bytes": 646928,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d02fa79a1747742c2d9ba2e09de8bbf6ca92ed6c6866eb3a5c0967f948464a86"
+    },
+    {
+      "path": "assets/Brand_Logos/SSK.png",
+      "bytes": 642130,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "63786e2e62a778eace8931b837427d2f5618fa0f1fdb668b6a1a55c9a8b04018"
+    },
+    {
+      "path": "assets/Cleaned_Products/Drumstick Salladu.png",
+      "bytes": 635233,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "38f0a785d877b3e0aa1ea2bd3e4cfa0f45404596a48014cb0a1fb4721d29c246"
+    },
+    {
+      "path": "assets/Cleaned_Products/Boost 500 gm Jar.png",
+      "bytes": 633923,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f35cd391178e27e17ff61b2e7482d565f8f262c577f493c679bcf42b971fd0c9"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Tender Mango Pickle.png",
+      "bytes": 633587,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9ba2f6858ed9785cbe36f9f41941196c060d0cb4dcf8f98c65e3ea4242174f62"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ruchi Gold Palm Oil.png",
+      "bytes": 632604,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "dd8765a57ba20c2a488f45c4098f853342df49ecc05b198cb936a8a3dfb61d6f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Wheel Detergent Powder Blue 1kg.png",
+      "bytes": 627426,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7b007e80b41d0ca71156c1cf2f717fb120c39f1b803c6ff2883c400ae7be1c99"
+    },
+    {
+      "path": "assets/Cleaned_Products/Beans.png",
+      "bytes": 625018,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ab1ccab084ec695ab2d16d4be45aa88596a44de70a45c033b3cfba8f96b7072c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milk Bikis Milk Cream.png",
+      "bytes": 622322,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3585d0063787ab347bee0bed89f68dc4f130e8b10ab4c0948a9b46ed162c18c7"
+    },
+    {
+      "path": "assets/Cleaned_Products/Marie Gold.png",
+      "bytes": 614971,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "33ab4ccb5e1a11e6380677c31eb6d50ac1275d35683618336646b2f435910587"
+    },
+    {
+      "path": "assets/Cleaned_Products/Good Day Pista Badam.png",
+      "bytes": 610290,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d32ec1cd5990c8b1a6a68e834d437f13af183271401bc2fd4f25144a39066252"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Care 100% Stronger Germ Protection.png",
+      "bytes": 604887,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "b11ca87b22738f4f4f12881daf03294b2c37702c90dba1d2f5cd91c422571d28"
+    },
+    {
+      "path": "assets/Cleaned_Products/V Wash Plus 100ml.png",
+      "bytes": 600872,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "44f417c16d6bb2dcc7a1f9356a9079e5ef303015ce34df63c4f443dacf89b75d"
+    },
+    {
+      "path": "assets/Cleaned_Products/TRESemme Hair Conditioner Smooth and Shine.png",
+      "bytes": 598974,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "a8ae96ee1514d6bf2dca58f7b5883a73cc63bd4dde3d5037c92c96fef32c36f0"
+    },
+    {
+      "path": "assets/Cleaned_Products/KP Herbal Paste.png",
+      "bytes": 598821,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8c885b7e1fe5b73b638a8e1767b08f263687a0cd6939e8ae348949971600219c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vim Dishwash Gel Liquid Lemon 115ml.png",
+      "bytes": 595527,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "64e4ef448833c3ed0b6518f1487ddc138e861c3cb4e37d8a690172e554dbb8a4"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kissan Jam Mixed Fruit 100g.png",
+      "bytes": 589811,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "51f307589d3ea6c4ce5132525c26a3f383a78408a4a73d7214b2b7b2b856a572"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Dates Pickle.png",
+      "bytes": 589773,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8383c4345a8feeb568964f736e3b22e5700a79d0c7fe68c427ad8c5c2bc58a29"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dark Fantasy Bourbon.png",
+      "bytes": 586447,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "30ff3c02fe13fefd6f7f008069b273b4ed779368a7ba969db94d9adb772d2073"
+    },
+    {
+      "path": "assets/Cleaned_Products/Hamam Soap.png",
+      "bytes": 582951,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "867b02a85461fc263cfa07ae52561d205ef5c7340acacf680bec64077ac79a32"
+    },
+    {
+      "path": "assets/Cleaned_Products/Taj Mahal Tea Leaf 100g.png",
+      "bytes": 580517,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e8033e698b5140cc6e3bd21f4f214457ceae240a0db162dddfb64adeef952b4d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Turmeric And Honey.png",
+      "bytes": 577858,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "2c0411355008b816edcd057752d05fb2c77fd99a56334525575b4bf21f5a6c02"
+    },
+    {
+      "path": "assets/Cleaned_Products/Surf Excel Detergent Powder Easy Wash.png",
+      "bytes": 576221,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ef9422f78fdbacf8b1bbae7cbf5a40c9972d051a97edbc21b3c133687402f253"
+    },
+    {
+      "path": "assets/Cleaned_Products/Bru Coffee Instant.png",
+      "bytes": 573741,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "c83fa05869843841073f68a793cb2a631b0a36f8a1fedeebe9dd22c1ef8c55e3"
+    },
+    {
+      "path": "assets/Cleaned_Products/Nescafe Classic Jar.png",
+      "bytes": 573357,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1f28fbb780a785a8342d9430b614033939749ae1b185646d2e812fa525cfeeee"
+    },
+    {
+      "path": "assets/Cleaned_Products/TRESemme Hair Shampoo Hair Fall Defense 6ml.png",
+      "bytes": 570590,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "4d3a8c9a8edea9ee1e5286468bf4940be1d7cd2d0bdd8a7cfee4d886e78c9762"
+    },
+    {
+      "path": "assets/Cleaned_Products/Red Label Tea Leaf Poly 100g.png",
+      "bytes": 564208,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "a5d045efe8b72757ee9c272d3fb9d2c57c88c84b14cb50ef16df3cb1a7b85996"
+    },
+    {
+      "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo.png",
+      "bytes": 561318,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "eaaad80d7ed8375238ebd7f694915aebb0deb3bf1d9cb58b904b92f9c7d3aeb5"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vim Dishwash Bar 75g.png",
+      "bytes": 561177,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "81bd8b8d6036acc0b00ad3b67f4d2fbb0a7acfe362301af5bb1b0c40500bbf04"
+    },
+    {
+      "path": "assets/Cleaned_Products/Good Day Cashew.png",
+      "bytes": 559651,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e290b879259d7ac91ada718312269f403560d9e4398c05198817c3bf9502c57b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Potato.png",
+      "bytes": 557963,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "b0223445a7812c7623b24ecf1651fa5052b948b8920cca493f86cbf47055db21"
+    },
+    {
+      "path": "assets/Cleaned_Products/Red Label Tea Leaf Carton 250g.png",
+      "bytes": 556277,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6f00e2eccffd8ee2cc6574bc3c6a136f7f3f8462d1ad032f49d9b694807077a2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Power Soap.png",
+      "bytes": 555076,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1fd125741d928937768776c237e1a804261cfb7e881a6ff0b711b4fbf814fbb7"
+    },
+    {
+      "path": "assets/Cleaned_Products/Curry Leaves K. Leaves.png",
+      "bytes": 554467,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "2ee5fdcbf7a99bed52caaf9b5eb4afbaf020eaa61c885f6197f5d19081829006"
+    },
+    {
+      "path": "assets/Cleaned_Products/Yardley Lavender Talc.png",
+      "bytes": 553558,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "64b992ffeba5c984a0f6aee9263190a3da43d40dfceeed6e809371e5c3fe8ecc"
+    },
+    {
+      "path": "assets/Cleaned_Products/Milma Ghee.png",
+      "bytes": 553216,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "315b1f6e5d3497cf970c155fb157c6b9cda4788e0269c62a1212b907644ea77f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Idiyappam Podi steamed.png",
+      "bytes": 552779,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7cfd651a388c1e5e460a76a796a74091bf730e348aee0ece0202561b95c8b082"
+    },
+    {
+      "path": "assets/Cleaned_Products/Surf Excel Detergent Liquid Easy Wash 500ml.png",
+      "bytes": 551172,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6b6d151c3b3f980a4b46b9544d487331ce56c9c3703dfae540163665b0a67695"
+    },
+    {
+      "path": "assets/Cleaned_Products/Comfort Fabric Conditioner Blue 220ml.png",
+      "bytes": 550174,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "18291a7345ab5073700b7cdac40ec7f9007d105ceee91b90c8b27e44553e5ee6"
+    },
+    {
+      "path": "assets/Cleaned_Products/Good Day Butter.png",
+      "bytes": 549597,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8c0234d4fc02819bcafb1879b4e4f47e1e534b229005b2115bc27b48d92fa589"
+    },
+    {
+      "path": "assets/Cleaned_Products/Clinic Plus Strong And Smooth 6ml.png",
+      "bytes": 547807,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6eb3c2b22a1f5c154436a8050f2c5fd8ab0508d068bf2d37125ac61dcba39d7b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ujala Y and F Bliss Aura Sachet.png",
+      "bytes": 544343,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ef1235645e19be6dd49a3ec02ad81f8b95b2f21d2ea846c5674c2f4b8a67e92d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Taaza Elaichi 250g.png",
+      "bytes": 543651,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "08be3264af54139a0264acf617390e622c42b36a16692f03e62514acbf2790bf"
+    },
+    {
+      "path": "assets/Cleaned_Products/Chocolate Horlicks Refill 1Kg.png",
+      "bytes": 543012,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e80e8d8dd8f5debe07bd021a1e41afe16b1fd735aae8b900139b07b0b5a491c0"
+    },
+    {
+      "path": "assets/Cleaned_Products/Horlicks Ready-to-Drink 125ml Chocolate.png",
+      "bytes": 542265,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f9fd450a44cc35905e423f9f34db66c2413cd7259dacb6d9f06461b2a0af0390"
+    },
+    {
+      "path": "assets/Cleaned_Products/Surf Excel Detergent Liquid Matic Top Load Refill.png",
+      "bytes": 538326,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "335924363441d64681cdfd61ecdc9f8201f8ae2b413b6720fe45ff7c76f22c3d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Strong and Shine 6ml.png",
+      "bytes": 535198,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "c943f3e1a32b26bc06281dc91256349b2c64e63e4881b48325239cf75dfc28cc"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Total Protect.png",
+      "bytes": 534972,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "851a2f531292a4ef0b583a6a2d449520569bed6098af696bec4d80389f1f2132"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pears Bathing Soap Pure and Gentle 60g.png",
+      "bytes": 528719,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "965aba9acc6a74b223a03cfabb106f0c2ba4dba41f3237e6ba8cc0a01e9ea96f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Hand Wash Powder to Liquid 10g.png",
+      "bytes": 528239,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "525bc910f69c1b4ff54c2941917badfd0ea2cd7e4d2924d6861bcd581d95df76"
+    },
+    {
+      "path": "assets/Cleaned_Products/Mango.png",
+      "bytes": 526884,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "cd5f325c3a4f4f214b57fdeb613f90a75756bd10c27a2929310c4faf0288022b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Surf Excel Detergent Liquid Matic Front Load Refill.png",
+      "bytes": 526366,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3655c0863be17bece3be22ae65b4d3c2f2a78e089da5eb08fabf24020d779469"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Anti Dandruff Therapy.png",
+      "bytes": 523659,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6ac54675a2d6ecbf9a9d9111fc6dfc601b1845ecb91601862651e7723dfb07f7"
+    },
+    {
+      "path": "assets/Cleaned_Products/Chocolate Horlicks Sachet 75g.png",
+      "bytes": 518230,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "80d783abd6152f40e48ce159b555a1bb28b28eef30b52464297474cdb1ce268b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Tiger Krunch Choco.png",
+      "bytes": 517975,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7172c371a02f40da844d06f1d0e4c65ed9f9916ff9aa629346cfe0790d5825b7"
+    },
+    {
+      "path": "assets/Cleaned_Products/Tiger KR Coconut.png",
+      "bytes": 517238,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9c261dab0e23a900c296963840add5ff30d27d0e30e0cacd1a37368cc87237ae"
+    },
+    {
+      "path": "assets/Cleaned_Products/786 Surekha Rice.png",
+      "bytes": 515267,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f5535adf4bc035cd05c85d61e9b35f912ba5e57f31b5dfc88e9f39bca645e15d"
+    },
+    {
+      "path": "assets/Cleaned_Products/DH Vermicelli Mix.png",
+      "bytes": 515159,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f68615bf4c1cb8836cf45bdde8849a91f8f63d414f9cced18eaabf83a4d95bd2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Lemon Fresh.png",
+      "bytes": 515087,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "17093eebf29519a65b884f18835bd99fdefb739a722a06b3686077eea0915902"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lux Bathing Soap Fresh Flash Water Lily and Cooling.png",
+      "bytes": 514731,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "462908e3851d3b39448171f1b51727c73c09d8fe9e229c43162328a28807df83"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Clean and Fresh 6ml.png",
+      "bytes": 512939,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "cb92d6993f6cde0ada38360743bdb6594515190942e577e49f84f3fc7c6fd161"
+    },
+    {
+      "path": "assets/Cleaned_Products/Bounty S.Bounty.png",
+      "bytes": 512811,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "600fd233def994cb6a1f55531e7ff64222173904e9d5f3ddab1701b775926606"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pears Bathing Soap Soft and Fresh 100g.png",
+      "bytes": 507133,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "59f6d2e5ec0ad35ee06ca877d8635c6085cfbaa2bbe3782866478d8e6892f79d"
+    },
+    {
+      "path": "assets/Cleaned_Products/E-fee Washing Liquid.png",
+      "bytes": 502867,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3cbb1e974d2375a076fd6d138bf2d27d32179dd03116b30afee019418d25894c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunlight Dishwash Liquid.png",
+      "bytes": 500487,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "4c8e69dbce973a6e03e31afb145fb8adab8f2ebea2cd0191c9f2ae308b885ce9"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vim Bar Tubs Anti-Smell 500g.png",
+      "bytes": 499376,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "70da1699bce9a5e754cf2617059218efb593a24f591cfa660cc924035288ad50"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kissan Jam Orange Marmalade 500g.png",
+      "bytes": 490282,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "32770052c93535dc42b80cdb35b1c42d4becbc43a9891379e0622a7680ebea37"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lux Bathing Soap Soft Touch 4 x 60g.png",
+      "bytes": 489128,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "df5b0bbb657db9cd5854aeac243b096a81e476efabc11e0fb2a0f2eaacd69228"
+    },
+    {
+      "path": "assets/Cleaned_Products/Cycle 3-in-1 Agarbathi.png",
+      "bytes": 489080,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "826bd542daf69652ef7ecdfb180907f37cbaf1f86b5615767ba88f30f576cbda"
+    },
+    {
+      "path": "assets/Cleaned_Products/Kissan Ketchup Fresh Tomato Chotu 90g.png",
+      "bytes": 487274,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3eb8c3b38915a265d441066bbd1a9b706debdfbfa1285ab23145e1f288b042a8"
+    },
+    {
+      "path": "assets/Cleaned_Products/TT Asafoetida Cake.png",
+      "bytes": 483471,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "da4eceb05c8fac59df528a1f501274bb96596dbfa3a92dd0298684bf12d9c222"
+    },
+    {
+      "path": "assets/Cleaned_Products/Women's Horlicks Caramel Pet Jar 400g.png",
+      "bytes": 482814,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "c1e1aaad04d6daf5fde6064bbfa5b8ae75cc0f69ddfabca9e10661e87b9bb489"
+    },
+    {
+      "path": "assets/Brand_Logos/True Blue.png",
+      "bytes": 482405,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "685f7d1fa5afda920f69f04e2f4ed44e4c60ed9b9573b7a27692e76880df7994"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Soya Sauce.png",
+      "bytes": 481743,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "4b3abfca2ae3221064fa8516193685c9a07968fe2fc98a9fdc3d90858ada9e8f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Good Day Chocochip.png",
+      "bytes": 480213,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "f37a57f1ebc1de85408ae689960e952bb7355a3ed768b201485bed23be0f138d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vim Dishwash Bar Tub 500g.png",
+      "bytes": 480073,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "534d77e8d19d22ca20812d3d840406901edeacbba26a8fbf1ddba358b8a34968"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pringles Sour and Cream.png",
+      "bytes": 479526,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7b3718ff6dafc03e15ff40075ab9f66869d947aa9fa071424c5fc89439e92545"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pringles Desi Masala.png",
+      "bytes": 475110,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3ff2e10d63154f861d8ab830bb33cf0c74fe926d007beb996cc2c3b8ce6cbf40"
+    },
+    {
+      "path": "assets/Cleaned_Products/Yardley English Rose Talc.png",
+      "bytes": 473782,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1b5d1307fbc24fb24014f6abb9b7274b65250a6491daf770baf3d797c163aa00"
+    },
+    {
+      "path": "assets/Cleaned_Products/Liril Bathing Soap Lime 75g.png",
+      "bytes": 473488,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f8e37304d2c07da5048e9d69de0354c1e859b94852cf50e4e0019e05d469687f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunsilk Hair Shampoo Dream Soft and Smooth.png",
+      "bytes": 471861,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9fd15536fbacc3302f6521142c0701ea0fb3175607317e94237c94579f53a802"
+    },
+    {
+      "path": "assets/Cleaned_Products/True Blue Dragon Noodles.png",
+      "bytes": 468006,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8ad6e0ca19e5f7436df487f0482608a228675648bed9ac00ac810a8a2e13e206"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lipton Green Tea Honey Lemon 100g.png",
+      "bytes": 466379,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "a1e16fa7ae22303de2184c15929f920f115ba3e3edfe134eed29a7d737c8daec"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Total 10 4x65g.png",
+      "bytes": 466359,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9585569bf0ef1ea9f0a5a020d96222f0df03c360a256282243820e2396391dad"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pepsodent Toothpaste Germi Check Cavity Protection.png",
+      "bytes": 465149,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "2e425b22645e493afb30e57f38b8be0dad25ac2ad638639d2ac5281084825d14"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lux Advanced Bright Glow.png",
+      "bytes": 464920,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "99d0455b6256fabbe3d1a161c77dc952b26287431c462fbff256f389a11fa62b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Chukku Kappi Ginger Coffee Mix.png",
+      "bytes": 458759,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "96d1ba0d293cc10a66bb918bef04cdf276e6bfe1727ec3ca887ab52259168c19"
+    },
+    {
+      "path": "assets/Cleaned_Products/Green Chilly.png",
+      "bytes": 457341,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f2c985de18fe873cec9e04dc65e51308f2fd0a26431feb286e0160b5f848fed1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pavithram Gingelly Sesame Oil.png",
+      "bytes": 450139,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "aaf570659d92b3f98f04c8f8c90c7a06a2e9026ad858679855773e15113c7841"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lux Sandal Rs10 MLP.png",
+      "bytes": 448208,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "df875080a2b48c7229e1c0d6942ffdd4f4c01a7c9919173b5a6dab66f3ce08cc"
+    },
+    {
+      "path": "assets/Cleaned_Products/Horlicks Plain Biscuits 45g.png",
+      "bytes": 448083,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "42817c56421e462ea5831da027f00c713e8023ee9e47f851311c97db1b662ea4"
+    },
+    {
+      "path": "assets/Cleaned_Products/TRESemme Hair Shampoo Keratin Smooth 6ml.png",
+      "bytes": 442448,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f65bb4b9e75b6a000349b147eb76d98d9448239d803ea1bb8c09e9fa7a5f8471"
+    },
+    {
+      "path": "assets/Cleaned_Products/Taaza Tea 100g.png",
+      "bytes": 436978,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d69ad97a6c26682daabdbd69e4a90ac5729a2be882ba0bc9f34afbcd94ec6900"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ladies Finger.png",
+      "bytes": 433695,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "563c983257462cdb659e702da3296d306180a5e0c44723e43059d1455fe91668"
+    },
+    {
+      "path": "assets/sub-categories/Soup.png",
+      "bytes": 427786,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "b613a19c2b444c797c15bb57d8b925cdb4e2612b6f765ea108dd23db2e3e011a"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunsilk Hair Shampoo Lusciously Thick and Long.png",
+      "bytes": 427505,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "cf06b8b9c89a7a2e8d7667e6404376754ba5757e8cb9a9142b94b0f08b0cdbe1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Indulekha Hair Shampoo Bringha Hair Fall Cleanser.png",
+      "bytes": 424452,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "aba8fd22c497edcf3753c3e2739e6d131574cf5854a89133dbccfd11e70aed37"
+    },
+    {
+      "path": "assets/Cleaned_Products/Snickers.png",
+      "bytes": 423660,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8a1ededaa15a18dfab6d85da46935623bdb011ac17f0f101ce18671df9e5cf82"
+    },
+    {
+      "path": "assets/Cleaned_Products/Carrot.png",
+      "bytes": 418064,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f3c923c3fc2b2e67400f91b6b07ae3c4dc28e9265a8b4b183cadc689d6203b74"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Conditioner Daily Shine.png",
+      "bytes": 417882,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9e9326c5c398b3bf21da831e5282a841795841fe6c13dabf75e82fac31ecc8d1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Surf Excel Detergent Powder Quick Wash 1kg.png",
+      "bytes": 413126,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "471a4e539b45d07be06d262e2cdd85c826ef3f409caff81e179c8e0154fc724d"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Conditioner Intense Damage Therapy.png",
+      "bytes": 412310,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "a1f9015d8f9fe583420013eb6c7bab99ced70e93fc8bac8881ea923c0b20164f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Nirmal Urutty Rose Rice.png",
+      "bytes": 411043,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "aaeb1fc68c61a30858c41e47cb290be10c377cfb2b896ce9056604439e52b798"
+    },
+    {
+      "path": "assets/Cleaned_Products/Rin Detergent Bar.png",
+      "bytes": 403362,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "beb6cc867e15eb69244e7eafa96293cb0eed17c5d58bf122198d72b3f76be26a"
+    },
+    {
+      "path": "assets/Cleaned_Products/Close Up Toothpaste Deep Action Red Hot Gel 26g.png",
+      "bytes": 401783,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "af702f21e89fa24630fa1b0ae9df3b8fb79bfbd3257ec6673fa355d386d1cff1"
+    },
+    {
+      "path": "assets/Cleaned_Products/TT Asafoetida Kayam.png",
+      "bytes": 401523,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e94d73bdd192c8e3c3fcc54c8dc3df0c068b6698be1accced671cc903a623295"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Pink Serum Beauty Bar.png",
+      "bytes": 399128,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "79af47b1859c0d6d452e775a3553c9f1287f13a46d5c2ce1645b20e891fe6ddd"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Men Plus Care Ad 2In1 Shampoo Plus Conditioner.png",
+      "bytes": 396788,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d1c53ae983a21673cde0cb9de5eef96b26a1ca8d0a3ff2e0ebd8a723d20d87ce"
+    },
+    {
+      "path": "assets/Cleaned_Products/Comfort Fabric Conditioner Pink 220ml.png",
+      "bytes": 396060,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "eaa8d296b0b67d6403d746dd2fff491deff4bffa12e9edd7a094e2490043f2d4"
+    },
+    {
+      "path": "assets/Cleaned_Products/Prakrithi Coconut Oil.png",
+      "bytes": 395757,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "c37c25bf89608c2b508ee40c7e5ecf0332ad89cf84279b3a4b73a2a5d0ac993d"
+    },
+    {
+      "path": "assets/images/icon.png",
+      "bytes": 393493,
+      "references": [],
+      "sha256": "119462bb78eb240a65c869fc067ee599639b3cb5a41953f25c07b17d2a8c7e0f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo and Conditioner Hair Fall Therapy.png",
+      "bytes": 392887,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ddf2ee8625293306ca63892431e5ab01a7b5045542d0422baa3da9ec996b2f8e"
+    },
+    {
+      "path": "assets/categories/Beverages.png",
+      "bytes": 391430,
+      "references": [
+        "src/utils/categoryImages.js"
+      ],
+      "sha256": "a42061d106d31e0c6799473e5b2022b0a9cf4c6ceee16d794ad1e61e0a2aa3c3"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dates Syrup.png",
+      "bytes": 389425,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "ff15763d9eed5d20397bb2a660c83c9a50988c6a3bb6fe25edbc5797718b16f1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunsilk Hair Shampoo Stunning Black Shine.png",
+      "bytes": 388200,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ec7cc0dc5d23caae8f319e0bbfa4bc6333e3a9ba40238a23cd40dda8fec4f0bf"
+    },
+    {
+      "path": "assets/Cleaned_Products/Yardley Red Rose Talc.png",
+      "bytes": 386610,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "0ff36b2a168e2154301bc88b68a916960cc4a80b5d12315229ccb940a4789fac"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Conditioner Hair Fall Rescue.png",
+      "bytes": 385515,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "a43af5131b449c24234f110fc5c5fd7443d022c3b427936eb32d607373ad01c3"
+    },
+    {
+      "path": "assets/Cleaned_Products/TRESemme Smooth and Shine LCS 6ml.png",
+      "bytes": 384664,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "594bf8f335250c4b5047b287b8500dde2a05d893931bec94028188039a459cec"
+    },
+    {
+      "path": "assets/sub-categories/Tea.png",
+      "bytes": 384563,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "1b0660fe7d23ae07f8743b5e6a47805ae5f0eb1f836d281e4260210688323985"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pond's Facewash Men Energy Charge 50g.png",
+      "bytes": 380494,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "381548ba33fe4d4830b61703afec969b38ee2dd043089681a3025b6c66580a98"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lifebuoy Ice Bath 65g x 4.png",
+      "bytes": 375180,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "437832b185b306289cb47a20b15c840441b225d60cb686930fa2c081c8ffc40b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Bathing Soap Cream Beauty 50g.png",
+      "bytes": 374373,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3c52ae731adfc957c83373155ac291880e0f39d653250849cddac27e2976cf38"
+    },
+    {
+      "path": "assets/Cleaned_Products/Hellmann's Sauce Mayonnaise Doy Pack 85g.png",
+      "bytes": 373512,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "f7687129b2df2d7c0c45bba83fc75cbb5dc0f531a0336762f404960a6d9b1654"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ujala Crystal White Liquid.png",
+      "bytes": 373389,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "268987f27d3197d5bbc02d34ba8d2642bc94079d626e20b2b2db776b100899a3"
+    },
+    {
+      "path": "assets/Cleaned_Products/Lux Bathing Soap Velvet Touch Jasmine And Almond.png",
+      "bytes": 373131,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "b3fd32771b212e5f56dbbeb57043d554d786c630559627df5d407ef61d76ec9c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Hellmann's Mayo Smoky Tandoori 85g.png",
+      "bytes": 370808,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d18a5ad53c7ad25cf1dbe2d1af2d18aaa3c213bad80c3b1a90b9ff3df02ebf09"
+    },
+    {
+      "path": "assets/Cleaned_Products/Vim Dishwash Gel Liquid Lemon 250ml.png",
+      "bytes": 370251,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8664f7eff3df0636e1327d918424fdf8767424ebbbb407878f5fcf88f77abc12"
+    },
+    {
+      "path": "assets/Cleaned_Products/Surf Excel Detergent Bar 100g.png",
+      "bytes": 368978,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "5f121f0745dea5ff5f059f7dbdbd0a09636b30abba1ac50578173febbd17edfd"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sarkara Jaggery.png",
+      "bytes": 364678,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "5bdc0c45559271e9764683bc4137c0331ed03c3ef8149120e1ddd4a5b56e902a"
+    },
+    {
+      "path": "assets/sub-categories/Shampoo.png",
+      "bytes": 362886,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "74cc9b0cbc32404f64bcf91a85ab90a084911dbd78bad66866161d70bbb9a82b"
+    },
+    {
+      "path": "assets/sub-categories/Coffee.png",
+      "bytes": 361742,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "baa038798003a7063e393bb4c14eb3d8bc6df9816259ab168d443a8fa1bf7f8a"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunsilk Thick and Long Twin 5.5 Plus 5.5ml.png",
+      "bytes": 361182,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "355c887b13b5c5376d1aef965801434deef7b7f7eea90fcb143a4374f385bc49"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Tomatto Sauce.png",
+      "bytes": 358520,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "cc656971b8edbf75b86a239629cfd30f2a8365af23e39ef997892f3aafc4c51b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Intense Repair.png",
+      "bytes": 354815,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ea3c84704eea5856a7774ec6d1cc2aaff94c34ebfcadc94c6c45fc31272c747f"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pringles Original.png",
+      "bytes": 353622,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "685bf5b9e454515625d88d31f65d03e6803aac8b3f3430a56d244a77f814c120"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Daily Shine.png",
+      "bytes": 351399,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7aff7e58d434be01ff0e498c019ef00cf2b2b75f973d80ba08f4d463ec8de0e0"
+    },
+    {
+      "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Strong and Extra Thick 175ml.png",
+      "bytes": 350923,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "0d88f1533605e9ad118177b871cada657aff864f5222b4cbce0e187ebe2f4c3b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Healthy Ritual For Growing Hair.png",
+      "bytes": 350176,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ff3d9e45c0cd090c85919bd037ba04d695c578841871ae3714d89e13d7c34fab"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dolphin IR8 Pachari Rice.png",
+      "bytes": 350122,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "90a5f9fa0daa298ddf32604bfb15e1fa6d7fe511703a350e01daae12f51d4407"
+    },
+    {
+      "path": "assets/Cleaned_Products/Elite Rava.png",
+      "bytes": 349494,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ce93474e8f09ffd1e62ccc534d021d288b7b322dd8e0840d96a466b5dd6ac061"
+    },
+    {
+      "path": "assets/Cleaned_Products/Clear Hair Oil 75ml.png",
+      "bytes": 349118,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "4d732badff19b84547a52a93300762c62ad45d492397be2c8eb7eddb564bdd22"
+    },
+    {
+      "path": "assets/categories/Health Food Drinks.png",
+      "bytes": 347179,
+      "references": [
+        "src/utils/categoryImages.js"
+      ],
+      "sha256": "02da376fd299acbb91de6943d01b21f070ce6b86d1fcba38c2fb95ffafa7734e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Straight and Shine 175ml.png",
+      "bytes": 346548,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "44224a9e0b183fe2492d756edc124974232b4c7a6343110c438cfa09226b43d8"
+    },
+    {
+      "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Strong Scalp.png",
+      "bytes": 344992,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "313c8dffdbf31690da966b3f9b1a3640148ad128e00b2d5215e6d046e8d7fb7c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Hair Fall Therapy.png",
+      "bytes": 343581,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ad0d529ef28fe5ceeeb3dd3d5b1bf4304552edf03dc33c64a99f03a97b8c87f0"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pran Litchi Drink.png",
+      "bytes": 341603,
+      "references": [
+        "src/utils/productImages.js",
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "c347da6cb0447640369976626a3da7a3587d1a4a41be5d5a2a8dfc92b6070998"
+    },
+    {
+      "path": "assets/sub-categories/Powder.png",
+      "bytes": 339411,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "f54d0dce48c6ea653299390a6576768e9765139932cd98f918a747c5115d911c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Dandruff Care 80ml.png",
+      "bytes": 337079,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "9547a1aa1c0b111dd38cfee653d93d510f190dfb2254c04f7189cd79d859306b"
+    },
+    {
+      "path": "assets/Cleaned_Products/Red Chilly Sauce.png",
+      "bytes": 335957,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6975b91cf4356e32af4958d478e1fe1e3b4ad50066d73ffb0d9e61b4f58f4f38"
+    },
+    {
+      "path": "assets/Brand_Logos/Bharath.png",
+      "bytes": 335913,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "bb102c99f001d843c4b69c1684282a03650ed1485084e4dab9f892594829b6aa"
+    },
+    {
+      "path": "assets/Cleaned_Products/Close Up Toothpaste Ever Fresh Red Hot Gel 40g.png",
+      "bytes": 335868,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1251285e042fcb74a2c0dd9c7d28756c01c0f16e1dd5aa6b9e65f41022c8f8a1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo and Conditioner Intense Repair.png",
+      "bytes": 335562,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1e6855ad79e21088e4f1cdd6926c3c93a2afe0744e313487d2a8365708cc5de6"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sensodyne Sensitive Toothbrush.png",
+      "bytes": 334041,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "510ff3068f57b3b5d3951eb844a656fdc22923db98a680a6b2ee3c1fec92e4d9"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sensodyne Fresh Gel Paste.png",
+      "bytes": 332031,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1c76e28cb3466dc3ab7a9813f9afe71477e84d6a266ccbe43fe98305c10ae1c1"
+    },
+    {
+      "path": "assets/Brand_Logos/Bakers.png",
+      "bytes": 331174,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "07db6e4fc20d224900394636ccb580147ea8775d58dcfc330b2e4c96d165a2c4"
+    },
+    {
+      "path": "assets/sub-categories/Hand Wash.png",
+      "bytes": 324395,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "999a93018e487af64bb01fe86cfa0ca357a67126ee407e86939e7bb22a4d6be9"
+    },
+    {
+      "path": "assets/categories/Detergent.png",
+      "bytes": 320752,
+      "references": [
+        "src/utils/categoryImages.js"
+      ],
+      "sha256": "5b8760228194677f19b85c6a30a832f84ea5f172da46c30ec8b52004518db207"
+    },
+    {
+      "path": "assets/Brand_Logos/Boost.png",
+      "bytes": 320589,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "f6a6061157d46503ef49d8948e71847577c07b52bd46d2af9fa086a36f8500dd"
+    },
+    {
+      "path": "assets/Cleaned_Products/Anus Chilly Sauce.png",
+      "bytes": 318468,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7884d1b780ace1dafe596462638ba4e35465c5210a9f44da779a1503e0b82426"
+    },
+    {
+      "path": "assets/sub-categories/Women.png",
+      "bytes": 317927,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "8e36c6d80165df08e41ef6cde47777386a4a94fd35abaea13826df05b14ca483"
+    },
+    {
+      "path": "assets/sub-categories/Toothpaste.png",
+      "bytes": 316435,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "d5e1691ed1bf202f1f0f7369f513552c3f96c03ddf64fc028070909ee0ee91ad"
+    },
+    {
+      "path": "assets/Brand_Logos/Red Label.png",
+      "bytes": 316068,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "6862c54fb808310b7e65ddf5d285c2bcbf5abf98978e861d69e2570f59843a4c"
+    },
+    {
+      "path": "assets/sub-categories/Detergent Bars.png",
+      "bytes": 316006,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "ef88ec8c8bf9f999d458c8dd4b96f01391295eecb6f994802bfbbd47ed6aa49c"
+    },
+    {
+      "path": "assets/sub-categories/Jam.png",
+      "bytes": 311041,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "146738f3d2bc56a8e88b48ecfa188b9f3497e5ca24faace1b9fa12637e9bf7d1"
+    },
+    {
+      "path": "assets/ms-traders-feature-graphic.png",
+      "bytes": 309012,
+      "references": [],
+      "sha256": "e1c9a08b6ae20ba0de625a21d7cfcf6e5ef53996c5bef5afe0395c902ddd7c5c"
+    },
+    {
+      "path": "assets/Brand_Logos/Sara.png",
+      "bytes": 308861,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "52b77976ecb3b6234e2552f05b4842e81a3eb3c7a438f84e23f741f971229491"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pond's Talcum Powder Dreamflow Magic 20g.png",
+      "bytes": 308509,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "e79da2be392842a34bf4a83cbe343338c51496e0011c546d8ff644a7cb96c2c8"
+    },
+    {
+      "path": "assets/categories/Face Wash.png",
+      "bytes": 306938,
+      "references": [],
+      "sha256": "c7b466e3943fe8e1a10942b5046e103aa441906f76bbd7556e9ea95ce3fb8b31"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dark Fantasy Vanilla.png",
+      "bytes": 306718,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "0349dfa4cf85c9da19635bb88036077e19beed67abdd7a4c3af6d877fb95d7bc"
+    },
+    {
+      "path": "assets/categories/Breakfast.png",
+      "bytes": 306025,
+      "references": [],
+      "sha256": "7828d7035d635482272d7ee8e14548101d67f1b7851fbb5461e707224fb6c8f1"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Daily Shine Shampoo and Conditioner Twin Sachet.png",
+      "bytes": 305549,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "3df225672b7b501568614728d086c72737ebbe4b0ea4f8291eca49b00120d187"
+    },
+    {
+      "path": "assets/Cleaned_Products/Glow and Lovely Facewash Fairness 50g.png",
+      "bytes": 301455,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d617eb3e90eed32185d92e4c5c4e08e2bd355afd95b45d80d2ef9c9abe984ad9"
+    },
+    {
+      "path": "assets/categories/Hair-Care.png",
+      "bytes": 299222,
+      "references": [],
+      "sha256": "52cf94b173a16cba01a7fc51800317b389687b1b8a78b5fdf175c2bf7ca5981c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pond's Talcum Powder Aloe 100g.png",
+      "bytes": 297599,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "fbe767a5ed22e74778e78a113528d8b79aafb36d064e055ee269657b9d950138"
+    },
+    {
+      "path": "assets/Cleaned_Products/Ponds Aloe Cool 180g.png",
+      "bytes": 296244,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "0d5eb3297127f51b50e683dfa0dffb4a13f8c40678afed297e583a27169661af"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pond's Pink Glow Face Talc 30g.png",
+      "bytes": 294725,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7bf9919b5a3a350d5fef18692fd081e3244bc4e9d262e2b010b0e26ed2e4359e"
+    },
+    {
+      "path": "assets/sub-categories/Petroleum Jelly.png",
+      "bytes": 293355,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "bfd1ce54effdad4188bade5f9c7da329530f18d79f63a5d51d281322f82f2749"
+    },
+    {
+      "path": "assets/Cleaned_Products/Rin Bleach Ala Bleach 200ml.png",
+      "bytes": 292645,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "8960023c65a253689cca811b84770eaa865cd28049a8a58dd218a7b306272781"
+    },
+    {
+      "path": "assets/categories/Bath and Hygiene.png",
+      "bytes": 289742,
+      "references": [
+        "src/utils/categoryImages.js"
+      ],
+      "sha256": "3e089733ad73b8f103ec41cc7e75bc2e7244e7fb93b143286e70006e7c6e9b89"
+    },
+    {
+      "path": "assets/sub-categories/Conditioner.png",
+      "bytes": 289628,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "4208f834b7281cc4f8e8aa99fa1ea842c3c5004b93644e21a71a12f63b824dd5"
+    },
+    {
+      "path": "assets/sub-categories/Soaps.png",
+      "bytes": 287585,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "e486ba9af3998cc8e91f5f53b0a98113e8beb508e9edf4b26a3e8ea28609bf61"
+    },
+    {
+      "path": "assets/Cleaned_Products/NC Cracker Lite.png",
+      "bytes": 287413,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "12b5dbcef475bc121e036041a6e11bc58237a42f89eb1bd89c0a9d8c2f535ca6"
+    },
+    {
+      "path": "assets/sub-categories/Health Drink and Supplements.png",
+      "bytes": 286086,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "c77a1ae903e653747f7f8ab3ff0c42679cf7136f647bb7f1e8b8c1f44ab947bd"
+    },
+    {
+      "path": "assets/sub-categories/Dishwash Bars.png",
+      "bytes": 285234,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "0a9d60ba84047059b47000c93f9fd76832e1bdb3bc3629143ac0a960928ddf32"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pond's Facewash White Beauty Spot Less Fairness.png",
+      "bytes": 284528,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7fdda82ac6e8ace382d02169f638f73a8659b5741db100699aa8259b970e8f8a"
+    },
+    {
+      "path": "assets/Brand_Logos/Dabur.png",
+      "bytes": 275863,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "546fc27bbcab34f43d468a2df4b9d094f09dfeba1fb381bbe6ec5e4eb0e7589c"
+    },
+    {
+      "path": "assets/sub-categories/Sauces and Ketchup.png",
+      "bytes": 271937,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "e54b02f5dc8a2721cc4a0d6ddf48e3e6cffed67c315f220788224d02cff55f1e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Hair Fall Rescue 80ml.png",
+      "bytes": 266812,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "16bea484e7bf8fbc654e664a4f57ccb7b502b7d4466375be042c2a704f64290c"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Conditioner Dryness Care 80ml.png",
+      "bytes": 263671,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "bb6d2006ced1897c362ad451bcfc6aa0759faa4e0e376edc7171eff1ea7c6559"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Hair Shampoo Dryness Care 80ml.png",
+      "bytes": 262130,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "6860998cd29ddeb42b8d4bb480e5766c99bdc1f6cc751fc03c07edf698335d68"
+    },
+    {
+      "path": "assets/Brand_Logos/Quaker.png",
+      "bytes": 256712,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "e7f97795f9c967423da22e7efcbadc0a247e5893ce771c5bf38d34f3411ce8ee"
+    },
+    {
+      "path": "assets/Cleaned_Products/Dove Glycolic Hydration Mid Shampoo 180ml.png",
+      "bytes": 255599,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "70b05d006e8fce2820f787577a19b4edcf24640b716b9a4828ed34af0d885857"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sensodyne Rapid Relief Paste.png",
+      "bytes": 255092,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "d3531ed25aa52228e4c86a06cd7534bac2f4794a3128363cb74cb21673c1cd2a"
+    },
+    {
+      "path": "assets/Cleaned_Products/Maggi Pazzta.png",
+      "bytes": 254296,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "b564941274306cd74287955374c0feeb5ee682acd76678b926cf1ef24e12e735"
+    },
+    {
+      "path": "assets/sub-categories/Intimate Wash.png",
+      "bytes": 253589,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "ea1141a2091a0a4eef4999baa95a1260fd641e04eb4a6d1e60b1e042413487db"
+    },
+    {
+      "path": "assets/sub-categories/Cereals and Ready To Eat.png",
+      "bytes": 253520,
+      "references": [],
+      "sha256": "91a14a6971248c9ad7abb296af539c1bf90b73aeabe1e1ca38e2fd86f89d13e7"
+    },
+    {
+      "path": "assets/sub-categories/Sunscreen.png",
+      "bytes": 251805,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "ef5d49abb21f09f51066a1e90c6c28de43302c906f6c87b5450f0aa793a2f3d8"
+    },
+    {
+      "path": "assets/sub-categories/Cream.png",
+      "bytes": 246837,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "06a6d3944e516b9f5be356caa55e4c126da43b8a44da7146b55eaabac2d91294"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pond's Talcum Powder Dreamflow 23g.png",
+      "bytes": 246019,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "dabcb51caab38eb71ca35ed11a69ea8bb7ba7f6270f828014b70ce11e4ed6471"
+    },
+    {
+      "path": "assets/categories/Packaged Foods.png",
+      "bytes": 244849,
+      "references": [
+        "src/utils/categoryImages.js"
+      ],
+      "sha256": "9e800dc80ac12ba4c839ac3c80d0433ea8608d3d6b7bb09eb2f642a90572fa49"
+    },
+    {
+      "path": "assets/Brand_Logos/Cycle.png",
+      "bytes": 242948,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "044a40301292d82b61e8bd09a053149473d273b49375f3b74019b18edc1d715b"
+    },
+    {
+      "path": "assets/categories/Dishwash.png",
+      "bytes": 239007,
+      "references": [],
+      "sha256": "4202e8a408357c887c62eb366d6f35e21cda69f0d05fec1760447142e30e5291"
+    },
+    {
+      "path": "assets/Brand_Logos/Yippee.png",
+      "bytes": 237627,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "b2ea087c86fe656d1f6e9828782c2d79286fa537892699a93d323aa4c7e0aea0"
+    },
+    {
+      "path": "assets/sub-categories/Body Lotion.png",
+      "bytes": 236705,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "83474073e32c59f24e362126d292dc941e703abd12f57f2cbd84302fe89c8def"
+    },
+    {
+      "path": "assets/categories/Oral-Care.png",
+      "bytes": 235345,
+      "references": [],
+      "sha256": "9d36900448ee6c570828616344a923ea9b836d129e732f9aa386ca0fe72e79f0"
+    },
+    {
+      "path": "assets/Brand_Logos/Sunsilk.png",
+      "bytes": 231778,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "c6d9d83bd80f0dd61fffcc24c5328691adb69b2f8ba74c74ae736a9332d1a8cf"
+    },
+    {
+      "path": "assets/Cleaned_Products/TRESemme Hair Conditioner Keratin Smooth.png",
+      "bytes": 231684,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "ef42d0bdfcb4b4a77622dbb0f095a2e97c63bd96986140db0ba592055ee3c86c"
+    },
+    {
+      "path": "assets/Brand_Logos/Bru.png",
+      "bytes": 230017,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "e5e2e3bb4cd3d83ae3fbcb56fb0a966df730e8fc0c40e65d13ddbf75fc8ebf85"
+    },
+    {
+      "path": "assets/Brand_Logos/Vim.png",
+      "bytes": 225669,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "88970d4e017c1123739cbbd281fcabba7d76adb1d2cfe28b0fd6f1189c9cdb1a"
+    },
+    {
+      "path": "assets/Cleaned_Products/TRESemme Hair Conditioner Hair Fall Defense.png",
+      "bytes": 223881,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "cf5172cb85143b9f478377eebbf0226e6e0606ee0302ee75954c3b912b584ce2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Maharaja Orid Dhall.png",
+      "bytes": 221372,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "10bd100672a69e9e06118f3167732561b5aeae644cfb33467247d7f33b88e977"
+    },
+    {
+      "path": "assets/sub-categories/Matic Liquid.png",
+      "bytes": 217924,
+      "references": [],
+      "sha256": "5fa9092e9adc1733d259d5e9d761d5fad58e5937fdbf3ceab24c3e45554f142e"
+    },
+    {
+      "path": "assets/Cleaned_Products/Munch Chocolate Wafer.png",
+      "bytes": 213183,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "7dc82d6786bb7ef93f1941e466290a97eb931773191dac5ef5f66fc79940b8ca"
+    },
+    {
+      "path": "assets/Brand_Logos/Surf Excel.png",
+      "bytes": 211246,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "81c7024b9915c343027d95faee4191babb232745d85185a651dcd84eee846dcf"
+    },
+    {
+      "path": "assets/Brand_Logos/Kitchen King.png",
+      "bytes": 210963,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "a7bc09a7a142aeea007f2cff5ba0c6e3ec7c486be9ae80b0ac38697acbe5f3d2"
+    },
+    {
+      "path": "assets/Cleaned_Products/Pond's Facewash Pure White Anti Pollution 50g.png",
+      "bytes": 210745,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "1ed65ba49d6cd201a90ed389473d2f50a6541c0f532571238f66d8daba95c003"
+    },
+    {
+      "path": "assets/sub-categories/Detergent Liquid.png",
+      "bytes": 208084,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "d6a86929dff18dea899b371a6c9d7db4d0a6a547cbfd2c2f42bd1daed16f0972"
+    },
+    {
+      "path": "assets/Brand_Logos/Wheel.png",
+      "bytes": 206899,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "c5903f1b8e8281655887ac570ace07b3dca0f40e789b9da8c3e0c06a7869f8d1"
+    },
+    {
+      "path": "assets/Brand_Logos/Rin.png",
+      "bytes": 204934,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "36c24eb3e0ddfaeea8943ffd360246e6c1edf8ac1cf08b754d4b6928275e0b67"
+    },
+    {
+      "path": "assets/Brand_Logos/Sunfeast.png",
+      "bytes": 200070,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "d5d85191c2fde163576a269980583f6de76f47fe16d978c7e574549a46cd86d8"
+    },
+    {
+      "path": "assets/sub-categories/Moisturiser.png",
+      "bytes": 199988,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "a6d262a6277acb599f1d59e806b9fbbb62e9773ba1fb202458834e66950a5457"
+    },
+    {
+      "path": "assets/Brand_Logos/Kit Kat.png",
+      "bytes": 194536,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "a057ad4ece40aa913b2bd6ccbc95c76b4532d196342095208514522816f289fb"
+    },
+    {
+      "path": "assets/Cleaned_Products/Sunsilk Hair Conditioner Smooth and Tangle Free 80ml.png",
+      "bytes": 186130,
+      "references": [
+        "src/utils/productImages.js"
+      ],
+      "sha256": "faffacf1afed4ace8904861cce4cf01c29dccc29731ab6784ea0c14bd5e20b0f"
+    },
+    {
+      "path": "assets/sub-categories/Fabric Conditioner.png",
+      "bytes": 185854,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "417c0447b8f541c461ab3fa9e37f9d5d8361ff97487849a14bc443310dca98c1"
+    },
+    {
+      "path": "assets/Brand_Logos/Ruchi Gold.png",
+      "bytes": 182917,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "72931bb9d49f796cde4365d79329c587884a3e41035509f8dfe36e398e7dd696"
+    },
+    {
+      "path": "assets/Brand_Logos/Anus.png",
+      "bytes": 180658,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "4e77ea2b8bb5111faa896421725f9c92260589fbe61142ddc845fa70842e33de"
+    },
+    {
+      "path": "assets/Brand_Logos/Lipton.png",
+      "bytes": 180539,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "ec35331d3b1ae2874b7e1769873551aaf9b3ce2726a793cbd586b9acf101819e"
+    },
+    {
+      "path": "assets/Brand_Logos/Lifebuoy.png",
+      "bytes": 178978,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "fef220d7014e1f614a23b48beac0689ba06a9eeaa78e4b8770730cd8acced0d5"
+    },
+    {
+      "path": "assets/Brand_Logos/Glow & Lovely.png",
+      "bytes": 178297,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "309d582ad2ded88ff64b7768a01f5542fa142e0244364b561c1ab1abd4af5dcb"
+    },
+    {
+      "path": "assets/Brand_Logos/Taj Mahal.png",
+      "bytes": 174668,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "a73f17099f6881b39ceeeccea8aa87387f78bd9269c29501e92a2cdf25c437f4"
+    },
+    {
+      "path": "assets/Brand_Logos/Horlicks.png",
+      "bytes": 171055,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "1accd026719f25fd99b6660ffa43dc203e75b3fc625a32e74c3e87a6470bf75c"
+    },
+    {
+      "path": "assets/sub-categories/Dishwash Liquid.png",
+      "bytes": 171039,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "57f47771ea24aac432f3046c8a8038729342ac5b7eea32bcd5e33d6e0a661155"
+    },
+    {
+      "path": "assets/Brand_Logos/Taaza.png",
+      "bytes": 168910,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "682472fea4a5f714d4e39151bb6bc222fa69361f9a2ec1e8cc1119385d2ba56e"
+    },
+    {
+      "path": "assets/categories/Talc and Grooming.png",
+      "bytes": 165368,
+      "references": [],
+      "sha256": "85454b798978aae7e8a9f5cea73be6dfa38e8b3db44a8d85588dc5abfc0b9ba8"
+    },
+    {
+      "path": "assets/Brand_Logos/Indulekha.png",
+      "bytes": 164105,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "03cc5ebe9fe2035bb7013ab671d8218058b89eb6923c58dba4f170a81c231845"
+    },
+    {
+      "path": "assets/Brand_Logos/786.png",
+      "bytes": 161928,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "1e3f075872d9a621e700a74e02aeba2706371e03e05ea2b795ec6cba9bb2de08"
+    },
+    {
+      "path": "assets/sub-categories/Men.png",
+      "bytes": 156975,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "1a9951ca0cb469b32644a55d6bb954a5b1ec903410bb790d5ef83b0c42ae9356"
+    },
+    {
+      "path": "assets/Brand_Logos/Kissan.png",
+      "bytes": 156594,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "27dedc1d96b822d4d9bc9c7cccb84e64bb24f92a380fdd1b5c80678bade1d144"
+    },
+    {
+      "path": "assets/categories/Feminine Hygiene.png",
+      "bytes": 155642,
+      "references": [],
+      "sha256": "d87267829d982ccae1e5a2ed74846c9528147996d2427ead58eb567680d89094"
+    },
+    {
+      "path": "assets/sub-categories/Hair Oil.png",
+      "bytes": 152855,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "52f3c07c444a979788c7a949bb4a1767ca4c1cc54bfb3ccbbfadfd54444959fb"
+    },
+    {
+      "path": "assets/Brand_Logos/Sunlight.png",
+      "bytes": 152465,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "8c1e8a3b11dadc4fdaa9146e21332b151f4784d409aa25dc4680f2d9773019b7"
+    },
+    {
+      "path": "assets/icon.png",
+      "bytes": 152181,
+      "references": [
+        "app.config.js"
+      ],
+      "sha256": "cee0dd6c197ef0a592b31546b344bced6722b8bb4e0ba5ba39d14f988da15e23"
+    },
+    {
+      "path": "assets/Brand_Logos/UT.png",
+      "bytes": 150983,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "e7c285f0fca5cbae49e278b54ddf5de099f3de9c62ae00611bf5f5729be384a4"
+    },
+    {
+      "path": "assets/Brand_Logos/Power.png",
+      "bytes": 147015,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "6bc9bc18f0e5e044671e53979b0b89ea727de64b99b30349634ebdc3675cce6a"
+    },
+    {
+      "path": "assets/Brand_Logos/Devon.png",
+      "bytes": 146208,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "ed68b68beae684859a57e1cfbf93ce7685d6cbad1038a4f1d1f6cfac703bb311"
+    },
+    {
+      "path": "assets/Brand_Logos/Prakrithi.png",
+      "bytes": 143940,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "8b30e7d5020cc367a3d4cfb2da1f13a812223fb9d9d1b217c8d576b1887a1b08"
+    },
+    {
+      "path": "assets/Brand_Logos/Pulari.png",
+      "bytes": 139905,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "9d7e44bb75a6c6cb4e314adef5ae55c23cb024a3a1d6ac090fe43e1428e362ae"
+    },
+    {
+      "path": "assets/Brand_Logos/Yardley.png",
+      "bytes": 138731,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "c083ef55d8471bab27788e0264f400603eb25db1215253c8568b6cac792da7e9"
+    },
+    {
+      "path": "assets/Brand_Logos/Bounty.png",
+      "bytes": 134948,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "af7b5f62003d63f199ea5a2daa818e80bb29f4b7826b75f9382e5edff6c6bad8"
+    },
+    {
+      "path": "assets/sub-categories/Bleach.png",
+      "bytes": 133439,
+      "references": [
+        "src/utils/subCategoryImages.js"
+      ],
+      "sha256": "0045a47e0b3c411af78474b6135db4b0cd26a9240ff55aa0ddae91ec835ba790"
+    },
+    {
+      "path": "assets/Brand_Logos/TT.png",
+      "bytes": 131681,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "9006b6b2df8d43a2d60b6e31600e7f63213f63a9e50ae2ded57e02a1dd8e7f07"
+    },
+    {
+      "path": "assets/Brand_Logos/Milma.png",
+      "bytes": 125973,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "716ab4662fdaa445f59cacb19296e85f9e32c0842ea77be508ee0f0faa0d5aea"
+    },
+    {
+      "path": "assets/Brand_Logos/Kellogg's.png",
+      "bytes": 125297,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "93927e54f057da3fe4351c6156291049994a89abd2e516a35a59a8dec4681486"
+    },
+    {
+      "path": "assets/Brand_Logos/Dove.png",
+      "bytes": 123491,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "755c0c98e5c8833a45d2b638bf2720ef5ef16d2510d5a2bfac31264ccfbccf89"
+    },
+    {
+      "path": "assets/Brand_Logos/Liril.png",
+      "bytes": 123019,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "d52d4416002eeefb8f4c9065530b6f8ff857032e7801a76fa10a0b3345653480"
+    },
+    {
+      "path": "assets/Brand_Logos/Lux.png",
+      "bytes": 119516,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "0c1a8ec0ece3c9b8e001e70c54f786bbf54a8719dcb9786a088f48d2298c988c"
+    },
+    {
+      "path": "assets/Brand_Logos/Exo.png",
+      "bytes": 116578,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "792287076035d4e169c180650f41989425f6915ed68149da73483f1acc889589"
+    },
+    {
+      "path": "assets/Brand_Logos/Knorr.png",
+      "bytes": 114498,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "c81dbf0a5b201307962e663fc6671d6759c4720595ff2823bee479b5ce0842e2"
+    },
+    {
+      "path": "assets/Brand_Logos/Pringles.png",
+      "bytes": 113908,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "ff95cde63ac556fea3b348bb1e2afbee66d7f199272dc52601bf757912afcab0"
+    },
+    {
+      "path": "assets/Brand_Logos/Pavithram.png",
+      "bytes": 110804,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "23decb60581d31afe35ec632dfe048d11b620a20fb2d7d26d39bbae69b0cb5b6"
+    },
+    {
+      "path": "assets/Brand_Logos/Hellmann's.png",
+      "bytes": 110406,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "69ea691d1d00f4f48ec80bf8c364bb4067bcd45eb1530019ea49cb7abe64f74d"
+    },
+    {
+      "path": "assets/Brand_Logos/Clear.png",
+      "bytes": 109537,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "eefdaaefe11b74fd018afb8407a8dac098f1775972255ebc486d9d990cad1e59"
+    },
+    {
+      "path": "assets/Brand_Logos/Comfort.png",
+      "bytes": 107529,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "5d2a8ce17958b7c5116e13c73ac95134c810e3ff59649feb5b7817e305745437"
+    },
+    {
+      "path": "assets/adaptive-icon.png",
+      "bytes": 105853,
+      "references": [
+        "app.config.js"
+      ],
+      "sha256": "39eac291577842e01d645dcb5bcdc65177c4a1ec78068e1eb073b19967f2e3f3"
+    },
+    {
+      "path": "assets/Brand_Logos/Pran.png",
+      "bytes": 105370,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "9d04341c748e41a58be019c4e9568af82ab7e2634971a55cca874a107077be0a"
+    },
+    {
+      "path": "assets/Brand_Logos/Santoor.png",
+      "bytes": 102235,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "5e9c6c7e51fa1904aed422d292e2380635fd5564dd729b38549e14e905378c1c"
+    },
+    {
+      "path": "assets/Brand_Logos/Clinic Plus.png",
+      "bytes": 99865,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "0871ca18f8f15a1b6ae4d7633a5b7a670d81db010bdad1c7465ce1d694a4ca9e"
+    },
+    {
+      "path": "assets/Brand_Logos/Maharaja.png",
+      "bytes": 99629,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "fdc504675450c6d245abc3413479ee9561e053330434cffd8205f087e573441b"
+    },
+    {
+      "path": "assets/Brand_Logos/Nirmal.png",
+      "bytes": 96696,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "4aca9b4d830878750d44ae903d424d0aa84ddfb4fc30626d60001df777da8a48"
+    },
+    {
+      "path": "assets/fonts/PlusJakartaSans-Medium.ttf",
+      "bytes": 94568,
+      "references": [
+        "App.js"
+      ],
+      "sha256": "648b7231dc5b29644ad10863410b5968214179d316452b14548fdaa8f53dc889"
+    },
+    {
+      "path": "assets/fonts/PlusJakartaSans-Regular.ttf",
+      "bytes": 94568,
+      "references": [
+        "App.js"
+      ],
+      "sha256": "856ac8f8014b97ec80c73ac48dd91c4ec99f436b2862511c8dfdcab190a6579d"
+    },
+    {
+      "path": "assets/fonts/PlusJakartaSans-SemiBold.ttf",
+      "bytes": 94560,
+      "references": [
+        "App.js"
+      ],
+      "sha256": "4efb704bc71227c453d1387bb11709cd298767522eae8bbc726e1c2d5b211b32"
+    },
+    {
+      "path": "assets/fonts/PlusJakartaSans-Bold.ttf",
+      "bytes": 94444,
+      "references": [
+        "App.js"
+      ],
+      "sha256": "644d13b9c3684ae52fad682ac807f7a16bfe0600aa9b873119b7df4d2289e872"
+    },
+    {
+      "path": "assets/Brand_Logos/Closeup.png",
+      "bytes": 92580,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "0bfeafe46dac83c95e061866b3b812749f1506449cb4414f6f791a8e613bde73"
+    },
+    {
+      "path": "assets/Brand_Logos/Britannia.png",
+      "bytes": 88735,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "06ad4329db84dd5c0c1e7885c7107642ae935e7f411a5055e3b946c8f03e3a91"
+    },
+    {
+      "path": "assets/Brand_Logos/Pepsodent.png",
+      "bytes": 88426,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "49dcd4d2e914fd16a8b26acee6ad2593c781d4dc31bf9a4ec36fa11f44d2bd37"
+    },
+    {
+      "path": "assets/Brand_Logos/Rexona.png",
+      "bytes": 87663,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "fd9231fff47955fe8dcf29b35f35f8408328b95599d9242d88d6db089b1a4f85"
+    },
+    {
+      "path": "assets/Brand_Logos/Medimix.png",
+      "bytes": 85797,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "d968f6e85195447a714bb8c792cd9720edf146919a460f7a726a32aadac203d0"
+    },
+    {
+      "path": "assets/Brand_Logos/VWash.png",
+      "bytes": 82546,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "3a7f3788fb31de5cf7ac99556be2c03acb4334b60e00e186b25681b2be9882d2"
+    },
+    {
+      "path": "assets/images/phonepe.png",
+      "bytes": 82496,
+      "references": [
+        "src/components/ui/PaymentAppBadge.js"
+      ],
+      "sha256": "b06697e4c3d4bab0704b62404d7780d93dcc8b4d0702a13ba1cfd2aea3f58324"
+    },
+    {
+      "path": "assets/Brand_Logos/AVT.png",
+      "bytes": 81836,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "9d0af615b18e4d22d1f5c6e5bdcee3b8876e8df33a28495872d124b73654662b"
+    },
+    {
+      "path": "assets/Brand_Logos/Pears.png",
+      "bytes": 79754,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "3d63e0d01591a89d89b9cbe8c34bbe00816e31c3943b45d54084dcee192e63fa"
+    },
+    {
+      "path": "assets/Brand_Logos/KP.png",
+      "bytes": 79496,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "1922066823d3967f5a1785fb0660c71c501fb679746e6f52f8ac8e20cec9da00"
+    },
+    {
+      "path": "assets/Brand_Logos/Munch.png",
+      "bytes": 79297,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "cf1da7909e72828321269a59c8ca8d503da57dbdf4e6b0645893e6b57acd38fd"
+    },
+    {
+      "path": "assets/images/android-icon-foreground.png",
+      "bytes": 78796,
+      "references": [],
+      "sha256": "9e3d0315a33c6799de601dd34cd8bf8cc3a8d16f3bf75592baec2ceb7240b391"
+    },
+    {
+      "path": "assets/app-icon.png",
+      "bytes": 78584,
+      "references": [],
+      "sha256": "4b50f877cb5797c2925dd90e57eb6e2bfc1d80ea490b6e3a893349dbfcf036d4"
+    },
+    {
+      "path": "assets/logo.png",
+      "bytes": 78584,
+      "references": [
+        "app.config.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/LoginScreen.js",
+        "src/screens/RegisterScreen.js"
+      ],
+      "sha256": "4b50f877cb5797c2925dd90e57eb6e2bfc1d80ea490b6e3a893349dbfcf036d4"
+    },
+    {
+      "path": "assets/Brand_Logos/Maggi.png",
+      "bytes": 69019,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "34e75ac145471f28cb6d603acc261edfa1d8f36a297a7b857b8a3a110891c45f"
+    },
+    {
+      "path": "assets/Brand_Logos/TRESemm\u00e9.png",
+      "bytes": 68893,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "ba76f3c3c5a83644ed5f67b69b0c80bc5ecbafe1d9edf9fc294950a61a1d4b6a"
+    },
+    {
+      "path": "assets/Brand_Logos/Maxo.png",
+      "bytes": 67292,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "7471806ddd7b16a8fbcf53b6ce19be975a1f6cb1af443e1ac4ae1aa0bc49c666"
+    },
+    {
+      "path": "assets/Brand_Logos/Ujala.png",
+      "bytes": 66268,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "78312e578cbece9c747c9baf4b3c92b12e3fe557945c17f63ec51655fa9ce062"
+    },
+    {
+      "path": "assets/images/gpay.png",
+      "bytes": 64594,
+      "references": [
+        "src/components/ui/PaymentAppBadge.js"
+      ],
+      "sha256": "3991428b8ed4a92a48312acc42430e0569afdeac5d74116ff810fd63ecb6e090"
+    },
+    {
+      "path": "assets/Brand_Logos/Dolphin.png",
+      "bytes": 60341,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "d72672b2d27025745f784fc79ffcd56c828079cfdce39267fbb6df0bdd97291a"
+    },
+    {
+      "path": "assets/Brand_Logos/Snickers.png",
+      "bytes": 58176,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "0345aee7e4fccc34267923117b6a41d3c30b3409df00e808af094aba65734b6d"
+    },
+    {
+      "path": "assets/images/paytm.png",
+      "bytes": 56462,
+      "references": [
+        "src/components/ui/PaymentAppBadge.js"
+      ],
+      "sha256": "a59e70a9c00289e07bdf3fbf92841fae201346fed0c56640da5aa5fa90fc3488"
+    },
+    {
+      "path": "assets/Brand_Logos/Elite.png",
+      "bytes": 55791,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "22552869902cf349af03bf7de6361a26b23300e34a56a3abc6837b3a1098b503"
+    },
+    {
+      "path": "assets/Brand_Logos/Pond's.png",
+      "bytes": 52770,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "1c7ac12302c7952fee928f90d2810ab2b72cf5ded1e12ba8a70adf3833407d30"
+    },
+    {
+      "path": "assets/Brand_Logos/Sensodyne.png",
+      "bytes": 50806,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "28dcfe33be7ac4ec0e7d0784147cc45d9678aa74ed154274fef194e08e5bbfa1"
+    },
+    {
+      "path": "assets/Brand_Logos/Hamam.png",
+      "bytes": 48700,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "e8efd30c5b6d397ba0dae635057a028243198b684f289f4f4168b5ebf4b08a67"
+    },
+    {
+      "path": "assets/images/react-logo@3x.png",
+      "bytes": 21252,
+      "references": [],
+      "sha256": "cd84e02a5d542a3e71b7fa10a685c1b9fb51db4aff92aca6c0da6461ce17be16"
+    },
+    {
+      "path": "assets/Brand_Logos/Nescafe.png",
+      "bytes": 20401,
+      "references": [
+        "src/utils/brandLogos.js"
+      ],
+      "sha256": "972bfd1040103dd00c73c75755e27395c8df366e8f11c2ece6e83f64424f19bd"
+    },
+    {
+      "path": "assets/images/android-icon-background.png",
+      "bytes": 17549,
+      "references": [],
+      "sha256": "fb139c2dee362ebf2070e23b96da6fc0d43f8492de38b8af1fd7223e19b5861d"
+    },
+    {
+      "path": "assets/images/splash-icon.png",
+      "bytes": 17547,
+      "references": [],
+      "sha256": "5f4c0a732b6325bf4071d9124d2ae67e037cb24fcc9c482ef82bea742109a3b8"
+    },
+    {
+      "path": "assets/splash.png",
+      "bytes": 16222,
+      "references": [],
+      "sha256": "803d924976c841d053aad67c5c7d39bc6ffd419430fb7922c7087a5e2218f8b1"
+    },
+    {
+      "path": "assets/images/react-logo@2x.png",
+      "bytes": 14225,
+      "references": [],
+      "sha256": "fa600be9ad2f869c7a8dbaffc78bb15af741123e1319c948f0be51753a153cde"
+    },
+    {
+      "path": "assets/images/react-logo.png",
+      "bytes": 6341,
+      "references": [],
+      "sha256": "224b7636b15e672801579b5b418077cbc2ca42f0146389062364356b0ecb5c5c"
+    },
+    {
+      "path": "assets/images/partial-react-logo.png",
+      "bytes": 5075,
+      "references": [],
+      "sha256": "015a72aeb24c1166243ebc185355c9488cc892fbf3aa82f9ae66819a10f3451c"
+    },
+    {
+      "path": "assets/images/qr.png",
+      "bytes": 4522,
+      "references": [],
+      "sha256": "8dec3f343391dadcc236e1fd26faaabbe32c495dafa617efc94dceece299564a"
+    },
+    {
+      "path": "assets/images/android-icon-monochrome.png",
+      "bytes": 4140,
+      "references": [],
+      "sha256": "6371fc2c12e33ad2215a86c281db3d682a81bebe7c957a842c13b8bf00cceb83"
+    },
+    {
+      "path": "assets/images/brand-placeholder.png",
+      "bytes": 1979,
+      "references": [
+        "src/components/ui/BrandLogo.js"
+      ],
+      "sha256": "172f942559ee9236517b62215758f46c0c5f9f5946586a607f62449d86174187"
+    },
+    {
+      "path": "assets/images/favicon.png",
+      "bytes": 1129,
+      "references": [],
+      "sha256": "a4e030697a7571b3e95d31860e4da55d2f98e5e861e2b55e414f45a8556828ba"
+    }
+  ],
+  "unreferencedCandidates": [
+    "assets/app-icon.png",
+    "assets/categories/Breakfast.png",
+    "assets/categories/Dishwash.png",
+    "assets/categories/Face Wash.png",
+    "assets/categories/Feminine Hygiene.png",
+    "assets/categories/Hair-Care.png",
+    "assets/categories/Oral-Care.png",
+    "assets/categories/Talc and Grooming.png",
+    "assets/images/android-icon-background.png",
+    "assets/images/android-icon-foreground.png",
+    "assets/images/android-icon-monochrome.png",
+    "assets/images/favicon.png",
+    "assets/images/icon.png",
+    "assets/images/partial-react-logo.png",
+    "assets/images/qr.png",
+    "assets/images/react-logo.png",
+    "assets/images/react-logo@2x.png",
+    "assets/images/react-logo@3x.png",
+    "assets/images/splash-icon.png",
+    "assets/ms-traders-feature-graphic.png",
+    "assets/splash.png",
+    "assets/sub-categories/Cereals and Ready To Eat.png",
+    "assets/sub-categories/Matic Liquid.png"
+  ],
+  "nonLiteralRequires": [],
+  "dependencies": [
+    {
+      "name": "react-native",
+      "installedBytes": 76165590,
+      "lockedVersion": "0.81.5",
+      "directSourceImports": [
+        "src/components/DeliveryConfirmationModal.js",
+        "src/components/EmptyState.js",
+        "src/components/Loader.js",
+        "src/components/ProductFilterModal.js",
+        "src/components/ProductSortModal.js",
+        "src/components/ui/Avatar.js",
+        "src/components/ui/Badge.js",
+        "src/components/ui/Button.js",
+        "src/components/ui/Card.js",
+        "src/components/ui/CartBar.js",
+        "src/components/ui/Dialog.js",
+        "src/components/ui/FavoriteButton.js",
+        "src/components/ui/FreeDeliveryBanner.js",
+        "src/components/ui/Header.js",
+        "src/components/ui/Input.js",
+        "src/components/ui/Loader.js",
+        "src/components/ui/PaymentAppBadge.js",
+        "src/components/ui/ProductCard.js",
+        "src/components/ui/SearchBar.js",
+        "src/components/ui/SectionHeader.js",
+        "src/components/ui/StatusChip.js",
+        "src/components/ui/ToastConfig.js",
+        "src/navigation/Navigation.js",
+        "src/screens/AddAddressScreen.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CategoriesScreen.js",
+        "src/screens/CategoryScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/DeliveryMapScreen.js",
+        "src/screens/DeliveryOrdersScreen.js",
+        "src/screens/EditProfileScreen.js",
+        "src/screens/FavoritesScreen.js",
+        "src/screens/ForgotPasswordScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/LoginScreen.js",
+        "src/screens/MyAddressesScreen.js",
+        "src/screens/NotificationsScreen.js",
+        "src/screens/OrderTrackingScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/PaymentScreen.js",
+        "src/screens/ProductDetailScreen.js",
+        "src/screens/ProductListScreen.js",
+        "src/screens/RegisterScreen.js",
+        "src/screens/SearchScreen.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "expo",
+      "installedBytes": 40816583,
+      "lockedVersion": "54.0.37",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "firebase",
+      "installedBytes": 36785725,
+      "lockedVersion": "12.19.0",
+      "directSourceImports": [
+        "src/components/DeliveryConfirmationModal.js",
+        "src/context/AuthContext.js",
+        "src/context/NotificationsContext.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CategoriesScreen.js",
+        "src/screens/CategoryScreen.js",
+        "src/screens/FavoritesScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/OrderTrackingScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/ProductDetailScreen.js",
+        "src/services/firebase.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "lucide-react-native",
+      "installedBytes": 27626995,
+      "lockedVersion": "1.46.0",
+      "directSourceImports": [
+        "src/components/DeliveryConfirmationModal.js",
+        "src/components/EmptyState.js",
+        "src/components/ProductFilterModal.js",
+        "src/components/ProductSortModal.js",
+        "src/components/ui/Avatar.js",
+        "src/components/ui/CartBar.js",
+        "src/components/ui/FavoriteButton.js",
+        "src/components/ui/FreeDeliveryBanner.js",
+        "src/components/ui/Header.js",
+        "src/components/ui/ProductCard.js",
+        "src/components/ui/SearchBar.js",
+        "src/components/ui/SectionHeader.js",
+        "src/components/ui/ToastConfig.js",
+        "src/navigation/Navigation.js",
+        "src/screens/AddAddressScreen.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CategoriesScreen.js",
+        "src/screens/CategoryScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/DeliveryMapScreen.js",
+        "src/screens/DeliveryOrdersScreen.js",
+        "src/screens/EditProfileScreen.js",
+        "src/screens/ForgotPasswordScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/LoginScreen.js",
+        "src/screens/MyAddressesScreen.js",
+        "src/screens/NotificationsScreen.js",
+        "src/screens/OrderTrackingScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/PaymentScreen.js",
+        "src/screens/ProductDetailScreen.js",
+        "src/screens/ProductListScreen.js",
+        "src/screens/RegisterScreen.js",
+        "src/screens/SearchScreen.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "react-dom",
+      "installedBytes": 6552660,
+      "lockedVersion": "19.1.0",
+      "directSourceImports": [],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "@expo/vector-icons",
+      "installedBytes": 6014797,
+      "lockedVersion": "15.1.1",
+      "directSourceImports": [],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "tailwindcss",
+      "installedBytes": 5590081,
+      "lockedVersion": "3.4.19",
+      "directSourceImports": [
+        "tailwind.config.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-svg",
+      "installedBytes": 4126833,
+      "lockedVersion": "15.12.1",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-reanimated",
+      "installedBytes": 3724823,
+      "lockedVersion": "4.1.7",
+      "directSourceImports": [
+        "App.js",
+        "src/components/ui/Button.js",
+        "src/components/ui/CartBar.js",
+        "src/components/ui/ProductCard.js",
+        "src/components/ui/Skeleton.js",
+        "src/components/ui/ToastConfig.js",
+        "src/navigation/Navigation.js",
+        "src/screens/AddAddressScreen.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CategoriesScreen.js",
+        "src/screens/CategoryScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/EditProfileScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/MyAddressesScreen.js",
+        "src/screens/NotificationsScreen.js",
+        "src/screens/OrderTrackingScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/PaymentScreen.js",
+        "src/screens/ProductDetailScreen.js",
+        "src/screens/SearchScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-gesture-handler",
+      "installedBytes": 3259588,
+      "lockedVersion": "2.28.0",
+      "directSourceImports": [
+        "App.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-web",
+      "installedBytes": 3030344,
+      "lockedVersion": "0.21.2",
+      "directSourceImports": [],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-screens",
+      "installedBytes": 2358169,
+      "lockedVersion": "4.16.0",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "axios",
+      "installedBytes": 1983343,
+      "lockedVersion": "1.20.0",
+      "directSourceImports": [
+        "src/services/api.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "expo-build-properties",
+      "installedBytes": 1286046,
+      "lockedVersion": "1.0.10",
+      "directSourceImports": [],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-qrcode-svg",
+      "installedBytes": 958563,
+      "lockedVersion": "6.3.24",
+      "directSourceImports": [
+        "src/screens/PaymentScreen.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-maps",
+      "installedBytes": 892562,
+      "lockedVersion": "1.20.1",
+      "directSourceImports": [
+        "src/screens/DeliveryMapScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "expo-image",
+      "installedBytes": 839777,
+      "lockedVersion": "3.0.11",
+      "directSourceImports": [
+        "src/components/ui/Avatar.js",
+        "src/components/ui/BrandLogo.js",
+        "src/components/ui/PaymentAppBadge.js",
+        "src/components/ui/ProductCard.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CategoriesScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/EditProfileScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/LoginScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/ProductDetailScreen.js",
+        "src/screens/RegisterScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "react-native-worklets",
+      "installedBytes": 784516,
+      "lockedVersion": "0.5.1",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "expo-location",
+      "installedBytes": 572840,
+      "lockedVersion": "19.0.8",
+      "directSourceImports": [
+        "src/screens/AddAddressScreen.js",
+        "src/screens/DeliveryMapScreen.js",
+        "src/screens/DeliveryOrdersScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "expo-image-picker",
+      "installedBytes": 517628,
+      "lockedVersion": "17.0.11",
+      "directSourceImports": [
+        "src/screens/EditProfileScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "@react-navigation/stack",
+      "installedBytes": 481372,
+      "lockedVersion": "7.11.1",
+      "directSourceImports": [],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "@react-navigation/bottom-tabs",
+      "installedBytes": 386671,
+      "lockedVersion": "7.19.1",
+      "directSourceImports": [
+        "src/navigation/Navigation.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "@react-native-async-storage/async-storage",
+      "installedBytes": 380789,
+      "lockedVersion": "2.2.0",
+      "directSourceImports": [
+        "src/context/AuthContext.js",
+        "src/screens/DeliveryOrdersScreen.js",
+        "src/services/api.js",
+        "src/services/firebase.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "nativewind",
+      "installedBytes": 341071,
+      "lockedVersion": "4.2.7",
+      "directSourceImports": [
+        "tailwind.config.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "@react-navigation/native",
+      "installedBytes": 292451,
+      "lockedVersion": "7.4.1",
+      "directSourceImports": [
+        "src/navigation/Navigation.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/DeliveryOrdersScreen.js",
+        "src/screens/FavoritesScreen.js",
+        "src/screens/MyAddressesScreen.js",
+        "src/screens/NotificationsScreen.js",
+        "src/screens/OrdersScreen.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "@react-navigation/elements",
+      "installedBytes": 280128,
+      "lockedVersion": "2.9.42",
+      "directSourceImports": [],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "expo-clipboard",
+      "installedBytes": 279530,
+      "lockedVersion": "8.0.8",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "expo-web-browser",
+      "installedBytes": 269941,
+      "lockedVersion": "15.0.11",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "@react-navigation/native-stack",
+      "installedBytes": 262037,
+      "lockedVersion": "7.19.1",
+      "directSourceImports": [
+        "src/navigation/Navigation.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "@react-native-community/datetimepicker",
+      "installedBytes": 260636,
+      "lockedVersion": "8.4.4",
+      "directSourceImports": [
+        "src/screens/EditProfileScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "react-native-safe-area-context",
+      "installedBytes": 230674,
+      "lockedVersion": "5.6.2",
+      "directSourceImports": [
+        "App.js",
+        "src/components/ProductFilterModal.js",
+        "src/components/ProductSortModal.js",
+        "src/components/ui/CartBar.js",
+        "src/components/ui/Header.js",
+        "src/navigation/Navigation.js",
+        "src/screens/AddAddressScreen.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CategoriesScreen.js",
+        "src/screens/CategoryScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/DeliveryMapScreen.js",
+        "src/screens/DeliveryOrdersScreen.js",
+        "src/screens/EditProfileScreen.js",
+        "src/screens/FavoritesScreen.js",
+        "src/screens/ForgotPasswordScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/LoginScreen.js",
+        "src/screens/MyAddressesScreen.js",
+        "src/screens/NotificationsScreen.js",
+        "src/screens/OrderTrackingScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/PaymentScreen.js",
+        "src/screens/ProductDetailScreen.js",
+        "src/screens/ProductListScreen.js",
+        "src/screens/RegisterScreen.js",
+        "src/screens/SearchScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": false
+    },
+    {
+      "name": "expo-font",
+      "installedBytes": 223084,
+      "lockedVersion": "14.0.12",
+      "directSourceImports": [
+        "App.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "react",
+      "installedBytes": 167000,
+      "lockedVersion": "19.1.0",
+      "directSourceImports": [
+        "App.js",
+        "src/components/DeliveryConfirmationModal.js",
+        "src/components/EmptyState.js",
+        "src/components/Loader.js",
+        "src/components/ProductFilterModal.js",
+        "src/components/ProductSortModal.js",
+        "src/components/ui/Avatar.js",
+        "src/components/ui/Badge.js",
+        "src/components/ui/BrandLogo.js",
+        "src/components/ui/Button.js",
+        "src/components/ui/Card.js",
+        "src/components/ui/CartBar.js",
+        "src/components/ui/Dialog.js",
+        "src/components/ui/FavoriteButton.js",
+        "src/components/ui/FreeDeliveryBanner.js",
+        "src/components/ui/Header.js",
+        "src/components/ui/Input.js",
+        "src/components/ui/Loader.js",
+        "src/components/ui/PaymentAppBadge.js",
+        "src/components/ui/ProductCard.js",
+        "src/components/ui/SearchBar.js",
+        "src/components/ui/SectionHeader.js",
+        "src/components/ui/Skeleton.js",
+        "src/components/ui/StatusChip.js",
+        "src/context/AuthContext.js",
+        "src/context/CartContext.js",
+        "src/context/FavoritesContext.js",
+        "src/context/NotificationsContext.js",
+        "src/navigation/Navigation.js",
+        "src/screens/AddAddressScreen.js",
+        "src/screens/CartScreen.js",
+        "src/screens/CategoriesScreen.js",
+        "src/screens/CategoryScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/DeliveryMapScreen.js",
+        "src/screens/DeliveryOrdersScreen.js",
+        "src/screens/EditProfileScreen.js",
+        "src/screens/FavoritesScreen.js",
+        "src/screens/ForgotPasswordScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/LoginScreen.js",
+        "src/screens/MyAddressesScreen.js",
+        "src/screens/NotificationsScreen.js",
+        "src/screens/OrderTrackingScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/PaymentScreen.js",
+        "src/screens/ProductDetailScreen.js",
+        "src/screens/ProductListScreen.js",
+        "src/screens/RegisterScreen.js",
+        "src/screens/SearchScreen.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "expo-linking",
+      "installedBytes": 159456,
+      "lockedVersion": "8.0.12",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "expo-constants",
+      "installedBytes": 128864,
+      "lockedVersion": "18.0.14",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "expo-splash-screen",
+      "installedBytes": 118396,
+      "lockedVersion": "31.0.13",
+      "directSourceImports": [
+        "App.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "expo-crypto",
+      "installedBytes": 115163,
+      "lockedVersion": "15.0.9",
+      "directSourceImports": [
+        "src/screens/CheckoutScreen.js"
+      ],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "expo-haptics",
+      "installedBytes": 80029,
+      "lockedVersion": "15.0.8",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "expo-system-ui",
+      "installedBytes": 76756,
+      "lockedVersion": "6.0.9",
+      "directSourceImports": [],
+      "androidDirectory": true,
+      "expoModule": true
+    },
+    {
+      "name": "react-native-toast-message",
+      "installedBytes": 49093,
+      "lockedVersion": "2.5.2",
+      "directSourceImports": [
+        "App.js",
+        "src/components/DeliveryConfirmationModal.js",
+        "src/context/CartContext.js",
+        "src/context/FavoritesContext.js",
+        "src/context/NotificationsContext.js",
+        "src/screens/AddAddressScreen.js",
+        "src/screens/CheckoutScreen.js",
+        "src/screens/DeliveryOrdersScreen.js",
+        "src/screens/EditProfileScreen.js",
+        "src/screens/ForgotPasswordScreen.js",
+        "src/screens/HomeScreen.js",
+        "src/screens/MyAddressesScreen.js",
+        "src/screens/OrderTrackingScreen.js",
+        "src/screens/OrdersScreen.js",
+        "src/screens/PaymentScreen.js",
+        "src/services/api.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "expo-symbols",
+      "installedBytes": 43991,
+      "lockedVersion": "1.0.8",
+      "directSourceImports": [],
+      "androidDirectory": false,
+      "expoModule": true
+    },
+    {
+      "name": "react-native-maps-directions",
+      "installedBytes": 34838,
+      "lockedVersion": "1.9.0",
+      "directSourceImports": [
+        "src/screens/DeliveryMapScreen.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    },
+    {
+      "name": "expo-status-bar",
+      "installedBytes": 24914,
+      "lockedVersion": "3.0.9",
+      "directSourceImports": [
+        "App.js"
+      ],
+      "androidDirectory": false,
+      "expoModule": false
+    }
+  ],
+  "caveat": "Installed npm bytes include source/iOS/tools and do not measure APK contribution. Unreferenced candidates require review before deletion."
+}

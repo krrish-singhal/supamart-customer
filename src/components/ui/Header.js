@@ -2,9 +2,21 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 export default function Header({ title, subtitle, showBack = true, onBack, rightComponent, transparent = false }) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (navigation?.canGoBack?.()) {
+      navigation.goBack();
+    } else {
+      navigation?.navigate('Main', { screen: 'Home' });
+    }
+  };
 
   return (
     <View
@@ -12,9 +24,9 @@ export default function Header({ title, subtitle, showBack = true, onBack, right
       style={{ paddingTop: insets.top + 12 }}
     >
       <View className="w-12 items-start justify-center">
-        {showBack && onBack && (
+        {showBack && (
           <Pressable
-            onPress={onBack}
+            onPress={handleBack}
             className="w-10 h-10 rounded-full bg-surface-50 items-center justify-center border border-border-light active:bg-surface-100 transition-colors"
           >
             <ChevronLeft size={24} color="#0f172a" />
