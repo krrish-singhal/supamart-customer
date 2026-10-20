@@ -1,7 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, setLogLevel } from 'firebase/firestore';
 import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Silence WebChannel reconnection stream transport warnings in React Native
+setLogLevel('error');
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -20,7 +23,17 @@ const firebaseConfig = {
 // would need a fully public rule, which is fine for products/categories/orders-by-id
 // but not for a per-user notification inbox.
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+
+let db;
+try {
+  // Use long-polling in React Native to prevent WebChannel RPC Listen stream transport drops
+  db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  });
+} catch {
+  db = getFirestore(app);
+}
+export { db };
 
 // initializeAuth (with explicit AsyncStorage persistence) instead of plain getAuth() —
 // without it, Firebase Auth warns on every launch and falls back to in-memory

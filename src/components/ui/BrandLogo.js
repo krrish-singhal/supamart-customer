@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import brandLogos from '../../utils/brandLogos';
 import { optimizeCloudinaryUrl } from '../../utils/cloudinaryImage';
 
-const PLACEHOLDER = require('../../../assets/images/brand-placeholder.png');
+const PLACEHOLDER = require('../../../assets/images/brand-placeholder.webp');
 
 // Priority: brand.logoUrl (admin-uploaded, a live Firestore field) -> a locally-bundled
 // logo for this exact brand name (this file's brandLogos map) -> local placeholder. No

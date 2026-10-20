@@ -1,73 +1,133 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ShoppingCart } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import Animated, {
+  FadeInDown,
+  FadeOutDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
+import { ChevronRight, ShoppingBag } from 'lucide-react-native';
+import { getProductImageSource } from '../../utils/productImages';
 
-// Floating "View Cart" bar shared by every product-listing screen (Home, Category,
-// ProductList). It anchors above the device's bottom safe-area inset instead of a
-// hardcoded `bottom: 20` — with app.json's edgeToEdgeEnabled:true the app draws under
-// the system navigation bar, so a fixed 20px offset put the bar (and its text) behind
-// the nav buttons, which is the clipping/overlap seen on gesture-nav phones.
-//
-// Screens that render this must add BOTTOM_SPACER to their list/scroll contentContainer
-// paddingBottom so the last row can scroll clear of the bar.
-export const CART_BAR_SPACER = 96;
+export const CART_BAR_SPACER = 84;
 
-export default function CartBar({ items, onPress }) {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export default function CartBar({ items, onPress, variant = 'default' }) {
   const insets = useSafeAreaInsets();
-  if (!items || items.length === 0) return null;
+  const bounceScale = useSharedValue(1);
 
-  const count = items.reduce((sum, item) => sum + item.qty, 0);
-  const total = items.reduce((sum, item) => sum + (item.price ?? 0) * item.qty, 0);
+  const count = items ? items.reduce((sum, item) => sum + (item.qty || 1), 0) : 0;
+  const total = items ? items.reduce((sum, item) => sum + (item.price ?? 0) * (item.qty || 1), 0) : 0;
+
+  useEffect(() => {
+    if (count > 0) {
+      bounceScale.value = withSequence(
+        withTiming(1.04, { duration: 120 }),
+        withSpring(1, { damping: 8, stiffness: 200 })
+      );
+    }
+  }, [count, total, bounceScale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: bounceScale.value }],
+  }));
+
+  if (!items || items.length === 0 || count === 0) return null;
+
+  const firstItem = items[0];
+  const itemImg = firstItem ? getProductImageSource(firstItem, 120) : null;
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(400)}
+      entering={FadeInDown.springify().damping(18).stiffness(180)}
+      exiting={FadeOutDown.duration(200)}
       pointerEvents="box-none"
       style={{
         position: 'absolute',
-        bottom: insets.bottom + 12,
-        left: 16,
-        right: 16,
-        backgroundColor: '#16a34a',
-        borderRadius: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 5,
+        bottom: Math.max(insets.bottom, 14) + 10,
+        left: 12,
+        right: 12,
+        zIndex: 99,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
-        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }} numberOfLines={1}>
-          {count} Item{count > 1 ? 's' : ''}
-        </Text>
-        <View style={{ width: 1, height: 14, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 10 }} />
-        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
-          ₹{total}
-        </Text>
-      </View>
-      <Pressable
+      <AnimatedPressable
         onPress={onPress}
-        style={{
-          backgroundColor: '#fff',
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderRadius: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-          marginLeft: 12,
-        }}
+        style={[
+          animatedStyle,
+          {
+            backgroundColor: '#047857',
+            borderRadius: 16,
+            height: 56,
+            paddingLeft: 18,
+            paddingRight: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            shadowColor: '#047857',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 10,
+            elevation: 8,
+          },
+        ]}
       >
-        <ShoppingCart size={15} color="#16a34a" strokeWidth={2.5} />
-        <Text style={{ color: '#16a34a', fontSize: 14, fontWeight: '800', marginLeft: 6 }}>View Cart</Text>
-      </Pressable>
+        {/* Left: count and total matching Image 3 & 4 */}
+        <View style={{ justifyContent: 'center' }}>
+          <Text
+            style={{
+              fontFamily: 'Inter-Medium',
+              fontSize: 11.5,
+              fontWeight: 'normal',
+              color: '#ffffff',
+              opacity: 0.92,
+            }}
+          >
+            {count} item(s) added
+          </Text>
+          <Text
+            style={{
+              fontFamily: 'Inter-ExtraBold',
+              fontSize: 17,
+              fontWeight: 'normal',
+              color: '#ffffff',
+              marginTop: 1,
+            }}
+          >
+            ₹{total.toFixed(0)}
+          </Text>
+        </View>
+
+        {/* Right: View cart pill button matching Image 3 & 4 */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+            borderRadius: 12,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: 'Inter-Bold',
+              fontSize: 13,
+              fontWeight: 'normal',
+              color: '#ffffff',
+              marginRight: 4,
+            }}
+          >
+            View cart
+          </Text>
+          <ChevronRight size={15} color="#ffffff" strokeWidth={2.8} />
+        </View>
+      </AnimatedPressable>
     </Animated.View>
   );
 }

@@ -1,0 +1,3049 @@
+[
+  {
+    "path": "assets/images/banner.png",
+    "bytes": 2450585,
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/QK Multigrain Oats.png",
+    "bytes": 2049675,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Long Beans Payeru.png",
+    "bytes": 1959841,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Mix Vegetable 18g.png",
+    "bytes": 1678613,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Cashew Split.png",
+    "bytes": 1583404,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Coriander Powder.png",
+    "bytes": 1495641,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Cheru Paruppu Moong Dal.png",
+    "bytes": 1413662,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Roast Ragi Powder.png",
+    "bytes": 1317683,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pears Bathing Soap Oil Clear and Glow 75g.png",
+    "bytes": 1297213,
+    "width": 1920,
+    "height": 1920,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Coriander Leaves Malli.png",
+    "bytes": 1248114,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Mint Leaves Puthina.png",
+    "bytes": 1238688,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kitchen King BT Rice.png",
+    "bytes": 1234401,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kadala Paruppu Chana Dal.png",
+    "bytes": 1223000,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Gold Walnut.png",
+    "bytes": 1215844,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Cumin Jeera Powder.png",
+    "bytes": 1209881,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Garam Masala Powder.png",
+    "bytes": 1168034,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Flowers assorted, for pooja.png",
+    "bytes": 1163185,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Red Masoor Dal.png",
+    "bytes": 1145241,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Green Peas 1st.png",
+    "bytes": 1127631,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pran Pudding Jar.png",
+    "bytes": 1122911,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Bharath Doppi Rice.png",
+    "bytes": 1085444,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Palada Payasam Mix.png",
+    "bytes": 1083965,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Bakers Kasuri Methi.png",
+    "bytes": 1069069,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Mutton Masala Powder.png",
+    "bytes": 1066755,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Black Pepper Powder.png",
+    "bytes": 1053518,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Mango Pickle.png",
+    "bytes": 1046802,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Elite Atta.png",
+    "bytes": 1038607,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kellogg's Corn Flakes.png",
+    "bytes": 1037006,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kismiss Medium Raisins Seedless.png",
+    "bytes": 1034849,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/S S K Doppi Rice 1st.png",
+    "bytes": 1029700,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milma Butter.png",
+    "bytes": 1013596,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Rin Detergent Powder 1kg.png",
+    "bytes": 997798,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pulari Rice Bran Oil.png",
+    "bytes": 996571,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Premium Bake Rusk.png",
+    "bytes": 993459,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/UT Puttu Podi.png",
+    "bytes": 991088,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sara Soap Podi washing powder.png",
+    "bytes": 988599,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/NC Thin Arrowroot Biscuit.png",
+    "bytes": 975280,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Neem and Aloe Soap.png",
+    "bytes": 974815,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Meat Masala Powder.png",
+    "bytes": 966217,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Macroni.png",
+    "bytes": 957957,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Elite Maida.png",
+    "bytes": 955916,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Local Greens Bal Chambu.png",
+    "bytes": 947585,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Devon Coriander Powder.png",
+    "bytes": 942769,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Quaker Oats.png",
+    "bytes": 934978,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lemon.png",
+    "bytes": 926951,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Devon Corn Starch household cooking use.png",
+    "bytes": 925733,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Exo Dishwash Bar.png",
+    "bytes": 907543,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lia Agarbathy Apple Rose Lavender Jasmine.png",
+    "bytes": 899683,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Banana Flower Ullie Poo.png",
+    "bytes": 898085,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milk Rusk Restage.png",
+    "bytes": 894365,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/AVT Premium Tea.png",
+    "bytes": 886989,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vim Bar 3x190g MPO.png",
+    "bytes": 885863,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Lemon Pickle.png",
+    "bytes": 881035,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Chicken Masala Powder.png",
+    "bytes": 860040,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lipton Clear And Light J and A 100g.png",
+    "bytes": 852707,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Beet Root.png",
+    "bytes": 850974,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sambar Powder.png",
+    "bytes": 842821,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/UT Uppuma Rava.png",
+    "bytes": 842121,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/KPR Jaya Rice.png",
+    "bytes": 841939,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Idiyappam Appam Podi.png",
+    "bytes": 834569,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/R.G. Palm Oil.png",
+    "bytes": 831197,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Manchow 12g.png",
+    "bytes": 830058,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Cucumber.png",
+    "bytes": 823760,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milk Rusk Premium Bake Rusk.png",
+    "bytes": 819590,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kissan Lehsun Mirch Chutney 100g Doy.png",
+    "bytes": 818893,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ginger Pickle.png",
+    "bytes": 818511,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Brinjal.png",
+    "bytes": 817249,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kissan Imli Khajoor Chutney 100g Doy.png",
+    "bytes": 812271,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Maggi 2-Minute Noodles.png",
+    "bytes": 806685,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Maxo Genius Combi.png",
+    "bytes": 804942,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Medimix Soap.png",
+    "bytes": 803490,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Nescafe Sunrise.png",
+    "bytes": 798823,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunfeast Golden Bakery.png",
+    "bytes": 798390,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Devon Chilly Powder.png",
+    "bytes": 798390,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ginger.png",
+    "bytes": 798097,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milma Ghee Cake Choco Brownie.png",
+    "bytes": 797034,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Elite Rice Puttu Podi.png",
+    "bytes": 796156,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kissan Hari Chutney 100g Doy.png",
+    "bytes": 795430,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Rexona Bathing Soap Coconut And Olive Oil.png",
+    "bytes": 795224,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Bru Coffee Pure.png",
+    "bytes": 788501,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Turmeric Powder.png",
+    "bytes": 787927,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dabur Red Toothpaste.png",
+    "bytes": 786947,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dabur Vatika Hair Oil.png",
+    "bytes": 781966,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Yippee Magic Masala Noodles.png",
+    "bytes": 780624,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunfeast Marie Light.png",
+    "bytes": 776044,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dabur Glucose.png",
+    "bytes": 775761,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vivel Fiama products assorted.png",
+    "bytes": 774234,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kellogg's Chocos.png",
+    "bytes": 772782,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lipton Green Tea Bags Honey Lemon 10 Pcs.png",
+    "bytes": 771080,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/SSK Ponni Rice 1st.png",
+    "bytes": 765105,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Rose Kaima Rice.png",
+    "bytes": 764726,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Knorr Cream of Broccoli Cup-A-Soup 12.5g.png",
+    "bytes": 761742,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH White Puttu Podi.png",
+    "bytes": 759353,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Raw Mango Amrai.png",
+    "bytes": 757422,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Capsicum Green.png",
+    "bytes": 751755,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Wheel L and O Powder A Plus 4kg Blue.png",
+    "bytes": 747597,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lux Bathing Soap International Creamy Perfume.png",
+    "bytes": 747557,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunfeast Marie Glucose.png",
+    "bytes": 747197,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunlight Detergent Powder.png",
+    "bytes": 744506,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Gooseberry Nelli Kai.png",
+    "bytes": 743801,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/50-50 Biscuits.png",
+    "bytes": 738198,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Corn Flour.png",
+    "bytes": 737545,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lux Glow Bar Collection.png",
+    "bytes": 735218,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Tomato Chatpata 16g.png",
+    "bytes": 733128,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milma Paneer.png",
+    "bytes": 728201,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dabur Almond Hair Oil.png",
+    "bytes": 727329,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Hot and Sour 11g.png",
+    "bytes": 726186,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Egg Masala Powder.png",
+    "bytes": 721204,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ginger Garlic Paste.png",
+    "bytes": 720851,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Maxo Coil Mosquito Repellent.png",
+    "bytes": 716160,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kashmiri Chilli Powder.png",
+    "bytes": 710703,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Knorr Cup A Soup Instant Sweet Corn 10g.png",
+    "bytes": 706315,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Turmeric Powder.png",
+    "bytes": 700458,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Red Label Tea Natural Care A Blend 250g.png",
+    "bytes": 681654,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kit Kat Miniatures.png",
+    "bytes": 680270,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milma Ghee Cake.png",
+    "bytes": 678432,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Santoor Soap White Set.png",
+    "bytes": 676269,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dabur Amla Hair Oil.png",
+    "bytes": 667064,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Easy Idiyappam.png",
+    "bytes": 663914,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Chilli Powder.png",
+    "bytes": 662124,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lipton Green Tea Clear and Light 10s TB.png",
+    "bytes": 659318,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Boost 200 gm Pouch.png",
+    "bytes": 658066,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Taaza Tea Masala Chaska Elaichi 250g.png",
+    "bytes": 653095,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/UT Appam Podi.png",
+    "bytes": 650911,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dream Cream Orange Cashewnut.png",
+    "bytes": 648399,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kadala Mavu Chickpea Flour.png",
+    "bytes": 647421,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vada Paruppu Urad Dal.png",
+    "bytes": 646928,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/SSK.png",
+    "bytes": 642130,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Drumstick Salladu.png",
+    "bytes": 635233,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Boost 500 gm Jar.png",
+    "bytes": 633923,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Tender Mango Pickle.png",
+    "bytes": 633587,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ruchi Gold Palm Oil.png",
+    "bytes": 632604,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Wheel Detergent Powder Blue 1kg.png",
+    "bytes": 627426,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Beans.png",
+    "bytes": 625018,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milk Bikis Milk Cream.png",
+    "bytes": 622322,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Marie Gold.png",
+    "bytes": 614971,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Good Day Pista Badam.png",
+    "bytes": 610290,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Care 100% Stronger Germ Protection.png",
+    "bytes": 604887,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/V Wash Plus 100ml.png",
+    "bytes": 600872,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TRESemme Hair Conditioner Smooth and Shine.png",
+    "bytes": 598974,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/KP Herbal Paste.png",
+    "bytes": 598821,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vim Dishwash Gel Liquid Lemon 115ml.png",
+    "bytes": 595527,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kissan Jam Mixed Fruit 100g.png",
+    "bytes": 589811,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Dates Pickle.png",
+    "bytes": 589773,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dark Fantasy Bourbon.png",
+    "bytes": 586447,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Hamam Soap.png",
+    "bytes": 582951,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Taj Mahal Tea Leaf 100g.png",
+    "bytes": 580517,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Turmeric And Honey.png",
+    "bytes": 577858,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Surf Excel Detergent Powder Easy Wash.png",
+    "bytes": 576221,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Bru Coffee Instant.png",
+    "bytes": 573741,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Nescafe Classic Jar.png",
+    "bytes": 573357,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TRESemme Hair Shampoo Hair Fall Defense 6ml.png",
+    "bytes": 570590,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Red Label Tea Leaf Poly 100g.png",
+    "bytes": 564208,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo.png",
+    "bytes": 561318,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vim Dishwash Bar 75g.png",
+    "bytes": 561177,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Good Day Cashew.png",
+    "bytes": 559651,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Potato.png",
+    "bytes": 557963,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Red Label Tea Leaf Carton 250g.png",
+    "bytes": 556277,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Power Soap.png",
+    "bytes": 555076,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Curry Leaves K. Leaves.png",
+    "bytes": 554467,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Yardley Lavender Talc.png",
+    "bytes": 553558,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Milma Ghee.png",
+    "bytes": 553216,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Idiyappam Podi steamed.png",
+    "bytes": 552779,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Surf Excel Detergent Liquid Easy Wash 500ml.png",
+    "bytes": 551172,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Comfort Fabric Conditioner Blue 220ml.png",
+    "bytes": 550174,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Good Day Butter.png",
+    "bytes": 549597,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Clinic Plus Strong And Smooth 6ml.png",
+    "bytes": 547807,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ujala Y and F Bliss Aura Sachet.png",
+    "bytes": 544343,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Taaza Elaichi 250g.png",
+    "bytes": 543651,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Chocolate Horlicks Refill 1Kg.png",
+    "bytes": 543012,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Horlicks Ready-to-Drink 125ml Chocolate.png",
+    "bytes": 542265,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Surf Excel Detergent Liquid Matic Top Load Refill.png",
+    "bytes": 538326,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Strong and Shine 6ml.png",
+    "bytes": 535198,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Total Protect.png",
+    "bytes": 534972,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pears Bathing Soap Pure and Gentle 60g.png",
+    "bytes": 528719,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Hand Wash Powder to Liquid 10g.png",
+    "bytes": 528239,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Mango.png",
+    "bytes": 526884,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Surf Excel Detergent Liquid Matic Front Load Refill.png",
+    "bytes": 526366,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Anti Dandruff Therapy.png",
+    "bytes": 523659,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Chocolate Horlicks Sachet 75g.png",
+    "bytes": 518230,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Tiger Krunch Choco.png",
+    "bytes": 517975,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Tiger KR Coconut.png",
+    "bytes": 517238,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/786 Surekha Rice.png",
+    "bytes": 515267,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/DH Vermicelli Mix.png",
+    "bytes": 515159,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Lemon Fresh.png",
+    "bytes": 515087,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lux Bathing Soap Fresh Flash Water Lily and Cooling.png",
+    "bytes": 514731,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Clean and Fresh 6ml.png",
+    "bytes": 512939,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Bounty S.Bounty.png",
+    "bytes": 512811,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pears Bathing Soap Soft and Fresh 100g.png",
+    "bytes": 507133,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/E-fee Washing Liquid.png",
+    "bytes": 502867,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunlight Dishwash Liquid.png",
+    "bytes": 500487,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vim Bar Tubs Anti-Smell 500g.png",
+    "bytes": 499376,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kissan Jam Orange Marmalade 500g.png",
+    "bytes": 490282,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lux Bathing Soap Soft Touch 4 x 60g.png",
+    "bytes": 489128,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Cycle 3-in-1 Agarbathi.png",
+    "bytes": 489080,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Kissan Ketchup Fresh Tomato Chotu 90g.png",
+    "bytes": 487274,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TT Asafoetida Cake.png",
+    "bytes": 483471,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Women's Horlicks Caramel Pet Jar 400g.png",
+    "bytes": 482814,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/True Blue.png",
+    "bytes": 482405,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Soya Sauce.png",
+    "bytes": 481743,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Good Day Chocochip.png",
+    "bytes": 480213,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vim Dishwash Bar Tub 500g.png",
+    "bytes": 480073,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pringles Sour and Cream.png",
+    "bytes": 479526,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pringles Desi Masala.png",
+    "bytes": 475110,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Yardley English Rose Talc.png",
+    "bytes": 473782,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Liril Bathing Soap Lime 75g.png",
+    "bytes": 473488,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunsilk Hair Shampoo Dream Soft and Smooth.png",
+    "bytes": 471861,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/True Blue Dragon Noodles.png",
+    "bytes": 468006,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lipton Green Tea Honey Lemon 100g.png",
+    "bytes": 466379,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Bathing Soap Total 10 4x65g.png",
+    "bytes": 466359,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pepsodent Toothpaste Germi Check Cavity Protection.png",
+    "bytes": 465149,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lux Advanced Bright Glow.png",
+    "bytes": 464920,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Chukku Kappi Ginger Coffee Mix.png",
+    "bytes": 458759,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Green Chilly.png",
+    "bytes": 457341,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pavithram Gingelly Sesame Oil.png",
+    "bytes": 450139,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lux Sandal Rs10 MLP.png",
+    "bytes": 448208,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Horlicks Plain Biscuits 45g.png",
+    "bytes": 448083,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TRESemme Hair Shampoo Keratin Smooth 6ml.png",
+    "bytes": 442448,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Taaza Tea 100g.png",
+    "bytes": 436978,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ladies Finger.png",
+    "bytes": 433695,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Soup.png",
+    "bytes": 427786,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunsilk Hair Shampoo Lusciously Thick and Long.png",
+    "bytes": 427505,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Indulekha Hair Shampoo Bringha Hair Fall Cleanser.png",
+    "bytes": 424452,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Snickers.png",
+    "bytes": 423660,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Carrot.png",
+    "bytes": 418064,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Conditioner Daily Shine.png",
+    "bytes": 417882,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Surf Excel Detergent Powder Quick Wash 1kg.png",
+    "bytes": 413126,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Conditioner Intense Damage Therapy.png",
+    "bytes": 412310,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Nirmal Urutty Rose Rice.png",
+    "bytes": 411043,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Rin Detergent Bar.png",
+    "bytes": 403362,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Close Up Toothpaste Deep Action Red Hot Gel 26g.png",
+    "bytes": 401783,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TT Asafoetida Kayam.png",
+    "bytes": 401523,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Pink Serum Beauty Bar.png",
+    "bytes": 399128,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Men Plus Care Ad 2In1 Shampoo Plus Conditioner.png",
+    "bytes": 396788,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Comfort Fabric Conditioner Pink 220ml.png",
+    "bytes": 396060,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Prakrithi Coconut Oil.png",
+    "bytes": 395757,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/icon.png",
+    "bytes": 393493,
+    "width": 1024,
+    "height": 1024,
+    "mode": "RGB"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo and Conditioner Hair Fall Therapy.png",
+    "bytes": 392887,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Beverages.png",
+    "bytes": 391430,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dates Syrup.png",
+    "bytes": 389425,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunsilk Hair Shampoo Stunning Black Shine.png",
+    "bytes": 388200,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Yardley Red Rose Talc.png",
+    "bytes": 386610,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Conditioner Hair Fall Rescue.png",
+    "bytes": 385515,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TRESemme Smooth and Shine LCS 6ml.png",
+    "bytes": 384664,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Tea.png",
+    "bytes": 384563,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pond's Facewash Men Energy Charge 50g.png",
+    "bytes": 380494,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lifebuoy Ice Bath 65g x 4.png",
+    "bytes": 375180,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Bathing Soap Cream Beauty 50g.png",
+    "bytes": 374373,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Hellmann's Sauce Mayonnaise Doy Pack 85g.png",
+    "bytes": 373512,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ujala Crystal White Liquid.png",
+    "bytes": 373389,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Lux Bathing Soap Velvet Touch Jasmine And Almond.png",
+    "bytes": 373131,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Hellmann's Mayo Smoky Tandoori 85g.png",
+    "bytes": 370808,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Vim Dishwash Gel Liquid Lemon 250ml.png",
+    "bytes": 370251,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Surf Excel Detergent Bar 100g.png",
+    "bytes": 368978,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sarkara Jaggery.png",
+    "bytes": 364678,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Shampoo.png",
+    "bytes": 362886,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Coffee.png",
+    "bytes": 361742,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunsilk Thick and Long Twin 5.5 Plus 5.5ml.png",
+    "bytes": 361182,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Tomatto Sauce.png",
+    "bytes": 358520,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Intense Repair.png",
+    "bytes": 354815,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pringles Original.png",
+    "bytes": 353622,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Daily Shine.png",
+    "bytes": 351399,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Strong and Extra Thick 175ml.png",
+    "bytes": 350923,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Healthy Ritual For Growing Hair.png",
+    "bytes": 350176,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dolphin IR8 Pachari Rice.png",
+    "bytes": 350122,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Elite Rava.png",
+    "bytes": 349494,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Clear Hair Oil 75ml.png",
+    "bytes": 349118,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Health Food Drinks.png",
+    "bytes": 347179,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Straight and Shine 175ml.png",
+    "bytes": 346548,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Clinic Plus Hair Shampoo Strong Scalp.png",
+    "bytes": 344992,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Hair Fall Therapy.png",
+    "bytes": 343581,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pran Litchi Drink.png",
+    "bytes": 341603,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Powder.png",
+    "bytes": 339411,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Dandruff Care 80ml.png",
+    "bytes": 337079,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Red Chilly Sauce.png",
+    "bytes": 335957,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Bharath.png",
+    "bytes": 335913,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Close Up Toothpaste Ever Fresh Red Hot Gel 40g.png",
+    "bytes": 335868,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo and Conditioner Intense Repair.png",
+    "bytes": 335562,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sensodyne Sensitive Toothbrush.png",
+    "bytes": 334041,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sensodyne Fresh Gel Paste.png",
+    "bytes": 332031,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Bakers.png",
+    "bytes": 331174,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Hand Wash.png",
+    "bytes": 324395,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Detergent.png",
+    "bytes": 320752,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Boost.png",
+    "bytes": 320589,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Anus Chilly Sauce.png",
+    "bytes": 318468,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Women.png",
+    "bytes": 317927,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Toothpaste.png",
+    "bytes": 316435,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Red Label.png",
+    "bytes": 316068,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Detergent Bars.png",
+    "bytes": 316006,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Jam.png",
+    "bytes": 311041,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/ms-traders-feature-graphic.png",
+    "bytes": 309012,
+    "width": 1024,
+    "height": 500,
+    "mode": "RGB"
+  },
+  {
+    "path": "assets/Brand_Logos/Sara.png",
+    "bytes": 308861,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pond's Talcum Powder Dreamflow Magic 20g.png",
+    "bytes": 308509,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Face Wash.png",
+    "bytes": 306938,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dark Fantasy Vanilla.png",
+    "bytes": 306718,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Breakfast.png",
+    "bytes": 306025,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Daily Shine Shampoo and Conditioner Twin Sachet.png",
+    "bytes": 305549,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Glow and Lovely Facewash Fairness 50g.png",
+    "bytes": 301455,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Hair-Care.png",
+    "bytes": 299222,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pond's Talcum Powder Aloe 100g.png",
+    "bytes": 297599,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Ponds Aloe Cool 180g.png",
+    "bytes": 296244,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pond's Pink Glow Face Talc 30g.png",
+    "bytes": 294725,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Petroleum Jelly.png",
+    "bytes": 293355,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Rin Bleach Ala Bleach 200ml.png",
+    "bytes": 292645,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Bath and Hygiene.png",
+    "bytes": 289742,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Conditioner.png",
+    "bytes": 289628,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Soaps.png",
+    "bytes": 287585,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/NC Cracker Lite.png",
+    "bytes": 287413,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Health Drink and Supplements.png",
+    "bytes": 286086,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Dishwash Bars.png",
+    "bytes": 285234,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pond's Facewash White Beauty Spot Less Fairness.png",
+    "bytes": 284528,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Dabur.png",
+    "bytes": 275863,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Sauces and Ketchup.png",
+    "bytes": 271937,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Hair Fall Rescue 80ml.png",
+    "bytes": 266812,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Conditioner Dryness Care 80ml.png",
+    "bytes": 263671,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Hair Shampoo Dryness Care 80ml.png",
+    "bytes": 262130,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Quaker.png",
+    "bytes": 256712,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Dove Glycolic Hydration Mid Shampoo 180ml.png",
+    "bytes": 255599,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sensodyne Rapid Relief Paste.png",
+    "bytes": 255092,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Maggi Pazzta.png",
+    "bytes": 254296,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Intimate Wash.png",
+    "bytes": 253589,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Cereals and Ready To Eat.png",
+    "bytes": 253520,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Sunscreen.png",
+    "bytes": 251805,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Cream.png",
+    "bytes": 246837,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pond's Talcum Powder Dreamflow 23g.png",
+    "bytes": 246019,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Packaged Foods.png",
+    "bytes": 244849,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Cycle.png",
+    "bytes": 242948,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Dishwash.png",
+    "bytes": 239007,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Yippee.png",
+    "bytes": 237627,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Body Lotion.png",
+    "bytes": 236705,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Oral-Care.png",
+    "bytes": 235345,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Sunsilk.png",
+    "bytes": 231778,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TRESemme Hair Conditioner Keratin Smooth.png",
+    "bytes": 231684,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Bru.png",
+    "bytes": 230017,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Vim.png",
+    "bytes": 225669,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/TRESemme Hair Conditioner Hair Fall Defense.png",
+    "bytes": 223881,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Maharaja Orid Dhall.png",
+    "bytes": 221372,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Matic Liquid.png",
+    "bytes": 217924,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Munch Chocolate Wafer.png",
+    "bytes": 213183,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Surf Excel.png",
+    "bytes": 211246,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Kitchen King.png",
+    "bytes": 210963,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Pond's Facewash Pure White Anti Pollution 50g.png",
+    "bytes": 210745,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Detergent Liquid.png",
+    "bytes": 208084,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Wheel.png",
+    "bytes": 206899,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Rin.png",
+    "bytes": 204934,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Sunfeast.png",
+    "bytes": 200070,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Moisturiser.png",
+    "bytes": 199988,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Kit Kat.png",
+    "bytes": 194536,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Cleaned_Products/Sunsilk Hair Conditioner Smooth and Tangle Free 80ml.png",
+    "bytes": 186130,
+    "width": 1080,
+    "height": 1080,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Fabric Conditioner.png",
+    "bytes": 185854,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Ruchi Gold.png",
+    "bytes": 182917,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Anus.png",
+    "bytes": 180658,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Lipton.png",
+    "bytes": 180539,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Lifebuoy.png",
+    "bytes": 178978,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Glow & Lovely.png",
+    "bytes": 178297,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Taj Mahal.png",
+    "bytes": 174668,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Horlicks.png",
+    "bytes": 171055,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Dishwash Liquid.png",
+    "bytes": 171039,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Taaza.png",
+    "bytes": 168910,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Talc and Grooming.png",
+    "bytes": 165368,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Indulekha.png",
+    "bytes": 164105,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/786.png",
+    "bytes": 161928,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Men.png",
+    "bytes": 156975,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Kissan.png",
+    "bytes": 156594,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/categories/Feminine Hygiene.png",
+    "bytes": 155642,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Hair Oil.png",
+    "bytes": 152855,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Sunlight.png",
+    "bytes": 152465,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/icon.png",
+    "bytes": 152181,
+    "width": 1024,
+    "height": 1024,
+    "mode": "RGB"
+  },
+  {
+    "path": "assets/Brand_Logos/UT.png",
+    "bytes": 150983,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Power.png",
+    "bytes": 147015,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Devon.png",
+    "bytes": 146208,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Prakrithi.png",
+    "bytes": 143940,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Pulari.png",
+    "bytes": 139905,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Yardley.png",
+    "bytes": 138731,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Bounty.png",
+    "bytes": 134948,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/sub-categories/Bleach.png",
+    "bytes": 133439,
+    "width": 640,
+    "height": 640,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/TT.png",
+    "bytes": 131681,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Milma.png",
+    "bytes": 125973,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Kellogg's.png",
+    "bytes": 125297,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Dove.png",
+    "bytes": 123491,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Liril.png",
+    "bytes": 123019,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Lux.png",
+    "bytes": 119516,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Exo.png",
+    "bytes": 116578,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Knorr.png",
+    "bytes": 114498,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Pringles.png",
+    "bytes": 113908,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Pavithram.png",
+    "bytes": 110804,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Hellmann's.png",
+    "bytes": 110406,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Clear.png",
+    "bytes": 109537,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Comfort.png",
+    "bytes": 107529,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/adaptive-icon.png",
+    "bytes": 105853,
+    "width": 1024,
+    "height": 1024,
+    "mode": "RGB"
+  },
+  {
+    "path": "assets/Brand_Logos/Pran.png",
+    "bytes": 105370,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Santoor.png",
+    "bytes": 102235,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Clinic Plus.png",
+    "bytes": 99865,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Maharaja.png",
+    "bytes": 99629,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Nirmal.png",
+    "bytes": 96696,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/fonts/PlusJakartaSans-Regular.ttf",
+    "bytes": 94568
+  },
+  {
+    "path": "assets/fonts/PlusJakartaSans-Medium.ttf",
+    "bytes": 94568
+  },
+  {
+    "path": "assets/fonts/PlusJakartaSans-SemiBold.ttf",
+    "bytes": 94560
+  },
+  {
+    "path": "assets/fonts/PlusJakartaSans-Bold.ttf",
+    "bytes": 94444
+  },
+  {
+    "path": "assets/Brand_Logos/Closeup.png",
+    "bytes": 92580,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Britannia.png",
+    "bytes": 88735,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Pepsodent.png",
+    "bytes": 88426,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Rexona.png",
+    "bytes": 87663,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Medimix.png",
+    "bytes": 85797,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/VWash.png",
+    "bytes": 82546,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/phonepe.png",
+    "bytes": 82496,
+    "width": 480,
+    "height": 480,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/AVT.png",
+    "bytes": 81836,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Pears.png",
+    "bytes": 79754,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/KP.png",
+    "bytes": 79496,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Munch.png",
+    "bytes": 79297,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/android-icon-foreground.png",
+    "bytes": 78796,
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/logo.png",
+    "bytes": 78584,
+    "width": 452,
+    "height": 369,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/app-icon.png",
+    "bytes": 78584,
+    "width": 452,
+    "height": 369,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Maggi.png",
+    "bytes": 69019,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/TRESemm\u00e9.png",
+    "bytes": 68893,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Maxo.png",
+    "bytes": 67292,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Ujala.png",
+    "bytes": 66268,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/gpay.png",
+    "bytes": 64594,
+    "width": 667,
+    "height": 374,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Dolphin.png",
+    "bytes": 60341,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Snickers.png",
+    "bytes": 58176,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/paytm.png",
+    "bytes": 56462,
+    "width": 640,
+    "height": 360,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Elite.png",
+    "bytes": 55791,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Pond's.png",
+    "bytes": 52770,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Sensodyne.png",
+    "bytes": 50806,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Hamam.png",
+    "bytes": 48700,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/react-logo@3x.png",
+    "bytes": 21252,
+    "width": 300,
+    "height": 300,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/Brand_Logos/Nescafe.png",
+    "bytes": 20401,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/android-icon-background.png",
+    "bytes": 17549,
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/splash-icon.png",
+    "bytes": 17547,
+    "width": 1024,
+    "height": 1024,
+    "mode": "P"
+  },
+  {
+    "path": "assets/splash.png",
+    "bytes": 16222,
+    "width": 1284,
+    "height": 2778,
+    "mode": "RGB"
+  },
+  {
+    "path": "assets/images/react-logo@2x.png",
+    "bytes": 14225,
+    "width": 200,
+    "height": 200,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/react-logo.png",
+    "bytes": 6341,
+    "width": 100,
+    "height": 100,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/partial-react-logo.png",
+    "bytes": 5075,
+    "width": 518,
+    "height": 316,
+    "mode": "P"
+  },
+  {
+    "path": "assets/images/qr.png",
+    "bytes": 4522,
+    "width": 600,
+    "height": 600,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/android-icon-monochrome.png",
+    "bytes": 4140,
+    "width": 432,
+    "height": 432,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/brand-placeholder.png",
+    "bytes": 1979,
+    "width": 200,
+    "height": 200,
+    "mode": "RGBA"
+  },
+  {
+    "path": "assets/images/favicon.png",
+    "bytes": 1129,
+    "width": 48,
+    "height": 48,
+    "mode": "RGBA"
+  }
+]

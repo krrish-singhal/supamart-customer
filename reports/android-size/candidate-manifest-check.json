@@ -1,0 +1,19 @@
+{
+  "package": "in.mstraders.grocery",
+  "versionCode": "4",
+  "versionName": "1.0.1",
+  "permissions": [
+    "android.permission.ACCESS_COARSE_LOCATION",
+    "android.permission.ACCESS_FINE_LOCATION",
+    "android.permission.ACCESS_NETWORK_STATE",
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.INTERNET",
+    "android.permission.RECEIVE_BOOT_COMPLETED",
+    "android.permission.SYSTEM_ALERT_WINDOW",
+    "android.permission.VIBRATE",
+    "android.permission.WAKE_LOCK",
+    "in.mstraders.grocery.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+  ],
+  "permissionsAdded": [],
+  "permissionsRemoved": []
+}

@@ -42,10 +42,13 @@ module.exports = {
         }
       },
       fontFamily: {
-        sans: ['PlusJakartaSans-Regular', 'sans-serif'],
-        medium: ['PlusJakartaSans-Medium', 'sans-serif'],
-        semibold: ['PlusJakartaSans-SemiBold', 'sans-serif'],
-        bold: ['PlusJakartaSans-Bold', 'sans-serif'],
+        sans: ['Inter-Regular'],
+        normal: ['Inter-Regular'],
+        medium: ['Inter-Medium'],
+        semibold: ['Inter-SemiBold'],
+        bold: ['Inter-Bold'],
+        extrabold: ['Inter-ExtraBold'],
+        black: ['Inter-Black'],
       },
       boxShadow: {
         'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',

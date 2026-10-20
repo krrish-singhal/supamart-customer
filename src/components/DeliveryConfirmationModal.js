@@ -2,7 +2,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { Star, AlertCircle, CheckCircle, X } from 'lucide-react-native';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { db, auth } from '../config/firebase';
 import { AuthContext } from '../context/AuthContext';
 import apiClient from '../services/api';
 import Toast from 'react-native-toast-message';
@@ -13,10 +14,25 @@ export default function DeliveryConfirmationModal() {
   const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [viewState, setViewState] = useState('QUESTION'); // QUESTION, RATING
+  const [firebaseUid, setFirebaseUid] = useState(auth.currentUser?.uid || null);
 
   useEffect(() => {
-    // Only customers should see this
-    if (!token || userProfile?.role !== 'CUSTOMER') return;
+    const unsubAuth = onAuthStateChanged(auth, (u) => {
+      setFirebaseUid(u?.uid || null);
+    });
+    return unsubAuth;
+  }, []);
+
+  useEffect(() => {
+    // Only customers with matching Firebase Auth credentials should query orders
+    if (!token || userProfile?.role !== 'CUSTOMER' || !userProfile?.id) {
+      setPendingOrder(null);
+      return;
+    }
+    if (!firebaseUid || firebaseUid !== userProfile.id) {
+      setPendingOrder(null);
+      return;
+    }
 
     const q = query(
       collection(db, 'orders'),
@@ -24,19 +40,28 @@ export default function DeliveryConfirmationModal() {
       where('status', '==', 'PENDING_CONFIRMATION')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        setPendingOrder({ id: doc.id, ...doc.data() });
-        setViewState('QUESTION');
-        setRating(0);
-      } else {
-        setPendingOrder(null);
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0];
+          setPendingOrder({ id: doc.id, ...doc.data() });
+          setViewState('QUESTION');
+          setRating(0);
+        } else {
+          setPendingOrder(null);
+        }
+      },
+      (error) => {
+        // Silently catch permission-denied during auth transitions so it doesn't crash the app
+        if (error.code !== 'permission-denied') {
+          console.warn('DeliveryConfirmationModal orders listener:', error.message || error);
+        }
       }
-    });
+    );
 
     return () => unsubscribe();
-  }, [token, userProfile?.id, userProfile?.role]);
+  }, [token, userProfile?.id, userProfile?.role, firebaseUid]);
 
   const submitRating = async (selectedRating) => {
     if (selectedRating === 0) {

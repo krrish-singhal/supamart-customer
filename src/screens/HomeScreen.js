@@ -1,361 +1,1958 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, Pressable, ScrollView, FlatList, StatusBar, Dimensions } from 'react-native';
+import React, { useEffect, useState, useContext, useCallback, useRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  Platform,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { ShoppingBag, Search, ChevronRight, Bell, LogOut } from 'lucide-react-native';
-import Animated, {
-  FadeInDown, useSharedValue, useAnimatedStyle, withTiming,
-} from 'react-native-reanimated';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import {
+  ChevronDown,
+  ChevronRight,
+  Search,
+  User,
+  ShoppingBag,
+  Truck,
+  Plus,
+  Minus,
+  Tag,
+  LayoutGrid,
+  Bell,
+} from 'lucide-react-native';
+import { useIsFocused } from '@react-navigation/native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import apiClient from '../services/api';
-import Toast from 'react-native-toast-message';
-import { Skeleton, BrandLogo, Dialog, CartBar, CART_BAR_SPACER } from '../components/ui';
+import BrandBadge from '../components/BrandBadge';
+import { Skeleton } from '../components/ui';
+import MSClubModal from '../components/MSClubModal';
+import { fonts } from '../theme/typography';
+import { isProductUnavailable } from '../utils/productAvailability';
 import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
-import categoryImages from '../utils/categoryImages';
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
+import { getProductImageSource } from '../utils/productImages';
+import { getCategoryVisual } from '../utils/categoryImages';
 import slugify from '../utils/slugify';
-import { optimizeCloudinaryUrl, THUMB_CARD, THUMB_ICON } from '../utils/cloudinaryImage';
 
-// Banner art is a square (1:1) image supplied by the client — size the box to match
-// exactly so it always renders edge-to-edge with zero cropping.
-const BANNER_SIZE = Dimensions.get('window').width - 32; // full width minus px-4 on both sides
+const CANONICAL_CATEGORY_ORDER = {
+  'fresh-vegetables': 1,
+  'fresh': 1,
+  'fresh-fruits': 1,
+  'rice-atta-grains': 2,
+  'staples': 2,
+  'dairy': 3,
+  'dairy-bread-eggs': 3,
+  'snacks-confectionery': 4,
+  'snacks': 4,
+  'household-cleaning': 5,
+  'home': 5,
+  'cooking-oils-ghee': 6,
+  'oils': 6,
+  'spices-masala': 7,
+  'spices': 7,
+  'instant-ready-to-cook-mixes': 8,
+  'instant': 8,
+  'beverages': 9,
+  'drinks': 9,
+  'health-drinks': 10,
+  'personal-care': 11,
+  'bakery-items': 12,
+  'pooja-devotional-items': 13,
+  'dry-fruits-nuts': 14,
+  'sauces-pickles-condiments': 15,
+};
+
+const getHomeScreenCategoryVisual = (cat) => {
+  if (!cat) return null;
+  if (cat.id === 'all') {
+    return require('../../assets/categories/home/fresh-fruits.webp');
+  }
+  const slug = slugify(cat.name || cat.label || '');
+  const bundled = {
+    'fresh-vegetables': require('../../assets/categories/home/fresh-vegetables.webp'),
+    'fresh': require('../../assets/categories/home/fresh-vegetables.webp'),
+    'rice-atta-grains': require('../../assets/Cleaned_Products/SSK Ponni Rice 1st.webp'),
+    'staples': require('../../assets/Cleaned_Products/SSK Ponni Rice 1st.webp'),
+    'dairy': require('../../assets/categories/home/dairy-bread-eggs.webp'),
+    'dairy-bread-eggs': require('../../assets/categories/home/dairy-bread-eggs.webp'),
+    'snacks-confectionery': require('../../assets/categories/home/chips-namkeens.webp'),
+    'snacks': require('../../assets/categories/home/chips-namkeens.webp'),
+    'household-cleaning': require('../../assets/categories/home/cleaning-essentials.webp'),
+    'home': require('../../assets/categories/home/cleaning-essentials.webp'),
+    'cooking-oils-ghee': require('../../assets/Cleaned_Products/Ruchi Gold Palm Oil.webp'),
+    'oils': require('../../assets/Cleaned_Products/Ruchi Gold Palm Oil.webp'),
+    'spices-masala': require('../../assets/Cleaned_Products/Turmeric Powder.webp'),
+    'spices': require('../../assets/Cleaned_Products/Turmeric Powder.webp'),
+    'instant-ready-to-cook-mixes': require('../../assets/categories/home/noodles-pasta.webp'),
+    'instant': require('../../assets/categories/home/noodles-pasta.webp'),
+    'beverages': require('../../assets/categories/Beverages.webp'),
+    'drinks': require('../../assets/categories/Beverages.webp'),
+  }[slug];
+
+  if (bundled) return bundled;
+  return getCategoryVisual(cat, 100);
+};
+
+const getCategoryShortLabel = (cat) => {
+  if (cat.id === 'all') return 'All';
+  const name = (cat.name || cat.label || '').trim();
+  const slug = slugify(name);
+  const map = {
+    'fresh-vegetables': 'Fresh',
+    'fresh': 'Fresh',
+    'fresh-fruits': 'Fruits',
+    'rice-atta-grains': 'Staples',
+    'staples': 'Staples',
+    'dairy': 'Dairy',
+    'dairy-bread-eggs': 'Dairy',
+    'snacks-confectionery': 'Snacks',
+    'snacks': 'Snacks',
+    'household-cleaning': 'Home',
+    'home': 'Home',
+    'cooking-oils-ghee': 'Oils',
+    'oils': 'Oils',
+    'spices-masala': 'Spices',
+    'spices': 'Spices',
+    'instant-ready-to-cook-mixes': 'Instant',
+    'instant': 'Instant',
+    'beverages': 'Drinks',
+    'drinks': 'Drinks',
+    'health-drinks': 'Drinks',
+    'personal-care': 'Personal',
+    'bakery-items': 'Bakery',
+    'pooja-devotional-items': 'Pooja',
+    'dry-fruits-nuts': 'Dry Fruits',
+    'sauces-pickles-condiments': 'Sauces',
+  };
+  return map[slug] || (name.length > 8 ? name.split(' ')[0] : name);
+};
+
+const ROTATING_SEARCH_TERMS = [
+  '"sunflower oil"',
+  '"toor dal"',
+  '"milk"',
+  '"fresh tomato"',
+  '"atta"',
+];
 
 export default function HomeScreen({ navigation }) {
-  const { items } = useCart();
-  const { userProfile, logout } = useContext(AuthContext);
+  const { width: screenWidth } = useWindowDimensions();
+  const { items: cartItems, addItem, updateQty, getQty, subtotal } = useCart();
+  const { userProfile } = useContext(AuthContext);
   const { unreadCount } = useNotifications();
-  const initial = (userProfile?.name || 'U').charAt(0).toUpperCase();
-  const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
+
+  const [products, setProducts] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [categoryProductsMap, setCategoryProductsMap] = useState({});
+  const [loadingCategoryProducts, setLoadingCategoryProducts] = useState(false);
+  const [defaultAddress, setDefaultAddress] = useState(null);
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [showClubModal, setShowClubModal] = useState(false);
 
-  const handleLogout = async () => {
-    setShowLogoutDialog(false);
-    await logout();
-    Toast.show({ type: 'success', text1: 'Logged out successfully.' });
-  };
-
-  const topCategories = categories.filter((c) => !c.parentId);
+  const bannerScrollRef = useRef(null);
+  const bannerIndexRef = useRef(0);
+  const isDraggingBannerRef = useRef(false);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
-    setLoading(true);
-    let unsubCats;
-    try {
-      unsubCats = onSnapshot(query(collection(db, 'categories'), where('isActive', '==', true)), (snap) => {
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
-        setCategories(list);
-        setLoading(false);
+    bannerIndexRef.current = activeBannerIndex;
+  }, [activeBannerIndex]);
 
-        // Warm expo-image's cache for category photos in the background, from the
-        // earliest point this data exists — Home is the first screen almost every session
-        // starts on, so by the time the user taps into a category tile (here or later on
-        // the Categories tab), the image is often already cached instead of popping in.
-        // Best-effort/non-blocking: a failed prefetch just falls back to loading normally.
-        const topLevel = list.filter((c) => !c.parentId && c.image);
-        topLevel.slice(0, 6).forEach((c) => {
-          Image.prefetch(optimizeCloudinaryUrl(c.image, THUMB_CARD)).catch(() => {});
-        });
-        topLevel.forEach((c) => {
-          Image.prefetch(optimizeCloudinaryUrl(c.image, THUMB_ICON)).catch(() => {});
-        });
+  // Automatic & continuous hero banner slideshow
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const bannerTimer = setInterval(() => {
+      if (isDraggingBannerRef.current) return;
+      const nextIndex = (bannerIndexRef.current + 1) % 3;
+      bannerIndexRef.current = nextIndex;
+      setActiveBannerIndex(nextIndex);
+      bannerScrollRef.current?.scrollTo({
+        x: nextIndex * (bannerCardWidth + 14),
+        animated: true,
       });
-      return () => { if (unsubCats) unsubCats(); };
-    } catch (e) {
-      console.error(e);
-      setError(true);
+    }, 3500);
+
+    return () => clearInterval(bannerTimer);
+  }, [bannerCardWidth, isFocused]);
+
+  // Rotating search term
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSearchIndex((prev) => (prev + 1) % ROTATING_SEARCH_TERMS.length);
+    }, 2800);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch products, categories, and default address
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [prodRes, catRes] = await Promise.allSettled([
+        apiClient.get('/products', {
+          params: { limit: 40 },
+          __skipErrorToast: true,
+        }),
+        apiClient.get('/categories', { __skipErrorToast: true }),
+      ]);
+
+      if (prodRes.status === 'fulfilled') {
+        setProducts(prodRes.value.data?.items || []);
+      }
+      if (catRes.status === 'fulfilled') {
+        setAllCategories(catRes.value.data?.items || []);
+      }
+    } catch {
+      // Fallback
+    } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    apiClient.get('/brands', { __skipErrorToast: true })
-      .then((res) => setBrands(res.data.items || []))
-      .catch(() => setBrands([]));
-  }, []);
+    loadData();
+  }, [loadData]);
 
-  if (loading) return <HomeSkeleton />;
+  // Derived dynamic category list driven completely by admin-portal / backend
+  const homeCategories = useMemo(() => {
+    const topLevel = allCategories
+      .filter((c) => !c.parentId && c.isActive !== false);
 
-  if (error) {
-    return (
-      <SafeAreaView className="flex-1 bg-surface-50 items-center justify-center" edges={['top']}>
-        <Text className="text-text-secondary font-medium mb-4">Couldn&apos;t load store</Text>
-        <Pressable onPress={() => setError(false)} className="bg-primary-600 px-6 py-3 rounded-2xl">
-          <Text className="text-white font-bold">Retry</Text>
-        </Pressable>
-      </SafeAreaView>
-    );
-  }
+    topLevel.sort((a, b) => {
+      const orderA = a.order != null ? Number(a.order) : (CANONICAL_CATEGORY_ORDER[slugify(a.name || '')] ?? 999);
+      const orderB = b.order != null ? Number(b.order) : (CANONICAL_CATEGORY_ORDER[slugify(b.name || '')] ?? 999);
+      return orderA - orderB;
+    });
+
+    const allItem = {
+      id: 'all',
+      name: 'All',
+      image: require('../../assets/categories/home/fresh-fruits.webp'),
+    };
+
+    return [allItem, ...topLevel];
+  }, [allCategories]);
+
+  // Grid categories for "Shop by category" driven by admin categories
+  const shopByCategories = useMemo(() => {
+    const topLevel = allCategories
+      .filter((c) => !c.parentId && c.isActive !== false);
+
+    topLevel.sort((a, b) => {
+      const orderA = a.order != null ? Number(a.order) : (CANONICAL_CATEGORY_ORDER[slugify(a.name || '')] ?? 999);
+      const orderB = b.order != null ? Number(b.order) : (CANONICAL_CATEGORY_ORDER[slugify(b.name || '')] ?? 999);
+      return orderA - orderB;
+    });
+
+    return topLevel;
+  }, [allCategories]);
+
+  // Fetch category-specific products dynamically from backend when category pill is selected
+  useEffect(() => {
+    if (activeCategory === 'all') return;
+    if (categoryProductsMap[activeCategory]) return;
+
+    let isCancelled = false;
+    setLoadingCategoryProducts(true);
+    const fetchCategoryProducts = async () => {
+      try {
+        const items = [];
+        let cursor = null;
+        do {
+          const { data } = await apiClient.get('/products', {
+            params: { categoryId: activeCategory, limit: 50, ...(cursor ? { cursor } : {}) },
+            __skipErrorToast: true,
+          });
+          items.push(...(data?.items || []));
+          cursor = data?.cursor || null;
+        } while (cursor && !isCancelled);
+        if (!isCancelled) {
+          setCategoryProductsMap((prev) => ({ ...prev, [activeCategory]: items }));
+        }
+      } catch {
+        // Keep the products already loaded on Home when the category request fails.
+      } finally {
+        if (!isCancelled) setLoadingCategoryProducts(false);
+      }
+    };
+    fetchCategoryProducts();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeCategory, categoryProductsMap]);
+
+  // Fetch address
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    apiClient
+      .get(`/users/${userProfile.id}/addresses`, { __skipErrorToast: true })
+      .then(({ data }) => {
+        const addrs = data.items || [];
+        const def = addrs.find((a) => a.isDefault) || addrs[0] || null;
+        setDefaultAddress(def);
+      })
+      .catch(() => {});
+  }, [userProfile?.id]);
+
+  const addressLabel = defaultAddress?.label || 'Home';
+  const addressSubtitle = defaultAddress
+    ? [defaultAddress.houseNo, defaultAddress.street, defaultAddress.landmark]
+        .filter(Boolean)
+        .join(', ') || 'Your delivery address'
+    : 'Your delivery address';
+
+  // Filter products by selected admin category (including any child subcategories)
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === 'all') return products;
+
+    const targetCategoryIds = new Set([activeCategory]);
+    const categoryQueue = [activeCategory];
+    for (let index = 0; index < categoryQueue.length; index += 1) {
+      const parentId = categoryQueue[index];
+      allCategories
+        .filter((category) => category.parentId === parentId)
+        .forEach((category) => {
+          if (!targetCategoryIds.has(category.id)) {
+            targetCategoryIds.add(category.id);
+            categoryQueue.push(category.id);
+          }
+        });
+    }
+    return products.filter((product) => targetCategoryIds.has(product.categoryId));
+  }, [products, activeCategory, allCategories]);
+
+  const displayProducts = useMemo(() => {
+    if (activeCategory === 'all') return products;
+    if (categoryProductsMap[activeCategory] && categoryProductsMap[activeCategory].length > 0) {
+      return categoryProductsMap[activeCategory];
+    }
+    return filteredProducts;
+  }, [activeCategory, products, categoryProductsMap, filteredProducts]);
+
+  const bestPriceProducts = useMemo(() => products.flatMap((product) =>
+    (product.variants || []).flatMap((variant) => {
+      const mrp = Number(variant.price ?? variant.mrp ?? 0);
+      const price = Number(variant.offerPrice ?? variant.sellingPrice ?? mrp);
+      if (!(mrp > 0 && price > 0 && price < mrp) || isProductUnavailable(product, variant)) return [];
+      return [{
+        id: `${product.id}-${variant.id}`,
+        product,
+        variant,
+        name: product.name,
+        packSize: variant.label || product.unit || '1 item',
+        price,
+        mrp,
+        discount: Math.round(((mrp - price) / mrp) * 100),
+      }];
+    })
+  ).sort((a, b) => b.discount - a.discount).slice(0, 8), [products]);
+
+  const cartItemCount = cartItems.reduce((sum, item) => sum + (item.qty || 1), 0);
+  const firstCartItem = cartItems[0];
+  const firstCartItemImage = firstCartItem
+    ? getProductImageSource(firstCartItem, 100) || (firstCartItem.image ? { uri: optimizeCloudinaryUrl(firstCartItem.image, 100) } : null)
+    : null;
+
+  // Free delivery calculation
+  const freeDeliveryThreshold = 200;
+  const missingForFree = Math.max(0, freeDeliveryThreshold - subtotal);
+  const freeProgress = Math.min(1, subtotal / freeDeliveryThreshold);
+
+  const bannerCardWidth = screenWidth - 32;
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff', position: 'relative' }} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: CART_BAR_SPACER + 16 }}
-      >
-        {/* Header */}
+      {/* TOP SECTION: Header, Search Bar, and Sub-categories */}
+      <View style={{ backgroundColor: '#ffffff', paddingBottom: 0 }}>
+        {/* Header Row: [ms logo] [Delivery in 18 mins ⌵] [Profile Avatar] */}
         <Animated.View
-          entering={FadeInDown.duration(350)}
-          className="flex-row items-center justify-between px-5 pt-4 pb-4"
+          entering={FadeInDown.duration(300)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingTop: 8,
+            paddingBottom: 6,
+          }}
         >
-          <Image
-            source={require('../../assets/logo.png')}
-            style={{ width: 100, height: 50 }}
-            contentFit="contain"
-          />
-          <View className="flex-row items-center" style={{ gap: 10 }}>
+          {/* Left Brand Badge + Delivery Address Dropdown */}
+          <Pressable
+            onPress={() => navigation.navigate('LocationPrompt')}
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}
+          >
+            {/* MS Traders App Logo */}
+            <View style={{ marginRight: 10 }}><BrandBadge size={40} /></View>
+
+            {/* Delivery in 18 mins & Address */}
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#059669',
+                    marginRight: 6,
+                  }}
+                />
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Medium',
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                    color: '#475569',
+                  }}
+                >
+                  MS Traders · delivery in
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-ExtraBold',
+                    fontSize: 22,
+                    fontWeight: 'normal',
+                    color: '#0f172a',
+                    letterSpacing: -0.4,
+                  }}
+                >
+                  18 mins
+                </Text>
+                <ChevronDown size={17} color="#0f172a" strokeWidth={3} style={{ marginLeft: 4 }} />
+              </View>
+
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontFamily: 'Inter-Regular',
+                  fontSize: 12,
+                  fontWeight: 'normal',
+                  color: '#64748b',
+                  marginTop: 1,
+                }}
+              >
+                {addressLabel} · [{addressSubtitle}]
+              </Text>
+            </View>
+          </Pressable>
+
+          {/* Notifications sit immediately left of the profile button. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Pressable
               onPress={() => navigation.navigate('Notifications')}
-              className="w-10 h-10 rounded-full bg-white border border-border-light shadow-soft items-center justify-center"
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#ffffff',
+                borderWidth: 1,
+                borderColor: '#dce4dd',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Bell size={20} color="#0f172a" />
+              <Bell size={19} color="#0f172a" strokeWidth={2.1} />
               {unreadCount > 0 && (
                 <View
-                  className="absolute -top-1 -right-1 bg-red-500 rounded-full items-center justify-center border-2 border-white"
-                  style={{ minWidth: 18, height: 18, paddingHorizontal: 3 }}
+                  style={{
+                    position: 'absolute',
+                    top: -5,
+                    right: -5,
+                    minWidth: 18,
+                    height: 18,
+                    paddingHorizontal: 4,
+                    borderRadius: 9,
+                    backgroundColor: '#dc2626',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1.5,
+                    borderColor: '#ffffff',
+                  }}
                 >
-                  <Text className="text-white text-[10px] font-black">{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  <Text style={{ fontFamily: 'Inter-Bold', fontSize: 9, color: '#ffffff', lineHeight: 11 }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
                 </View>
               )}
             </Pressable>
+
             <Pressable
-              onPress={() => navigation.navigate('EditProfile')}
-              className="w-8 h-8 rounded-full items-center justify-center overflow-hidden border border-border-light shadow-soft"
-              style={{ backgroundColor: '#f0fdf4' }}
+              onPress={() => navigation.navigate('Account')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Profile"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#ffffff',
+                borderWidth: 1,
+                borderColor: '#dce4dd',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
               {userProfile?.profileImage ? (
-                <Image source={{ uri: optimizeCloudinaryUrl(userProfile.profileImage, 100) }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
+                <Image
+                  source={{ uri: optimizeCloudinaryUrl(userProfile.profileImage, 100) }}
+                  style={{ width: '100%', height: '100%', borderRadius: 22 }}
+                  contentFit="cover"
+                />
               ) : (
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#16a34a' }}>{initial}</Text>
+                <User size={20} color="#0f172a" strokeWidth={2.2} />
               )}
-            </Pressable>
-            {/* A red LogOut icon, not an ambiguous 3-dot menu -- so it's obvious what
-                tapping this does before the confirmation dialog even opens. */}
-            <Pressable
-              onPress={() => setShowLogoutDialog(true)}
-              className="w-10 h-10 rounded-full bg-white border border-red-100 shadow-soft items-center justify-center"
-            >
-              <LogOut size={19} color="#ef4444" />
             </Pressable>
           </View>
         </Animated.View>
 
-        {/* Search */}
-        <Animated.View entering={FadeInDown.duration(350).delay(60)} className="px-5 mb-5">
+        {/* Search Bar matching Images 1, 2, 3 */}
+        <Animated.View entering={FadeInDown.duration(300).delay(60)} style={{ paddingHorizontal: 16, marginTop: 10 }}>
           <Pressable
             onPress={() => navigation.navigate('Search')}
-            className="flex-row items-center bg-white border border-border rounded-2xl px-4 shadow-soft"
-            style={{ height: 52 }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#ffffff',
+              borderRadius: 12,
+              height: 46,
+              paddingHorizontal: 14,
+              borderWidth: 1,
+              borderColor: '#dce4dd',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.02,
+              shadowRadius: 3,
+              elevation: 0,
+            }}
           >
-            <Search size={18} color="#94a3b8" />
-            <Text className="ml-3 text-base font-medium text-text-tertiary flex-1">
-              Search for groceries…
-            </Text>
+            <Search size={18} color="#64748b" strokeWidth={2.2} />
+            <View style={{ flex: 1, marginLeft: 10, height: 22, justifyContent: 'center', overflow: 'hidden' }}>
+              <Text
+                style={{
+                  fontFamily: 'Inter-Regular',
+                  fontSize: 14,
+                  fontWeight: 'normal',
+                  color: '#64748b',
+                }}
+              >
+                Search {ROTATING_SEARCH_TERMS[searchIndex]}
+              </Text>
+            </View>
           </Pressable>
         </Animated.View>
+      </View>
 
-        {/* Brands */}
-        {brands.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(350).delay(90)} className="mb-6">
-            <Text className="text-lg font-black text-text-primary tracking-tight px-5 mb-3">
-              Shop by Brand
-            </Text>
-            {/* FlatList, not a plain ScrollView — with up to ~80 brands, a ScrollView would
-                mount every logo's <Image> at once, firing that many concurrent
-                downloads/decodes the instant Home mounts and competing with the vertical
-                scroll for the JS/UI thread. FlatList only mounts what's near-visible and
-                loads the rest in as the strip is scrolled. */}
-            <FlatList
-              horizontal
-              data={brands}
-              keyExtractor={(brand) => brand.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20, gap: 18 }}
-              initialNumToRender={8}
-              maxToRenderPerBatch={6}
-              windowSize={5}
-              removeClippedSubviews
-              renderItem={({ item: brand }) => (
+      {/* BODY CONTENT SCROLLVIEW */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        decelerationRate="normal"
+        overScrollMode="never"
+        scrollEventThrottle={16}
+        removeClippedSubviews={Platform.OS === 'android'}
+        style={{ flex: 1, backgroundColor: '#ffffff' }}
+        contentContainerStyle={{
+          paddingTop: 8,
+          paddingBottom: cartItemCount > 0 ? 90 : 32,
+        }}
+      >
+        {/* Sub-category Pills matching Images 1, 2, 3 */}
+        <View style={{ marginBottom: 14 }}>
+          <ScrollView
+            horizontal
+            nestedScrollEnabled={true}
+            overScrollMode="never"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
+          >
+            {loading && allCategories.length === 0 ? (
+              Array.from({ length: 6 }, (_, index) => (
+                <View key={`home-category-skeleton-${index}`} style={{ alignItems: 'center', width: 52 }}>
+                  <Skeleton width={48} height={48} borderRadius={24} />
+                  <Skeleton width={42} height={10} borderRadius={4} className="mt-2" />
+                </View>
+              ))
+            ) : homeCategories.map((cat) => {
+              const isActive = activeCategory === cat.id;
+              const imgSource = getHomeScreenCategoryVisual(cat);
+              const categoryLabel = getCategoryShortLabel(cat);
+
+              return (
                 <Pressable
-                  onPress={() => navigation.navigate('ProductList', { brandId: brand.id, title: brand.name })}
-                  className="items-center"
-                  style={{ width: 82 }}
+                  key={cat.id}
+                  onPress={() => {
+                    if (cat.id === 'all') {
+                      setActiveCategory('all');
+                    } else {
+                      navigation.navigate('Category', {
+                        id: cat.id,
+                        name: cat.name || cat.label,
+                        image: cat.image,
+                      });
+                    }
+                  }}
+                  style={{ alignItems: 'center', minWidth: 52, maxWidth: 64, paddingHorizontal: 2 }}
                 >
-                  <View className="w-20 h-20 rounded-full bg-white border border-border-light shadow-soft items-center justify-center overflow-hidden mb-1.5">
-                    <BrandLogo brand={brand} size={80} style={{ borderRadius: 40, backgroundColor: '#ffffff' }} />
+                  <View
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      backgroundColor: '#ffffff',
+                      borderWidth: isActive ? 2 : 1,
+                      borderColor: isActive ? '#087f46' : '#dce4dd',
+                      overflow: 'hidden',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                    }}
+                  >
+                    {imgSource ? (
+                      <Image
+                        source={imgSource}
+                        style={{ width: '100%', height: '100%' }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <ShoppingBag size={22} color="#94a3b8" />
+                    )}
                   </View>
-                  <Text className="text-[11px] font-semibold text-text-primary text-center" numberOfLines={1}>
-                    {brand.name}
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontFamily: isActive ? 'Inter-Bold' : 'Inter-Medium',
+                      fontSize: 12,
+                      fontWeight: 'normal',
+                      color: isActive ? '#087f46' : '#475569',
+                      marginTop: 6,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {categoryLabel}
                   </Text>
+                  {/* Active Green Underline Bar matching Images 1, 2, 3 */}
+                  <View
+                    style={{
+                      width: 24,
+                      height: 3,
+                      backgroundColor: isActive ? '#087f46' : 'transparent',
+                      borderRadius: 1.5,
+                      marginTop: 4,
+                    }}
+                  />
                 </Pressable>
-              )}
-            />
-          </Animated.View>
-        )}
+              );
+            })}
+      </ScrollView>
+        </View>
 
-        {/* Banner */}
-        <Animated.View entering={FadeInDown.duration(350).delay(120)} className="mb-6 px-4">
-          <Image
-            source={require('../../assets/images/banner.png')}
-            style={{ width: '100%', aspectRatio: 1, borderRadius: 20 }}
-            contentFit="cover"
-          />
-        </Animated.View>
+        {/* HERO BANNER CAROUSEL matching Reference Images */}
+        <View style={{ marginBottom: 14 }}>
+          <ScrollView
+            ref={bannerScrollRef}
+            horizontal
+            nestedScrollEnabled={true}
+            overScrollMode="never"
+            pagingEnabled={false}
+            snapToInterval={bannerCardWidth + 14}
+            decelerationRate="fast"
+            snapToAlignment="start"
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={() => {
+              isDraggingBannerRef.current = true;
+            }}
+            onScrollEndDrag={() => {
+              isDraggingBannerRef.current = false;
+            }}
+            onMomentumScrollEnd={(e) => {
+              isDraggingBannerRef.current = false;
+              const x = e.nativeEvent.contentOffset.x;
+              const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + 14))));
+              bannerIndexRef.current = idx;
+              setActiveBannerIndex(idx);
+            }}
+            onScroll={(e) => {
+              const x = e.nativeEvent.contentOffset.x;
+              const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + 14))));
+              if (idx !== activeBannerIndex) {
+                setActiveBannerIndex(idx);
+                bannerIndexRef.current = idx;
+              }
+            }}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
+          >
+            {/* Banner 1: Farm Fresh (Light Fresh Sage Green) */}
+            <View
+              style={{
+                width: bannerCardWidth,
+                height: 166,
+                borderRadius: 22,
+                backgroundColor: '#E4F2E9',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                overflow: 'hidden',
+              }}
+            >
+              <View style={{ flex: 1, paddingRight: 8, justifyContent: 'center' }}>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Bold',
+                    fontSize: 10.5,
+                    fontWeight: 'normal',
+                    color: '#1C2E24',
+                    letterSpacing: 0.8,
+                    textTransform: 'uppercase',
+                    marginBottom: 3,
+                  }}
+                >
+                  FARM FRESH
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-ExtraBold',
+                    fontSize: 18,
+                    fontWeight: 'normal',
+                    color: '#111813',
+                    lineHeight: 22.5,
+                    letterSpacing: -0.4,
+                  }}
+                >
+                  Vegetables picked{'\n'}this morning
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Regular',
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                    color: '#3B5145',
+                    marginTop: 3,
+                    marginBottom: 11,
+                  }}
+                >
+                  Starting at just ₹9
+                </Text>
+                <Pressable
+                  onPress={() => navigation.navigate('Main', { screen: 'Categories' })}
+                  hitSlop={8}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: '#0A7C47',
+                      borderRadius: 20,
+                      paddingHorizontal: 14,
+                      paddingVertical: 6.5,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: 'Inter-Bold',
+                        fontSize: 12.5,
+                        fontWeight: 'normal',
+                        color: '#ffffff',
+                        marginRight: 4,
+                      }}
+                    >
+                      Shop now
+                    </Text>
+                    <ChevronRight size={13} color="#ffffff" strokeWidth={2.8} />
+                  </View>
+                </Pressable>
+              </View>
 
-        {/* Top Categories */}
-        {topCategories.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(350).delay(180)} className="mb-3 px-5">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-lg font-black text-text-primary tracking-tight">
-                Top Categories
-              </Text>
-              <Pressable
-                onPress={() => navigation.navigate('Categories')}
-                className="flex-row items-center"
+              {/* Graphic collage with fresh vegetables */}
+              <View
+                style={{
+                  width: 122,
+                  height: 74,
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                <Text className="text-sm font-bold text-primary-600 mr-0.5">View More</Text>
-                <ChevronRight size={16} color="#16a34a" />
+                <Image
+                  source={require('../../assets/images/banner_collage_fresh.webp')}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="contain"
+                />
+              </View>
+            </View>
+
+            {/* Banner 2: Monthly Ration (Solid Vibrant Emerald Green) */}
+            <View
+              style={{
+                width: bannerCardWidth,
+                height: 166,
+                borderRadius: 22,
+                backgroundColor: '#0B7B43',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                overflow: 'hidden',
+              }}
+            >
+              <View style={{ flex: 1, paddingRight: 8, justifyContent: 'center' }}>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Bold',
+                    fontSize: 10.5,
+                    fontWeight: 'normal',
+                    color: '#A7F3D0',
+                    letterSpacing: 0.8,
+                    textTransform: 'uppercase',
+                    marginBottom: 3,
+                  }}
+                >
+                  MONTHLY RATION
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-ExtraBold',
+                    fontSize: 18,
+                    fontWeight: 'normal',
+                    color: '#ffffff',
+                    lineHeight: 22.5,
+                    letterSpacing: -0.4,
+                  }}
+                >
+                  Wholesale prices,{'\n'}home delivered
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Regular',
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                    color: '#D1FAE5',
+                    marginTop: 3,
+                    marginBottom: 11,
+                  }}
+                >
+                  Up to 20% off atta, rice & oil
+                </Text>
+                <Pressable
+                  onPress={() => navigation.navigate('Offers')}
+                  hitSlop={8}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: 20,
+                      paddingHorizontal: 14,
+                      paddingVertical: 6.5,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: 'Inter-Bold',
+                        fontSize: 12.5,
+                        fontWeight: 'normal',
+                        color: '#0B7B43',
+                        marginRight: 4,
+                      }}
+                    >
+                      Shop now
+                    </Text>
+                    <ChevronRight size={13} color="#0B7B43" strokeWidth={2.8} />
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Graphic collage with staple items matching Reference Image 2 */}
+              <View
+                style={{
+                  width: 140,
+                  height: 86,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Image
+                  source={require('../../assets/images/banner_collage_ration.webp')}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="contain"
+                />
+              </View>
+            </View>
+
+            {/* Banner 3: Tea Time (Deep Charcoal Forest Green) */}
+            <View
+              style={{
+                width: bannerCardWidth,
+                height: 166,
+                borderRadius: 22,
+                backgroundColor: '#1E2B23',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                overflow: 'hidden',
+              }}
+            >
+              <View style={{ flex: 1, paddingRight: 8, justifyContent: 'center' }}>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Bold',
+                    fontSize: 10.5,
+                    fontWeight: 'normal',
+                    color: '#94A3B8',
+                    letterSpacing: 0.8,
+                    textTransform: 'uppercase',
+                    marginBottom: 3,
+                  }}
+                >
+                  TEA TIME
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-ExtraBold',
+                    fontSize: 18,
+                    fontWeight: 'normal',
+                    color: '#ffffff',
+                    lineHeight: 22.5,
+                    letterSpacing: -0.4,
+                  }}
+                >
+                  Tea, biscuits &{'\n'}snacks
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Regular',
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                    color: '#CBD5E1',
+                    marginTop: 3,
+                    marginBottom: 11,
+                  }}
+                >
+                  Buy 2, get 10% extra off
+                </Text>
+                <Pressable
+                  onPress={() => navigation.navigate('Main', { screen: 'Categories' })}
+                  hitSlop={8}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: 20,
+                      paddingHorizontal: 14,
+                      paddingVertical: 6.5,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: 'Inter-Bold',
+                        fontSize: 12.5,
+                        fontWeight: 'normal',
+                        color: '#1E2B23',
+                        marginRight: 4,
+                      }}
+                    >
+                      Shop now
+                    </Text>
+                    <ChevronRight size={13} color="#1E2B23" strokeWidth={2.8} />
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Graphic collage with tea and snacks */}
+              <View
+                style={{
+                  width: 122,
+                  height: 74,
+                  backgroundColor: '#ffffff',
+                  borderRadius: 16,
+                  padding: 3,
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Image
+                  source={require('../../assets/images/banner_collage_teatime.webp')}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="contain"
+                />
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Dots Indicator matching Images 1, 2, 3 */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10, gap: 6 }}>
+            {[0, 1, 2].map((i) => {
+              const isActive = activeBannerIndex === i;
+              return (
+                <Pressable
+                  key={i}
+                  hitSlop={8}
+                  onPress={() => {
+                    bannerIndexRef.current = i;
+                    setActiveBannerIndex(i);
+                    bannerScrollRef.current?.scrollTo({
+                      x: i * (bannerCardWidth + 14),
+                      animated: true,
+                    });
+                  }}
+                  style={{
+                    width: isActive ? 20 : 5.5,
+                    height: 5.5,
+                    borderRadius: 3,
+                    backgroundColor: isActive ? '#121712' : '#C4CCC5',
+                  }}
+                />
+              );
+            })}
+          </View>
+        </View>
+
+        {/* FREE DELIVERY PROGRESS CARD matching Images 1, 2, 3 */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 18 }}>
+          <View
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 14,
+              padding: 13,
+              borderWidth: 1,
+              borderColor: '#e2e8f0',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.04,
+              shadowRadius: 4,
+              elevation: 1,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Truck size={18} color="#047857" strokeWidth={2.2} style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: 13, color: '#334155' }}>
+                {missingForFree > 0 ? (
+                  <>
+                    <Text style={{ fontFamily: 'Inter-Regular', fontWeight: 'normal', color: '#334155' }}>
+                      Add{' '}
+                    </Text>
+                    <Text style={{ fontFamily: 'Inter-ExtraBold', fontWeight: 'normal', color: '#0f172a' }}>
+                      ₹{missingForFree}
+                    </Text>
+                    <Text style={{ fontFamily: 'Inter-Regular', fontWeight: 'normal', color: '#334155' }}>
+                      {' '}more for{' '}
+                    </Text>
+                    <Text style={{ fontFamily: 'Inter-Bold', fontWeight: 'normal', color: '#047857' }}>
+                      free delivery
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={{ fontFamily: 'Inter-Bold', fontWeight: 'normal', color: '#047857' }}>
+                    Free delivery applied to your order!
+                  </Text>
+                )}
+              </Text>
+            </View>
+
+            {/* Green Progress Track */}
+            <View style={{ height: 5, backgroundColor: '#e2e8f0', borderRadius: 2.5, overflow: 'hidden' }}>
+              <View
+                style={{
+                  width: `${Math.round(freeProgress * 100)}%`,
+                  height: '100%',
+                  backgroundColor: '#047857',
+                  borderRadius: 2.5,
+                }}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* DAILY ESSENTIALS SECTION matching Images 1, 2, 3 */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+          <View
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 16,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: '#f1f5f9',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.04,
+              shadowRadius: 6,
+              elevation: 1,
+            }}
+          >
+            {/* Header: [Bag icon] Daily essentials  See all > */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 16,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 10,
+                    backgroundColor: '#ecfdf5',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 10,
+                  }}
+                >
+                  <ShoppingBag size={18} color="#047857" strokeWidth={2.2} />
+                </View>
+                <View>
+                  <Text
+                    style={{
+                      fontFamily: 'Inter-ExtraBold',
+                      fontSize: 18,
+                      fontWeight: 'normal',
+                      color: '#0f172a',
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    {activeCategory === 'all'
+                      ? 'Daily essentials'
+                      : (allCategories.find((c) => c.id === activeCategory)?.name || 'Category items')}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: 'Inter-Regular',
+                      fontSize: 12.5,
+                      fontWeight: 'normal',
+                      color: '#64748b',
+                      marginTop: 2,
+                    }}
+                  >
+                    {activeCategory === 'all'
+                      ? 'Most ordered in your area'
+                      : `${displayProducts.length} items available`}
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={() => {
+                  if (activeCategory === 'all') {
+                    navigation.navigate('Main', { screen: 'Categories' });
+                  } else {
+                    const selected = allCategories.find((c) => c.id === activeCategory);
+                    navigation.navigate('Category', {
+                      id: activeCategory,
+                      name: selected?.name || 'Category',
+                      image: selected?.image,
+                    });
+                  }
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+              >
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Bold',
+                    fontSize: 13.5,
+                    fontWeight: 'normal',
+                    color: '#047857',
+                    marginRight: 3,
+                  }}
+                >
+                  See all
+                </Text>
+                <ChevronRight size={15} color="#047857" strokeWidth={2.6} />
               </Pressable>
             </View>
-            <View className="flex-row flex-wrap justify-between">
-              {topCategories.slice(0, 6).map((item, index) => (
-                <TopCategoryCard
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  onPress={() => navigation.navigate('Category', { id: item.id, name: item.name })}
-                />
-              ))}
+
+            {/* Vertical Items List matching Images 1, 2, 3 */}
+            {loading || (loadingCategoryProducts && activeCategory !== 'all') ? (
+              <View style={{ gap: 14 }}>
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} width="100%" height={70} borderRadius={16} />
+                ))}
+              </View>
+            ) : displayProducts.length === 0 ? (
+              <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                <Text
+                  style={{
+                    fontFamily: fonts.medium,
+                    fontSize: 13.5,
+                    color: '#64748b',
+                    textAlign: 'center',
+                  }}
+                >
+                  No products found in this category yet.
+                </Text>
+              </View>
+            ) : (
+              displayProducts.slice(0, 12).map((prod) => {
+                const variant = prod.variants?.[0];
+                const price = variant?.offerPrice ?? variant?.price ?? prod.price ?? 0;
+                const mrp = variant?.price ?? prod.price ?? 0;
+                const packSize = variant?.label || prod.unit || '500 g';
+                const qty = getQty(prod.id, variant?.id);
+                const outOfStock = isProductUnavailable(prod, variant);
+                const imgSource =
+                  getProductImageSource(prod, 150) || (prod.image ? { uri: optimizeCloudinaryUrl(prod.image, 150) } : null);
+
+                return (
+                  <View
+                    key={prod.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 10,
+                      borderBottomWidth: 1,
+                      borderColor: '#f8fafc',
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <Pressable
+                      onPress={() => navigation.navigate('ProductDetail', { id: prod.id })}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: 14,
+                        backgroundColor: '#ffffff',
+                        borderWidth: 1,
+                        borderColor: '#f1f5f9',
+                        overflow: 'hidden',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 12,
+                      }}
+                    >
+                      {imgSource ? (
+                        <Image
+                          source={imgSource}
+                          style={{ width: '100%', height: '100%' }}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <ShoppingBag size={24} color="#94a3b8" />
+                      )}
+                    </Pressable>
+
+                    {/* Info */}
+                    <Pressable
+                      onPress={() => navigation.navigate('ProductDetail', { id: prod.id })}
+                      style={{ flex: 1, paddingRight: 8 }}
+                    >
+                      <Text
+                        numberOfLines={2}
+                        style={{
+                          fontFamily: 'Inter-Bold',
+                          fontSize: 15,
+                          fontWeight: 'normal',
+                          color: '#0f172a',
+                          lineHeight: 20,
+                        }}
+                      >
+                        {prod.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: 'Inter-Regular',
+                          fontSize: 13,
+                          fontWeight: 'normal',
+                          color: '#64748b',
+                          marginTop: 2,
+                        }}
+                      >
+                        {packSize}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
+                        <Text
+                          style={{
+                            fontFamily: 'Inter-ExtraBold',
+                            fontSize: 16,
+                            fontWeight: 'normal',
+                            color: '#0f172a',
+                          }}
+                        >
+                          ₹{price}
+                        </Text>
+                        {mrp > price && (
+                          <Text
+                            style={{
+                              fontFamily: 'Inter-Regular',
+                              fontSize: 12.5,
+                              fontWeight: 'normal',
+                              color: '#94a3b8',
+                              textDecorationLine: 'line-through',
+                              marginLeft: 6,
+                            }}
+                          >
+                            ₹{mrp}
+                          </Text>
+                        )}
+                      </View>
+                    </Pressable>
+
+                    {/* ADD Button or Stepper matching Images 1, 2, 3 */}
+                    {outOfStock ? (
+                      <View
+                        style={{
+                          borderWidth: 1.2,
+                          borderColor: '#ef4444',
+                          borderRadius: 8,
+                          paddingHorizontal: 10,
+                          paddingVertical: 7,
+                          backgroundColor: '#fff',
+                        }}
+                      >
+                        <Text style={{ fontFamily: 'Inter-Bold', fontSize: 11.5, color: '#ef4444' }}>SOLD OUT</Text>
+                      </View>
+                    ) : qty === 0 ? (
+                      <Pressable
+                        onPress={() => addItem(prod, variant)}
+                        style={{
+                          borderWidth: 1.2,
+                          borderColor: '#047857',
+                          borderRadius: 8,
+                          paddingHorizontal: 22,
+                          paddingVertical: 7,
+                          backgroundColor: '#ffffff',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: 'Inter-Bold',
+                            fontSize: 13.5,
+                            fontWeight: 'normal',
+                            color: '#047857',
+                          }}
+                        >
+                          ADD
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#047857',
+                          borderRadius: 8,
+                          paddingHorizontal: 6,
+                          height: 34,
+                        }}
+                      >
+                        <Pressable
+                          onPress={() => updateQty(prod.id, variant?.id, -1)}
+                          hitSlop={6}
+                          style={{ paddingHorizontal: 6 }}
+                        >
+                          <Minus size={14} color="#ffffff" strokeWidth={3} />
+                        </Pressable>
+                        <Text
+                          style={{
+                            fontFamily: 'Inter-Bold',
+                            fontSize: 13.5,
+                            fontWeight: 'normal',
+                            color: '#ffffff',
+                            marginHorizontal: 6,
+                          }}
+                        >
+                          {qty}
+                        </Text>
+                        <Pressable
+                          onPress={() => addItem(prod, variant)}
+                          hitSlop={6}
+                          style={{ paddingHorizontal: 6 }}
+                        >
+                          <Plus size={14} color="#ffffff" strokeWidth={3} />
+                        </Pressable>
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </View>
+
+        {/* TODAY'S BEST PRICES SECTION matching Image 4 */}
+        <View style={{ marginTop: 22 }}>
+          {/* Section Header */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 16,
+              marginBottom: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  backgroundColor: '#fef3c7',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 9,
+                }}
+              >
+                <Tag size={16} color="#d97706" strokeWidth={2.2} />
+              </View>
+              <View>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-ExtraBold',
+                    fontSize: 18,
+                    fontWeight: 'normal',
+                    color: '#0f172a',
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  Today&apos;s best prices
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: 'Inter-Regular',
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                    color: '#64748b',
+                    marginTop: 1,
+                  }}
+                >
+                  Trader rates on staples
+                </Text>
+              </View>
             </View>
-          </Animated.View>
-        )}
+
+            <Pressable
+              onPress={() => navigation.navigate('Main', { screen: 'Offers' })}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
+              <Text
+                style={{
+                  fontFamily: 'Inter-Bold',
+                  fontSize: 13,
+                  fontWeight: 'normal',
+                  color: '#047857',
+                  marginRight: 2,
+                }}
+              >
+                See all
+              </Text>
+              <ChevronRight size={15} color="#047857" strokeWidth={2.6} />
+            </Pressable>
+          </View>
+
+          {/* Horizontal Product Cards Carousel matching Image 4 */}
+          <ScrollView
+            horizontal
+            nestedScrollEnabled={true}
+            overScrollMode="never"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+          >
+            {bestPriceProducts.map((item) => {
+              const qty = getQty(item.product.id, item.variant.id);
+
+              return (
+                <View
+                  key={item.id}
+                  style={{
+                    width: 154,
+                    backgroundColor: '#ffffff',
+                    borderRadius: 16,
+                    padding: 10,
+                    borderWidth: 1,
+                    borderColor: '#e2e8f0',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Discount is calculated only from this saved variant's MRP and offer price. */}
+                  {item.discount > 0 && <View
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      left: 8,
+                      zIndex: 3,
+                      backgroundColor: '#f59e0b',
+                      borderRadius: 8,
+                      paddingHorizontal: 6,
+                      paddingVertical: 3,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: 'Inter-ExtraBold',
+                        fontSize: 10,
+                        fontWeight: 'normal',
+                        color: '#0f172a',
+                        textAlign: 'center',
+                        lineHeight: 12,
+                      }}
+                    >
+                      {item.discount}{'\n'}OFF
+                    </Text>
+                  </View>}
+
+                  {/* Product Image */}
+                  <View style={{ width: '100%', height: 104, alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      source={getProductImageSource(item.product, 200)}
+                      style={{ width: '80%', height: '80%' }}
+                      contentFit="contain"
+                    />
+                  </View>
+
+                  {/* Pack Size */}
+                  <Text
+                    style={{
+                      fontFamily: 'Inter-Regular',
+                      fontSize: 12,
+                      fontWeight: 'normal',
+                      color: '#64748b',
+                      marginTop: 6,
+                    }}
+                  >
+                    {item.packSize}
+                  </Text>
+
+                  {/* Product Name */}
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontFamily: 'Inter-Bold',
+                      fontSize: 13,
+                      fontWeight: 'normal',
+                      color: '#0f172a',
+                      marginTop: 2,
+                    }}
+                  >
+                    {item.name}
+                  </Text>
+
+                  {/* Price & Action row */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: 8,
+                    }}
+                  >
+                    <View>
+                      <Text
+                        style={{
+                          fontFamily: 'Inter-ExtraBold',
+                          fontSize: 16,
+                          fontWeight: 'normal',
+                          color: '#0f172a',
+                        }}
+                      >
+                        ₹{item.price}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: 'Inter-Regular',
+                          fontSize: 11.5,
+                          fontWeight: 'normal',
+                          color: '#94a3b8',
+                          textDecorationLine: 'line-through',
+                        }}
+                      >
+                        ₹{item.mrp}
+                      </Text>
+                    </View>
+
+                    {qty === 0 ? (
+                      <Pressable
+                        onPress={() => addItem(item.product, item.variant)}
+                        style={{
+                          borderWidth: 1.2,
+                          borderColor: '#047857',
+                          borderRadius: 8,
+                          paddingHorizontal: 14,
+                          paddingVertical: 6,
+                          backgroundColor: '#ffffff',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: 'Inter-Bold',
+                            fontSize: 12.5,
+                            fontWeight: 'normal',
+                            color: '#047857',
+                          }}
+                        >
+                          ADD
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#047857',
+                          borderRadius: 8,
+                          paddingHorizontal: 5,
+                          height: 30,
+                        }}
+                      >
+                        <Pressable
+                          onPress={() => updateQty(item.product.id, item.variant.id, -1)}
+                          hitSlop={6}
+                          style={{ paddingHorizontal: 5 }}
+                        >
+                          <Minus size={12} color="#ffffff" strokeWidth={3} />
+                        </Pressable>
+                        <Text
+                          style={{
+                            fontFamily: 'Inter-Bold',
+                            fontSize: 12.5,
+                            fontWeight: 'normal',
+                            color: '#ffffff',
+                            marginHorizontal: 4,
+                          }}
+                        >
+                          {qty}
+                        </Text>
+                        <Pressable
+                          onPress={() => addItem(item.product, item.variant)}
+                          hitSlop={6}
+                          style={{ paddingHorizontal: 5 }}
+                        >
+                          <Plus size={12} color="#ffffff" strokeWidth={3} />
+                        </Pressable>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* SHOP BY CATEGORY SECTION matching Image 4 & Image 5 */}
+        <View style={{ marginTop: 24, paddingHorizontal: 16 }}>
+          {/* Section Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: '#ecfdf5',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 9,
+              }}
+            >
+              <LayoutGrid size={16} color="#047857" strokeWidth={2.2} />
+            </View>
+            <Text
+              style={{
+                fontFamily: 'Inter-ExtraBold',
+                fontSize: 18,
+                fontWeight: 'normal',
+                color: '#0f172a',
+                letterSpacing: -0.3,
+              }}
+            >
+              Shop by category
+            </Text>
+          </View>
+
+          {/* 4-Column Grid matching Image 5 */}
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-start',
+              columnGap: 10,
+              rowGap: 16,
+            }}
+          >
+            {loading && allCategories.length === 0 ? (
+              Array.from({ length: 8 }, (_, index) => {
+                const cardW = Math.floor((screenWidth - 32 - 30) / 4);
+                return (
+                  <View key={`shop-category-skeleton-${index}`} style={{ width: cardW, alignItems: 'center' }}>
+                    <Skeleton width={cardW} height={cardW} borderRadius={18} />
+                    <Skeleton width="76%" height={12} borderRadius={4} className="mt-2" />
+                  </View>
+                );
+              })
+            ) : shopByCategories.map((cat) => {
+              const cardW = Math.floor((screenWidth - 32 - 30) / 4);
+              const visualSource = getHomeScreenCategoryVisual(cat);
+
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => {
+                    navigation.navigate('Category', {
+                      id: cat.id,
+                      name: cat.name,
+                      image: cat.image,
+                    });
+                  }}
+                  style={{ width: cardW, alignItems: 'center' }}
+                >
+                  <View
+                    style={{
+                      width: cardW,
+                      height: cardW,
+                      borderRadius: 18,
+                      backgroundColor: '#ffffff',
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#f1f5f9',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 3,
+                      elevation: 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {visualSource ? (
+                      <Image
+                        source={visualSource}
+                        style={{ width: '100%', height: '100%', borderRadius: 18 }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <ShoppingBag size={24} color="#94a3b8" />
+                    )}
+                  </View>
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      fontFamily: 'Inter-Bold',
+                      fontSize: 11.5,
+                      fontWeight: 'normal',
+                      color: '#0f172a',
+                      marginTop: 6,
+                      textAlign: 'center',
+                      lineHeight: 14,
+                    }}
+                  >
+                    {cat.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        {/* Keep the club card and brand footer together as the final home section. */}
+        <Pressable
+          onPress={() => setShowClubModal(true)}
+          style={{
+            marginTop: 24,
+            marginHorizontal: 16,
+            marginBottom: 34,
+            backgroundColor: '#fff8ec',
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: '#fed7aa',
+            padding: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            elevation: 1,
+          }}
+        >
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text
+              style={{
+                fontFamily: 'Inter-ExtraBold',
+                fontSize: 16.5,
+                fontWeight: 'normal',
+                color: '#1c1917',
+                letterSpacing: -0.3,
+              }}
+            >
+              Join MS Club
+            </Text>
+            <Text
+              style={{
+                fontFamily: 'Inter-Regular',
+                fontSize: 12.5,
+                fontWeight: 'normal',
+                color: '#71717a',
+                marginTop: 3,
+                lineHeight: 18,
+              }}
+            >
+              Free delivery on every order and{'\n'}extra 5% off bulk packs.
+            </Text>
+          </View>
+          <View
+            style={{
+              backgroundColor: '#18181b',
+              borderRadius: 12,
+              paddingHorizontal: 15,
+              paddingVertical: 9,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: 'Inter-Bold',
+                fontSize: 13,
+                fontWeight: 'normal',
+                color: '#ffffff',
+              }}
+            >
+              Know more
+            </Text>
+          </View>
+        </Pressable>
+
+        <View style={{ marginHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
+          <Text
+            accessibilityRole="text"
+            style={{ fontFamily: 'Inter-ExtraBold', fontSize: 38, lineHeight: 44, color: '#cbd6ce', letterSpacing: -1.4 }}
+          >
+            ms traders
+          </Text>
+          <Text style={{ fontFamily: 'Inter-Regular', fontSize: 12, lineHeight: 17, color: '#647569' }}>
+            Your neighbourhood trader, now on your phone
+          </Text>
+        </View>
       </ScrollView>
 
-      {/* Floating Cart Bar */}
-      <CartBar items={items} onPress={() => navigation.navigate('Main', { screen: 'Cart' })} />
+      {/* FLOATING "View cart" CAPSULE BAR matching Images 1, 2, 3 */}
+      {cartItemCount > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            left: 14,
+            right: 14,
+            zIndex: 999,
+          }}
+        >
+          <Pressable
+            onPress={() => navigation.navigate('Cart')}
+            style={{ width: '100%' }}
+          >
+            <View
+              style={{
+                backgroundColor: '#0a7942',
+                borderRadius: 16,
+                height: 56,
+                paddingHorizontal: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.22,
+                shadowRadius: 10,
+                elevation: 8,
+              }}
+            >
+            {/* First Cart item thumbnail */}
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                backgroundColor: '#ffffff',
+                overflow: 'hidden',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 12,
+                padding: 2,
+              }}
+            >
+              {firstCartItemImage ? (
+                <Image
+                  source={firstCartItemImage}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="contain"
+                />
+              ) : (
+                <ShoppingBag size={20} color="#0a7942" />
+              )}
+            </View>
 
-      <Dialog
-        visible={showLogoutDialog}
-        title="Sign Out"
-        message="Are you sure you want to sign out of your account?"
-        confirmText="Sign Out"
-        cancelText="Cancel"
-        destructive
-        onConfirm={handleLogout}
-        onCancel={() => setShowLogoutDialog(false)}
-      />
-    </SafeAreaView>
-  );
-}
+            {/* Label and Item total */}
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontFamily: 'Inter-Bold',
+                  fontSize: 14.5,
+                  fontWeight: 'normal',
+                  color: '#ffffff',
+                }}
+              >
+                View cart
+              </Text>
+              <Text
+                style={{
+                  fontFamily: 'Inter-Medium',
+                  fontSize: 12,
+                  fontWeight: 'normal',
+                  color: '#dcfce7',
+                  marginTop: 1,
+                }}
+              >
+                {cartItemCount} item{cartItemCount > 1 ? 's' : ''} · ₹{subtotal}
+              </Text>
+            </View>
 
-const CATEGORY_ICONS = {
-  vegetables: ShoppingBag, fruits: ShoppingBag, dairy: ShoppingBag, snacks: ShoppingBag,
-  beverages: ShoppingBag, groceries: ShoppingBag, household: ShoppingBag, frozen: ShoppingBag,
-  bakery: ShoppingBag, meat: ShoppingBag, seafood: ShoppingBag, eggs: ShoppingBag,
-  organic: ShoppingBag, personal: ShoppingBag,
-};
-
-function getCategoryIcon(item) {
-  const key = item.name.toLowerCase().split(' ')[0];
-  const IconComponent = CATEGORY_ICONS[key] || ShoppingBag;
-  return <IconComponent size={34} color="#64748b" />;
-}
-
-// createAnimatedComponent() must run once at module scope, not inside the component body —
-// calling it on every render (as this was) mints a brand-new component TYPE each time,
-// which forces React to fully unmount+remount the native view on every re-render of
-// TopCategoryCard (e.g. whenever the cart badge or notification count changes elsewhere on
-// Home, since that re-renders this whole screen). That's a real, visible source of jank,
-// not just wasted work.
-const AnimPress = Animated.createAnimatedComponent(Pressable);
-
-function TopCategoryCard({ item, onPress, index }) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  // An admin-uploaded photo can be any aspect ratio/size (unlike the bundled defaults,
-  // which are pre-cropped square PNGs) -- "cover" would crop it unpredictably, so it
-  // gets "contain" instead (always shows the whole photo, letterboxed if needed) plus
-  // an onError fallback in case the URL is ever unreachable, so an admin's upload never
-  // renders as a broken image.
-  const [uploadErrored, setUploadErrored] = useState(false);
-  useEffect(() => { setUploadErrored(false); }, [item.image]);
-
-  const bundled = categoryImages[slugify(item.name)];
-  const showUpload = !!item.image && !uploadErrored;
-
-  return (
-    <AnimPress
-      onPress={onPress}
-      onPressIn={() => { scale.value = withTiming(0.95, { duration: 80 }); }}
-      onPressOut={() => { scale.value = withTiming(1, { duration: 140 }); }}
-      style={[animStyle, { width: '31.5%', marginBottom: 12 }]}
-      className="items-center bg-white rounded-2xl border border-border-light shadow-soft overflow-hidden"
-    >
-      <View className="w-full aspect-square items-center justify-center bg-surface-50">
-        {/* An admin-uploaded photo (item.image, a live Firestore field) always overrides
-            the bundled default -- same priority as getProductImageSource() -- otherwise
-            editing a category's image from the admin portal would silently never show up. */}
-        {showUpload ? (
-          <Image
-            source={{ uri: optimizeCloudinaryUrl(item.image, THUMB_CARD) }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            transition={150}
-            onError={() => setUploadErrored(true)}
-          />
-        ) : bundled ? (
-          <Image
-            source={bundled}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={150}
-          />
-        ) : (
-          getCategoryIcon(item)
-        )}
+            {/* Circle chevron button */}
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ChevronRight size={18} color="#ffffff" strokeWidth={2.8} />
+            </View>
+          </View>
+        </Pressable>
       </View>
-      <Text
-        className="text-xs font-bold text-text-primary text-center leading-4 px-1.5 py-2"
-        numberOfLines={2}
-      >
-        {item.name}
-      </Text>
-    </AnimPress>
-  );
-}
+      )}
 
-function HomeSkeleton() {
-  return (
-    <SafeAreaView className="flex-1 bg-surface-50" edges={['top']}>
-      <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
-        <Skeleton width={130} height={22} borderRadius={8} />
-        <Skeleton width={40} height={40} borderRadius={20} />
-      </View>
-      <View className="px-5 mb-5">
-        <Skeleton width="100%" height={52} borderRadius={16} />
-      </View>
-      <View className="px-4 mb-6">
-        <Skeleton width="100%" height={BANNER_SIZE} borderRadius={20} />
-      </View>
-      <View className="px-5 mb-3 flex-row items-center justify-between">
-        <Skeleton width={140} height={22} borderRadius={8} />
-        <Skeleton width={70} height={16} borderRadius={6} />
-      </View>
-      <View className="flex-row flex-wrap justify-between px-5">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} width="31.5%" height={110} borderRadius={16} className="mb-3" />
-        ))}
-      </View>
+      {/* MS Club Modal */}
+      <MSClubModal visible={showClubModal} onClose={() => setShowClubModal(false)} />
     </SafeAreaView>
   );
 }

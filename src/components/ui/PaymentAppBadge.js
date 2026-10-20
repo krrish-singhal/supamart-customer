@@ -25,13 +25,17 @@ function LogoChip({ source }) {
 }
 
 export function GPayBadge() {
-  return <LogoChip source={require('../../../assets/images/gpay.png')} />;
+  return <LogoChip source={require('../../../assets/images/gpay.webp')} />;
 }
 
 export function PhonePeBadge() {
-  return <LogoChip source={require('../../../assets/images/phonepe.png')} />;
+  return <LogoChip source={require('../../../assets/images/phonepe.webp')} />;
 }
 
 export function PaytmBadge() {
-  return <LogoChip source={require('../../../assets/images/paytm.png')} />;
+  return <LogoChip source={require('../../../assets/images/paytm.webp')} />;
+}
+
+export function UpiBadge() {
+  return <LogoChip source={require('../../../assets/upi.png')} />;
 }

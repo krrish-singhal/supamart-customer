@@ -9,6 +9,7 @@ import {
 import { doc, getDoc } from 'firebase/firestore';
 import apiClient from '../services/api';
 import { auth, db } from '../services/firebase';
+import { stopBackgroundTracking } from '../services/backgroundLocation';
 
 export const AuthContext = createContext();
 
@@ -164,12 +165,14 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const login = async (newToken, profile) => {
+  const login = async (newToken, profile, { deferState = false } = {}) => {
     await AsyncStorage.setItem('userToken', newToken);
     await AsyncStorage.setItem('userProfile', JSON.stringify(profile));
     await AsyncStorage.removeItem('authMode'); // this is the backend-JWT path — make sure the request interceptor uses it, not a stale Firebase marker
-    setToken(newToken);
-    setUserProfile(profile);
+    if (!deferState) {
+      setToken(newToken);
+      setUserProfile(profile);
+    }
     syncFirebaseAuth();
   };
 
@@ -183,61 +186,63 @@ export function AuthProvider({ children }) {
   // The backend now also mirrors the new account into Firebase Auth in the background
   // (see backend/src/routes/auth.routes.js), so this same account's NEXT sign-in already
   // gets the fast path below.
+  const [needsAddressPrompt, setNeedsAddressPrompt] = useState(false);
+  const [needsAddressSelection, setNeedsAddressSelection] = useState(false);
+
   const register = async ({ name, email, mobile, password }) => {
     const { data } = await apiClient.post('/auth/register', { name, email, mobile, password });
     const { token: newToken, ...profile } = data;
-    await login(newToken, profile);
+    await login(newToken, profile, { deferState: true });
+    setNeedsAddressPrompt(true);
+    setNeedsAddressSelection(false);
+    setToken(newToken);
+    setUserProfile(profile);
     return profile;
   };
 
-  // Fast path first: sign in directly against Firebase Auth — a globally-distributed,
-  // always-on service with no cold-start dependency on our Render backend, unlike the
-  // fallback endpoint below. Every account gets mirrored into Firebase Auth on
-  // registration or the first time it logs in via the fallback (see backend/src/routes/
-  // auth.routes.js mirrorToFirebaseAuth()), so this succeeds for the large majority of
-  // real logins; anything not yet mirrored — or a genuinely wrong password on top of a
-  // migrated account — falls through to the exact original flow, unchanged.
-  const signIn = async ({ email, password }) => {
-    try {
-      // Bounded the same way as the boot-time restore above — a stalled network call here
-      // must fall back to the original login instead of leaving the Sign In button stuck.
-      const result = await withTimeout(
-        (async () => {
-          const cred = await signInWithEmailAndPassword(auth, email, password);
-          let snap = await getDoc(doc(db, 'users', cred.user.uid));
-          if (snap.exists()) return sanitizeProfile(snap.id, snap.data());
-          snap = await getDoc(doc(db, 'deliveryPartners', cred.user.uid));
-          if (snap.exists()) return { id: snap.id, ...snap.data(), role: 'PARTNER' };
-          return null;
-        })(),
-        FAST_PATH_RESTORE_TIMEOUT_MS
-      );
+  const signIn = async ({ email, password, mobile }) => {
+    if (email && password) {
+      try {
+        const result = await withTimeout(
+          (async () => {
+            const cred = await signInWithEmailAndPassword(auth, email, password);
+            let snap = await getDoc(doc(db, 'users', cred.user.uid));
+            if (snap.exists()) return sanitizeProfile(snap.id, snap.data());
+            snap = await getDoc(doc(db, 'deliveryPartners', cred.user.uid));
+            if (snap.exists()) return { id: snap.id, ...snap.data(), role: 'PARTNER' };
+            return null;
+          })(),
+          FAST_PATH_RESTORE_TIMEOUT_MS
+        );
 
-      if (result === '__timeout__') {
-        console.error(`Firebase sign-in timed out after ${FAST_PATH_RESTORE_TIMEOUT_MS}ms — falling back to backend login.`);
-      } else if (result) {
-        await AsyncStorage.setItem('authMode', 'firebase');
-        await AsyncStorage.removeItem('userToken');
-        setToken(FIREBASE_NATIVE_MARKER);
-        setUserProfile(result);
-        return result;
-      } else {
-        // Signed in but no matching Firestore profile — shouldn't happen in practice, but
-        // don't leave the user stuck on it; fall through to the backend path below.
-        console.error('Firebase sign-in succeeded but no matching Firestore profile was found; falling back.');
-      }
-    } catch (err) {
-      // Expected, not an error, for any account not yet mirrored into Firebase Auth —
-      // this one login uses the original path, which mirrors it for next time.
-      if (!['auth/user-not-found', 'auth/invalid-credential', 'auth/wrong-password'].includes(err.code)) {
-        console.error('Firebase sign-in failed unexpectedly, falling back to backend login:', err);
+        if (result && result !== '__timeout__') {
+          await AsyncStorage.setItem('authMode', 'firebase');
+          await AsyncStorage.removeItem('userToken');
+          if (result.role !== 'PARTNER') {
+            setNeedsAddressPrompt(true);
+            setNeedsAddressSelection(false);
+          }
+          setToken(FIREBASE_NATIVE_MARKER);
+          setUserProfile(result);
+          return result;
+        }
+      } catch (err) {
+        if (!['auth/user-not-found', 'auth/invalid-credential', 'auth/wrong-password'].includes(err.code)) {
+          console.error('Firebase sign-in failed unexpectedly, falling back to backend login:', err);
+        }
       }
     }
 
-    // Fallback: the original backend-verified login — entirely unchanged.
-    const { data } = await apiClient.post('/auth/login', { email, password });
+    // Backend login (supports email, mobile, and password)
+    const { data } = await apiClient.post('/auth/login', { email, password, mobile });
     const { token: newToken, ...profile } = data;
-    await login(newToken, profile);
+    await login(newToken, profile, { deferState: true });
+    if (profile.role !== 'PARTNER') {
+      setNeedsAddressPrompt(true);
+      setNeedsAddressSelection(false);
+    }
+    setToken(newToken);
+    setUserProfile(profile);
     return profile;
   };
 
@@ -247,10 +252,15 @@ export function AuthProvider({ children }) {
     await AsyncStorage.removeItem('authMode');
     setToken(null);
     setUserProfile(null);
+    setNeedsAddressPrompt(false);
+    setNeedsAddressSelection(false);
+    try {
+      await stopBackgroundTracking();
+    } catch (_e) {}
     try {
       await firebaseSignOut(auth);
     } catch {
-      // best-effort — nothing to clean up if there was never a Firebase session
+      // best-effort cleanup
     }
   };
 
@@ -264,6 +274,8 @@ export function AuthProvider({ children }) {
     await AsyncStorage.removeItem('authMode');
     setToken(null);
     setUserProfile(null);
+    setNeedsAddressPrompt(false);
+    setNeedsAddressSelection(false);
     try {
       await firebaseSignOut(auth);
     } catch {
@@ -273,7 +285,26 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, userProfile, setToken, setUserProfile, login, register, signIn, logout, deleteAccount, loading, loadToken }}>
+    <AuthContext.Provider
+      value={{
+        token,
+        userProfile,
+        setToken,
+        setUserProfile,
+        login,
+        register,
+        signIn,
+        logout,
+        signOut: logout,
+        deleteAccount,
+        loading,
+        loadToken,
+        needsAddressPrompt,
+        setNeedsAddressPrompt,
+        needsAddressSelection,
+        setNeedsAddressSelection,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,25 @@
+{
+  "apks": [
+    {
+      "apk": "base-arm64_v8a.apk",
+      "fileBytes": 19531754,
+      "uncompressedEntryBytes": 19393209
+    },
+    {
+      "apk": "base-xxhdpi.apk",
+      "fileBytes": 178002,
+      "uncompressedEntryBytes": 168898
+    },
+    {
+      "apk": "base-master_2.apk",
+      "fileBytes": 224939552,
+      "uncompressedEntryBytes": 225381571
+    },
+    {
+      "apk": "base-en.apk",
+      "fileBytes": 37210,
+      "uncompressedEntryBytes": 30935
+    }
+  ],
+  "caveat": "APK and entry bytes are not installed disk usage; ART/data/cache are not included."
+}
