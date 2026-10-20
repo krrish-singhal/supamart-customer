@@ -114,7 +114,7 @@ export default function DeliveryConfirmationModal() {
                   disabled={submitting}
                   style={[styles.button, styles.buttonFlex, styles.btnDispute]}
                 >
-                  <Text style={styles.btnDisputeText}>No, I didn't</Text>
+                  <Text style={styles.btnDisputeText}>No, I did not</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   onPress={() => setViewState('RATING')}

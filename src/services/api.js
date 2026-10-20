@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { create } from 'axios';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from './firebase';
@@ -8,7 +8,7 @@ console.log('API_URL is:', API_URL);
 
 // 15s global default. Standard production timeout to prevent the app from appearing stuck.
 // If the backend is on a free tier that sleeps, the user should upgrade for production.
-const apiClient = axios.create({
+const apiClient = create({
   baseURL: API_URL,
   timeout: 15000,
 });

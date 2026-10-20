@@ -1,6 +1,6 @@
 import { useState, useCallback, useContext } from 'react';
 import { View, Text, ScrollView, Pressable, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, Plus, Trash2, Home, Briefcase } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
@@ -61,10 +61,12 @@ function AddressCard({ addr, onSetDefault, onDelete }) {
 }
 
 export default function MyAddressesScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { userProfile: user } = useContext(AuthContext);
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState({ visible: false, addressId: null });
+  const footerBottomPadding = Math.max(insets.bottom, 24);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -118,7 +120,7 @@ export default function MyAddressesScreen({ navigation }) {
       <Header title="My Addresses" onBack={() => navigation.goBack()} />
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 96 + footerBottomPadding }}
         showsVerticalScrollIndicator={false}
       >
         {addresses.length === 0 ? (
@@ -152,7 +154,10 @@ export default function MyAddressesScreen({ navigation }) {
       </ScrollView>
 
       {addresses.length > 0 && (
-        <View className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-border-light">
+        <View
+          className="absolute bottom-0 left-0 right-0 px-4 pt-3 bg-white border-t border-border-light"
+          style={{ paddingBottom: footerBottomPadding }}
+        >
           <Button
             title="Add New Address"
             onPress={() => navigation.navigate('AddAddress')}

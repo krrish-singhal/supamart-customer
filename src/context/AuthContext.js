@@ -129,7 +129,7 @@ export function AuthProvider({ children }) {
           try {
             setUserProfile(JSON.parse(storedProfile));
             setLoading(false); // Unblock UI immediately
-          } catch(e) {}
+          } catch (_e) {}
         }
         
         // Verify in background
