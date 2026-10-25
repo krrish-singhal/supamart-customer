@@ -6,7 +6,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WifiOff } from 'lucide-react-native';
+import { WifiOff } from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import { fonts } from '../theme/typography';

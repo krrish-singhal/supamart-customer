@@ -1,7 +1,8 @@
+import { getGridMetrics } from '../utils/responsiveLayout';
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, StatusBar, Pressable, ScrollView, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SlidersHorizontal, ArrowUpDown, ArrowLeft, Search, CheckCircle } from 'lucide-react-native';
+import { SlidersHorizontal, ArrowUpDown, ArrowLeft, Search, CheckCircle } from '../components/icons';
 import apiClient from '../services/api';
 import { Skeleton, ProductCard, CartBar, CART_BAR_SPACER } from '../components/ui';
 import EmptyState from '../components/EmptyState';
@@ -19,9 +20,9 @@ const SORT_DROPDOWN_OPTIONS = [
 
 export default function ProductListScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
-  // Padding 10 on each side (20 total) + gap of 8 between 2 cards:
-  const cardWidth = Math.max(120, Math.floor((windowWidth - 28) / 2));
+  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const [paneWidth, setPaneWidth] = useState(null);
+  const { columns, cardWidth } = getGridMetrics(paneWidth ?? windowWidth, { gap: 8, fontScale });
   const { featured, categoryId, brandId, title } = route.params || {};
   const { items: cartItems, addItem, updateQty, getQty } = useCart();
   const [items, setItems] = useState([]);
@@ -133,7 +134,7 @@ export default function ProductListScreen({ navigation, route }) {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-50" edges={['top', 'bottom']}>
+    <SafeAreaView onLayout={({ nativeEvent }) => setPaneWidth(nativeEvent.layout.width)} className="flex-1 bg-surface-50" edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {/* TOP HEADER: Back arrow, Title, Search icon (Matching Image 2 exactly) */}
@@ -336,14 +337,16 @@ export default function ProductListScreen({ navigation, route }) {
         <EmptyState icon="search" message="No products match your filters" />
       ) : (
         <FlatList
+          key={`product-grid-${columns}`}
           data={visibleItems}
           keyExtractor={(item) => item.id}
           extraData={cartItems}
-          numColumns={2}
-          columnWrapperStyle={{ gap: 8, paddingHorizontal: 10, justifyContent: 'flex-start' }}
+          numColumns={columns}
+          columnWrapperStyle={columns > 1 ? { gap: 8, justifyContent: 'flex-start' } : undefined}
           contentContainerStyle={{
+            paddingHorizontal: 10,
             paddingTop: 8,
-            paddingBottom: cartItems.length > 0 ? CART_BAR_SPACER + 24 : 32,
+            paddingBottom: cartItems.length > 0 ? CART_BAR_SPACER * Math.max(1, fontScale) + 24 : 32,
           }}
           showsVerticalScrollIndicator={false}
           onEndReached={() => cursor && fetchItems(cursor)}

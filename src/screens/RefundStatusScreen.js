@@ -23,10 +23,10 @@ import {
   ShoppingBag,
   Camera,
   RotateCcw,
-} from 'lucide-react-native';
+} from '../components/icons';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from '../services/reads';
 import { db, auth } from '../config/firebase';
 import apiClient from '../services/api';
 import { getProductImageSource } from '../utils/productImages';

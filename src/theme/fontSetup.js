@@ -3,22 +3,22 @@ import { StyleSheet, Platform } from 'react-native';
 import * as ReactNative from 'react-native';
 
 export const FONT_MAP = {
-  '900': 'Inter-Black',
-  black: 'Inter-Black',
-  '800': 'Inter-ExtraBold',
-  heavy: 'Inter-ExtraBold',
-  extrabold: 'Inter-ExtraBold',
-  '700': 'Inter-Bold',
-  bold: 'Inter-Bold',
-  '600': 'Inter-SemiBold',
-  semibold: 'Inter-SemiBold',
-  '500': 'Inter-Medium',
-  medium: 'Inter-Medium',
-  '400': 'Inter-Regular',
-  normal: 'Inter-Regular',
-  '300': 'Inter-Regular',
-  '200': 'Inter-Regular',
-  '100': 'Inter-Regular',
+  '900': 'PlusJakartaSans-ExtraBold',
+  black: 'PlusJakartaSans-ExtraBold',
+  '800': 'PlusJakartaSans-ExtraBold',
+  heavy: 'PlusJakartaSans-ExtraBold',
+  extrabold: 'PlusJakartaSans-ExtraBold',
+  '700': 'PlusJakartaSans-SemiBold',
+  bold: 'PlusJakartaSans-SemiBold',
+  '600': 'PlusJakartaSans-SemiBold',
+  semibold: 'PlusJakartaSans-SemiBold',
+  '500': 'PlusJakartaSans-SemiBold',
+  medium: 'PlusJakartaSans-SemiBold',
+  '400': 'PlusJakartaSans-Regular',
+  normal: 'PlusJakartaSans-Regular',
+  '300': 'PlusJakartaSans-Regular',
+  '200': 'PlusJakartaSans-Regular',
+  '100': 'PlusJakartaSans-Regular',
 };
 
 const ICON_FONTS = [
@@ -38,9 +38,9 @@ const ICON_FONTS = [
   'materialcommunityicons',
 ];
 
-export function resolveInterStyle(style, hasAncestor = false) {
+export function resolveBrandFontStyle(style, hasAncestor = false) {
   if (!style && !hasAncestor) {
-    return { fontFamily: 'Inter-Regular', fontWeight: 'normal' };
+    return { fontFamily: 'PlusJakartaSans-Regular', fontWeight: 'normal' };
   }
   if (!style) {
     return style;
@@ -48,7 +48,7 @@ export function resolveInterStyle(style, hasAncestor = false) {
 
   const flat = StyleSheet.flatten(style);
   if (!flat) {
-    return hasAncestor ? style : { fontFamily: 'Inter-Regular', fontWeight: 'normal' };
+    return hasAncestor ? style : { fontFamily: 'PlusJakartaSans-Regular', fontWeight: 'normal' };
   }
 
   // Preserve icon fonts completely
@@ -70,33 +70,33 @@ export function resolveInterStyle(style, hasAncestor = false) {
       existingFont.includes('Black') ||
       existingFont.includes('900')
     ) {
-      targetFont = 'Inter-Black';
+      targetFont = 'PlusJakartaSans-ExtraBold';
     } else if (
       existingFont.includes('ExtraBold') ||
       existingFont.includes('800')
     ) {
-      targetFont = 'Inter-ExtraBold';
+      targetFont = 'PlusJakartaSans-ExtraBold';
     } else if (
       existingFont.includes('SemiBold') ||
       existingFont.includes('600')
     ) {
-      targetFont = 'Inter-SemiBold';
+      targetFont = 'PlusJakartaSans-SemiBold';
     } else if (
       existingFont.includes('Bold') ||
       existingFont.includes('700')
     ) {
-      targetFont = 'Inter-Bold';
+      targetFont = 'PlusJakartaSans-SemiBold';
     } else if (
       existingFont.includes('Medium') ||
       existingFont.includes('500')
     ) {
-      targetFont = 'Inter-Medium';
+      targetFont = 'PlusJakartaSans-SemiBold';
     } else if (
       existingFont.includes('Regular') ||
       existingFont.includes('PlusJakartaSans') ||
       existingFont.includes('Inter')
     ) {
-      targetFont = rawWeight && FONT_MAP[rawWeight] ? FONT_MAP[rawWeight] : 'Inter-Regular';
+      targetFont = rawWeight && FONT_MAP[rawWeight] ? FONT_MAP[rawWeight] : 'PlusJakartaSans-Regular';
     }
   }
 
@@ -104,13 +104,18 @@ export function resolveInterStyle(style, hasAncestor = false) {
     if (rawWeight && FONT_MAP[rawWeight]) {
       targetFont = FONT_MAP[rawWeight];
     } else if (!hasAncestor) {
-      targetFont = 'Inter-Regular';
+      targetFont = 'PlusJakartaSans-Regular';
     }
   }
 
   // If nested and no explicit font or weight was defined, let it inherit from parent
   if (!targetFont) {
     return style;
+  }
+
+  // Larger emphasised text is a heading; the guide specifies ExtraBold.
+  if (flat.fontSize >= 18 && targetFont === 'PlusJakartaSans-SemiBold') {
+    targetFont = 'PlusJakartaSans-ExtraBold';
   }
 
   const spacingFix = {};
@@ -146,7 +151,7 @@ let OriginalText = ReactNative.Text;
 
 export const CustomText = React.forwardRef((props, ref) => {
   const hasAncestor = React.useContext(AncestorContext);
-  const resolvedStyle = resolveInterStyle(props.style, hasAncestor);
+  const resolvedStyle = resolveBrandFontStyle(props.style, hasAncestor);
   return <OriginalText {...props} ref={ref} style={resolvedStyle} />;
 });
 
@@ -155,7 +160,7 @@ CustomText.displayName = 'Text';
 let OriginalTextInput = ReactNative.TextInput;
 
 export const CustomTextInput = React.forwardRef((props, ref) => {
-  const resolvedStyle = resolveInterStyle(props.style, false);
+  const resolvedStyle = resolveBrandFontStyle(props.style, false);
   const androidStyle =
     Platform.OS === 'android' && !props.multiline
       ? { textAlignVertical: 'center' }
@@ -181,7 +186,18 @@ try {
     enumerable: true,
   });
 } catch (_e) {
-  ReactNative.Text = CustomText;
+  // React Native Web exports are read-only. Wrap the forwardRef render instead.
+  const renderText = OriginalText.render;
+  if (typeof renderText === 'function') {
+    OriginalText.render = function BrandedTextRender(props, ref) {
+      const hasAncestor = React.useContext(AncestorContext);
+      return React.createElement(
+        FallbackAncestorContext.Provider,
+        { value: true },
+        renderText({ ...props, style: resolveBrandFontStyle(props.style, hasAncestor) }, ref),
+      );
+    };
+  }
 }
 
 try {
@@ -193,11 +209,16 @@ try {
     enumerable: true,
   });
 } catch (_e) {
-  ReactNative.TextInput = CustomTextInput;
+  const renderInput = OriginalTextInput.render;
+  if (typeof renderInput === 'function') {
+    OriginalTextInput.render = (props, ref) => renderInput(
+      { ...props, style: resolveBrandFontStyle(props.style, false) }, ref,
+    );
+  }
 }
 
 export default {
   Text: CustomText,
   TextInput: CustomTextInput,
-  resolveInterStyle,
+  resolveBrandFontStyle,
 };

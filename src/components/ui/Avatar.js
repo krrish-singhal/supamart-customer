@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
-import { User } from 'lucide-react-native';
+import { User } from '../icons';
 import { optimizeCloudinaryUrl } from '../../utils/cloudinaryImage';
 
 const PIXEL_SIZES = { sm: 32, md: 48, lg: 64, xl: 96 };

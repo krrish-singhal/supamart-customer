@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable } from 'react-native';
-import { Heart } from 'lucide-react-native';
+import { Heart } from '../icons';
 import { useFavorites } from '../../context/FavoritesContext';
 
 export default function FavoriteButton({ productId, size = 16, style }) {

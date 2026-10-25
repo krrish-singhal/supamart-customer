@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Check, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Check, ChevronRight } from '../components/icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
@@ -42,8 +42,8 @@ const DEFAULT_OFFERS = [
     code: 'FRESH20',
     tag: 'FRESH',
     tagColor: '#4d7c0f',
-    title: '₹20 off on fruits & vegetables',
-    description: 'Applies to fresh items in your cart.',
+    title: '₹20 off on fresh fruits & vegetables',
+    description: 'Applies to fresh items in your cart above ₹149.',
     minValue: 149,
     value: 20,
     kind: 'FLAT',
@@ -57,6 +57,48 @@ const DEFAULT_OFFERS = [
     minValue: 999,
     value: 100,
     kind: 'FLAT',
+  },
+  {
+    code: 'FLAT10OFF',
+    tag: 'FLAT',
+    tagColor: '#0891b2',
+    title: 'Flat ₹10 off on orders',
+    description: 'Valid on orders above ₹100.',
+    minValue: 100,
+    value: 10,
+    kind: 'FLAT',
+  },
+  {
+    code: 'FIRSTORDER',
+    tag: 'FIRST',
+    tagColor: '#7c3aed',
+    title: 'Flat ₹100 off on your first order',
+    description: 'Valid on orders above ₹500.',
+    minValue: 500,
+    value: 100,
+    kind: 'FLAT',
+  },
+  {
+    code: 'TEA15',
+    tag: 'TEA',
+    tagColor: '#d97706',
+    title: '15% Off Tea & Beverages',
+    description: 'Save 15% (up to ₹80) on tea and hot beverages.',
+    minValue: 0,
+    value: 15,
+    maxDiscount: 80,
+    kind: 'PERCENT',
+  },
+  {
+    code: 'DETERGENT20',
+    tag: 'HOME',
+    tagColor: '#2563eb',
+    title: '20% Off Detergent',
+    description: 'Save 20% (up to ₹100) on detergents and laundry care.',
+    minValue: 0,
+    value: 20,
+    maxDiscount: 100,
+    kind: 'PERCENT',
   },
 ];
 

@@ -6,7 +6,7 @@ import {
   Pressable,
   StatusBar,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -16,7 +16,7 @@ import {
   Minus,
   ShoppingBag,
   Bell,
-} from 'lucide-react-native';
+} from '../components/icons';
 import Toast from 'react-native-toast-message';
 import Animated, {
   useSharedValue,
@@ -26,7 +26,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { doc, onSnapshot, collection, query, limit, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, limit, getDocs, where } from '../services/reads';
 import { db } from '../config/firebase';
 import EmptyState from '../components/EmptyState';
 import { FavoriteButton } from '../components/ui';
@@ -39,7 +39,6 @@ import { isProductUnavailable } from '../utils/productAvailability';
 import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 function getDiscountPercent(variant) {
   if (!variant?.price || variant.offerPrice == null || variant.offerPrice >= variant.price) return 0;
@@ -71,6 +70,7 @@ function getProductTags(product) {
 }
 
 export default function ProductDetailScreen({ route, navigation }) {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const { id } = route.params;
   const insets = useSafeAreaInsets();
   const [currentId, setCurrentId] = useState(id);
@@ -145,11 +145,24 @@ export default function ProductDetailScreen({ route, navigation }) {
     if (!recommendationProductId) return;
     const fetchRecs = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'products'), limit(50)));
-        const items = snap.docs
+        const recQuery = recommendationCategoryId
+          ? query(collection(db, 'products'), where('categoryId', '==', recommendationCategoryId), limit(8))
+          : query(collection(db, 'products'), limit(8));
+        const snap = await getDocs(recQuery);
+        let items = snap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
           .filter((p) => p.id !== recommendationProductId && !isProductUnavailable(p));
-        items.sort((a, b) => Number(b.categoryId === recommendationCategoryId) - Number(a.categoryId === recommendationCategoryId));
+        if (items.length < 4 && recommendationCategoryId) {
+          try {
+            const fallbackSnap = await getDocs(query(collection(db, 'products'), limit(8)));
+            const fallbackItems = fallbackSnap.docs
+              .map((d) => ({ id: d.id, ...d.data() }))
+              .filter((p) => p.id !== recommendationProductId && !isProductUnavailable(p) && !items.some((i) => i.id === p.id));
+            items = [...items, ...fallbackItems];
+          } catch {
+            // Keep items found so far
+          }
+        }
         setRecommendations(items.slice(0, 4));
       } catch {
         // Fallback

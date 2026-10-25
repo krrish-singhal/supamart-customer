@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import { STORE_LOCATION, validCoordinates } from '../config/deliveryArea';
+import React, { useState, useEffect, useContext, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   Alert,
   StyleSheet,
-  ActivityIndicator,
   Linking,
-  Platform,
   ScrollView,
   Modal,
   StatusBar,
+  TextInput,
+  ActivityIndicator,
+  AppState,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import MapViewDirections from 'react-native-maps-directions';
+import { useFocusEffect } from '@react-navigation/native';
+import KeylessMap from '../components/maps/KeylessMap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -22,13 +24,14 @@ import {
   Phone,
   Truck,
   AlertCircle,
-  Clock,
-  Radio,
   ExternalLink,
   ChevronDown,
   ChevronUp,
-} from 'lucide-react-native';
+  Clock,
+  X,
+} from '../components/icons';
 import * as Location from 'expo-location';
+import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import {
@@ -36,21 +39,38 @@ import {
   stopBackgroundTracking,
   isTrackingActive,
 } from '../services/backgroundLocation';
+import { fonts } from '../theme/typography';
+import { db } from '../config/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || 'PLACEHOLDER_API_KEY';
+const DELAY_PRESET_REASONS = [
+  'Heavy Traffic Congestion',
+  'Bad Weather / Heavy Rain',
+  'Vehicle Breakdown / Flat Tyre',
+  'Road Closure / Long Detour',
+  'Store Pickup Delay',
+];
+
+const DELAY_PRESET_TIMES = ['+10 mins', '+15 mins', '+20 mins', '+30 mins', '+45 mins'];
 
 export default function DeliveryMapScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const { order: initialOrder } = route.params;
+  const initialOrder = route?.params?.order || null;
   const { userProfile } = useContext(AuthContext);
 
   const [order, setOrder] = useState(initialOrder);
-  const [config, setConfig] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [partnerLocation, setPartnerLocation] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [bgTrackingOn, setBgTrackingOn] = useState(false);
+
+  // Delay reporting modal state
+  const [delayModalVisible, setDelayModalVisible] = useState(false);
+  const [selectedDelayReason, setSelectedDelayReason] = useState('');
+  const [customDelayReason, setCustomDelayReason] = useState('');
+  const [selectedDelayTime, setSelectedDelayTime] = useState('+15 mins');
+  const [customDelayTime, setCustomDelayTime] = useState('');
+  const [submittingDelay, setSubmittingDelay] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState({
     visible: false,
@@ -60,109 +80,131 @@ export default function DeliveryMapScreen({ route, navigation }) {
     onConfirm: null,
   });
 
-  const [tracksViewChanges, setTracksViewChanges] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setTracksViewChanges(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
-
   const mapRef = useRef(null);
 
-  // Fetch store configuration coordinates
+  // 1. Subscribe to Live Order updates from Firestore
   useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const res = await apiClient.get('/config');
-        setConfig(res.data);
-      } catch (err) {
-        console.error('Failed to fetch config:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchConfig();
-  }, []);
+    if (!order?.id) return;
+    const unsub = onSnapshot(
+      doc(db, 'orders', String(order.id)),
+      (snap) => {
+        if (snap.exists()) {
+          const fresh = { id: snap.id, ...snap.data() };
+          setOrder((prev) => ({ ...prev, ...fresh }));
+        }
+      },
+      (err) => console.warn('DeliveryMapScreen order snapshot error:', err)
+    );
+    return () => unsub();
+  }, [order?.id]);
 
-  // Manage location tracking & background service
+  // 2. Manage location tracking & background service
   useEffect(() => {
     let locationSubscription;
+    let isMounted = true;
 
     const initTracking = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Location permission is required for delivery tracking.');
-        return;
-      }
+      try {
+        const perm = await Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' }));
+        if (perm?.status !== 'granted') {
+          Alert.alert('Permission needed', 'Location permission allows updating your delivery progress to the customer and admin.');
+          return;
+        }
 
-      // 1. Start foreground watcher for in-app map movement
-      locationSubscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 8,
-          timeInterval: 10000,
-        },
-        (loc) => {
-          const newLoc = {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          };
-          setPartnerLocation(newLoc);
+        if (!isMounted) return;
 
-          if (userProfile?.id) {
-            apiClient
-              .patch(`/delivery-partners/${userProfile.id}/location`, {
-                lat: newLoc.latitude,
-                lng: newLoc.longitude,
-              })
-              .catch((e) => console.log('Location sync:', e?.message));
+        // Start foreground watcher for in-app map movement
+        try {
+          locationSubscription = await Location.watchPositionAsync(
+            {
+              accuracy: Location.Accuracy.High,
+              distanceInterval: 8,
+              timeInterval: 10000,
+            },
+            (loc) => {
+              if (!isMounted || !loc?.coords) return;
+              const newLoc = {
+                latitude: loc.coords.latitude,
+                longitude: loc.coords.longitude,
+              };
+              setPartnerLocation(newLoc);
+
+              if (userProfile?.id) {
+                apiClient
+                  .patch(`/delivery-partners/${userProfile.id}/location`, {
+                    lat: newLoc.latitude,
+                    lng: newLoc.longitude,
+                  })
+                  .catch((e) => console.log('Location sync:', e?.message));
+              }
+            }
+          );
+        } catch (watchErr) {
+          console.warn('[DeliveryMapScreen] watchPositionAsync error:', watchErr?.message);
+        }
+
+        if (!isMounted) return;
+
+        // If order is actively out for delivery, ensure background tracking
+        try {
+          if (order?.status === 'OUT_FOR_DELIVERY') {
+            const res = await startBackgroundTracking({
+              orderNo: order?.orderNo,
+              partnerId: userProfile?.id,
+            });
+            if (isMounted && res?.success) {
+              setBgTrackingOn(true);
+            }
+          } else {
+            const active = await isTrackingActive();
+            if (isMounted) {
+              setBgTrackingOn(active);
+            }
           }
+        } catch (bgErr) {
+          console.warn('[DeliveryMapScreen] background tracking error:', bgErr?.message);
         }
-      );
-
-      // 2. If order is actively out for delivery, start persistent background notification
-      if (order.status === 'OUT_FOR_DELIVERY') {
-        const res = await startBackgroundTracking({
-          orderNo: order.orderNo,
-          partnerId: userProfile?.id,
-        });
-        if (res.success) {
-          setBgTrackingOn(true);
-        }
-      } else {
-        const active = await isTrackingActive();
-        setBgTrackingOn(active);
+      } catch (err) {
+        console.warn('[DeliveryMapScreen] initTracking failed safely:', err?.message);
       }
     };
 
-    initTracking();
+    if (order?.id) {
+      initTracking();
+    }
 
     return () => {
+      isMounted = false;
       if (locationSubscription) {
-        locationSubscription.remove();
+        try {
+          locationSubscription.remove();
+        } catch (_) {}
       }
     };
-  }, [order.id, order.status, userProfile?.id]);
+  }, [order?.id, order?.status, order?.orderNo, userProfile?.id]);
 
   const updateOrderStatus = async (newStatus, successMessage) => {
+    if (!order?.id) return;
     setUpdating(true);
     try {
       const res = await apiClient.patch(`/orders/${order.id}/status`, { status: newStatus });
       const updatedOrder = res.data.order || { ...order, status: newStatus };
       setOrder(updatedOrder);
 
-      // Manage background tracking lifecycle based on status
-      if (newStatus === 'OUT_FOR_DELIVERY') {
-        await startBackgroundTracking({
-          orderNo: order.orderNo,
-          partnerId: userProfile?.id,
-        });
-        setBgTrackingOn(true);
-      } else if (newStatus === 'DELIVERED' || newStatus === 'CANCELLED' || newStatus === 'PENDING_CONFIRMATION') {
-        await stopBackgroundTracking();
-        setBgTrackingOn(false);
+      // Manage background tracking lifecycle based on status safely
+      try {
+        if (newStatus === 'OUT_FOR_DELIVERY') {
+          const tracking = await startBackgroundTracking({
+            orderNo: order?.orderNo,
+            partnerId: userProfile?.id,
+          });
+          setBgTrackingOn(tracking?.success || false);
+        } else if (newStatus === 'DELIVERED' || newStatus === 'CANCELLED' || newStatus === 'PENDING_CONFIRMATION') {
+          await stopBackgroundTracking();
+          setBgTrackingOn(false);
+        }
+      } catch (bgErr) {
+        console.warn('[DeliveryMapScreen] status background tracking error:', bgErr?.message);
       }
 
       setConfirmModal({
@@ -193,10 +235,10 @@ export default function DeliveryMapScreen({ route, navigation }) {
   const handlePickUp = () => {
     setConfirmModal({
       visible: true,
-      title: 'Pick Up Order',
-      message: 'Confirm you have collected this order from the store and are starting delivery?',
+      title: 'Start Delivery',
+      message: 'Confirm you have collected this order and are heading to the customer?',
       isAlert: false,
-      onConfirm: () => updateOrderStatus('OUT_FOR_DELIVERY', 'Order is now Out for Delivery! Background tracking enabled.'),
+      onConfirm: () => updateOrderStatus('OUT_FOR_DELIVERY', 'Order is now Out for Delivery! Live tracking enabled.'),
     });
   };
 
@@ -204,15 +246,18 @@ export default function DeliveryMapScreen({ route, navigation }) {
     setConfirmModal({
       visible: true,
       title: 'Confirm Delivery',
-      message: 'Have you handed this order to the customer?',
+      message: 'Have you reached the customer and handed over this order? The customer will receive a verification prompt to confirm and rate.',
       isAlert: false,
-      onConfirm: () => updateOrderStatus('PENDING_CONFIRMATION', 'Order delivery recorded! Customer will confirm.'),
+      onConfirm: () => updateOrderStatus('PENDING_CONFIRMATION', 'Order delivery recorded! Awaiting customer confirmation.'),
     });
   };
 
   const callCustomer = () => {
-    if (order.userPhone) {
-      Linking.openURL(`tel:${order.userPhone}`);
+    const phone = order?.userPhone || order?.addressSnapshot?.phone || order?.address?.phone;
+    if (phone) {
+      Linking.openURL(`tel:${phone}`).catch(() => {
+        Alert.alert('Call Failed', 'Unable to open dialer on this device.');
+      });
     } else {
       setConfirmModal({
         visible: true,
@@ -225,167 +270,186 @@ export default function DeliveryMapScreen({ route, navigation }) {
   };
 
   /**
-   * Launch external Google Maps navigation while ensuring background tracking stays active
+   * Submit delay report with mandatory time and reason
+   */
+  const handleSubmitDelay = async () => {
+    const finalReason = (customDelayReason.trim() || selectedDelayReason.trim());
+    const finalTime = (customDelayTime.trim() || selectedDelayTime.trim());
+
+    if (!finalReason) {
+      Toast.show({
+        type: 'error',
+        text1: 'Reason Required',
+        text2: 'Please state the reason for the delivery delay.',
+      });
+      return;
+    }
+
+    if (!finalTime) {
+      Toast.show({
+        type: 'error',
+        text1: 'Delivery Time Required',
+        text2: 'Please specify the updated estimated delivery time.',
+      });
+      return;
+    }
+
+    setSubmittingDelay(true);
+    try {
+      const res = await apiClient.patch(`/orders/${order.id}/delivery-delay`, {
+        newEstimatedTime: finalTime,
+        delayReason: finalReason,
+      });
+
+      const updated = res.data || {};
+      setOrder((prev) => ({ ...prev, ...updated }));
+      setDelayModalVisible(false);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Time Updated',
+        text2: 'Delivery time updated & customer notified.',
+      });
+    } catch (err) {
+      console.error('Submit delay error:', err);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Update Time',
+        text2: err.response?.data?.error || 'Network error, please try again.',
+      });
+    } finally {
+      setSubmittingDelay(false);
+    }
+  };
+
+  /**
+   * Launch external Google Maps navigation
    */
   const openExternalMaps = async () => {
-    const lat = order.addressSnapshot?.lat;
-    const lng = order.addressSnapshot?.lng;
+    const lat = order?.addressSnapshot?.lat;
+    const lng = order?.addressSnapshot?.lng;
     if (!lat || !lng) return;
 
-    // Ensure background tracking is actively running before opening Google Maps
     try {
-      await startBackgroundTracking({
-        orderNo: order.orderNo,
+      const tracking = await startBackgroundTracking({
+        orderNo: order?.orderNo,
         partnerId: userProfile?.id,
       });
-      setBgTrackingOn(true);
+      if (tracking?.success) setBgTrackingOn(true);
     } catch (_) {}
 
-    const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
-    const latLng = `${lat},${lng}`;
-    const label = encodeURIComponent(`MS Traders Delivery #${order.orderNo}`);
-    const url = Platform.select({
-      ios: `${scheme}${label}@${latLng}`,
-      android: `${scheme}${latLng}(${label})`,
-    });
-
-    Linking.canOpenURL(url).then((supported) => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
-      }
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    Linking.openURL(googleMapsUrl).catch(() => {
+      Linking.openURL(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`).catch(() => {});
     });
   };
 
-  if (loading) {
+  if (!order) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>
-        <ActivityIndicator size="large" color="#059669" />
-        <Text style={{ marginTop: 12, fontSize: 14, fontWeight: '600', color: '#64748b' }}>
-          Loading delivery details...
+      <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <StatusBar barStyle="dark-content" />
+        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <AlertCircle size={32} color="#64748b" />
+        </View>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 18, color: '#0f172a', marginBottom: 6 }}>
+          Order Details Unavailable
         </Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+          Could not load the requested delivery details.
+        </Text>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={{ backgroundColor: '#059669', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 }}
+        >
+          <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#ffffff' }}>Back to Deliveries</Text>
+        </Pressable>
       </View>
     );
   }
 
-  const destination = {
-    latitude: order.addressSnapshot?.lat || 0,
-    longitude: order.addressSnapshot?.lng || 0,
-  };
+  const addr = order?.addressSnapshot || order?.address || {};
+  const rawDestLat = Number(addr?.lat ?? addr?.latitude ?? order?.lat ?? order?.latitude);
+  const rawDestLng = Number(addr?.lng ?? addr?.longitude ?? order?.lng ?? order?.longitude);
+  const hasValidCoordinates =
+    !isNaN(rawDestLat) &&
+    !isNaN(rawDestLng) &&
+    rawDestLat !== 0 &&
+    rawDestLng !== 0 &&
+    validCoordinates(rawDestLat, rawDestLng);
 
-  const origin = config && config.storeLat ? {
-    latitude: config.storeLat,
-    longitude: config.storeLng,
-  } : destination;
+  const destination = useMemo(() => {
+    return hasValidCoordinates ? { latitude: rawDestLat, longitude: rawDestLng } : null;
+  }, [hasValidCoordinates, rawDestLat, rawDestLng]);
+
+  const origin = useMemo(() => ({
+    latitude: Number(STORE_LOCATION.lat),
+    longitude: Number(STORE_LOCATION.lng),
+  }), []);
 
   const routeOrigin = partnerLocation || origin;
-  const hasValidCoordinates = destination.latitude !== 0 && destination.longitude !== 0;
+  const orderTotal = Math.round(Number(order.total || order.totalAmount) || 0);
+
+  // Resume handler: refresh GPS location and re-align map when app returns from background
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active') {
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          if (loc?.coords) {
+            setPartnerLocation({
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            });
+          }
+        } catch (_) {}
+
+        if (destination) {
+          setTimeout(() => {
+            mapRef.current?.fitToCoordinates([
+              origin,
+              destination,
+              ...(partnerLocation ? [partnerLocation] : []),
+            ]);
+          }, 350);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [destination, origin, partnerLocation]);
+
+  // Screen focus handler: re-fit map when navigating to or returning to screen
+  useFocusEffect(
+    useCallback(() => {
+      const timer = setTimeout(() => {
+        if (destination) {
+          mapRef.current?.fitToCoordinates([
+            origin,
+            destination,
+            ...(partnerLocation ? [partnerLocation] : []),
+          ]);
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }, [destination, origin, partnerLocation])
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <StatusBar barStyle="dark-content" />
 
       {/* MAP VIEW */}
-      {hasValidCoordinates ? (
-        <MapView
+      {hasValidCoordinates && destination ? (
+        <KeylessMap
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
-          initialRegion={{
-            latitude: destination.latitude,
-            longitude: destination.longitude,
-            latitudeDelta: 0.04,
-            longitudeDelta: 0.04,
-          }}
-          showsUserLocation={true}
-          showsMyLocationButton={false}
-        >
-          <Marker coordinate={origin} title="MS Traders Store" tracksViewChanges={tracksViewChanges}>
-            <View
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                backgroundColor: '#059669',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2.5,
-                borderColor: '#ffffff',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 4,
-              }}
-            >
-              <Truck size={17} color="#ffffff" />
-            </View>
-          </Marker>
-
-          <Marker coordinate={destination} title="Customer Delivery Address" description={order.addressSnapshot?.addressLine1} tracksViewChanges={tracksViewChanges}>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: '#0f172a',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2.5,
-                borderColor: '#ffffff',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 4,
-              }}
-            >
-              <Navigation size={17} color="#ffffff" />
-            </View>
-          </Marker>
-
-          {partnerLocation && (
-            <Marker coordinate={partnerLocation} title="Your Location" tracksViewChanges={tracksViewChanges}>
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: '#ffffff',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 3,
-                  borderColor: '#059669',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 5,
-                }}
-              >
-                <Truck size={18} color="#059669" />
-              </View>
-            </Marker>
-          )}
-
-          {GOOGLE_MAPS_API_KEY !== 'PLACEHOLDER_API_KEY' && (
-            <MapViewDirections
-              origin={routeOrigin}
-              destination={destination}
-              apikey={GOOGLE_MAPS_API_KEY}
-              strokeWidth={4.5}
-              strokeColor="#059669"
-              onReady={(result) => {
-                mapRef.current?.fitToCoordinates(result.coordinates, {
-                  edgePadding: { top: 120, right: 50, bottom: 350, left: 50 },
-                  animated: true,
-                });
-              }}
-            />
-          )}
-        </MapView>
+          initialCenter={destination}
+          selected={destination}
+          rider={partnerLocation}
+          route={[routeOrigin, destination]}
+          onReady={() => mapRef.current?.fitToCoordinates([origin, destination, ...(partnerLocation ? [partnerLocation] : [])])}
+        />
       ) : (
-        <View style={[StyleSheet.absoluteFillObject, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', paddingBottom: 250 }]}>
+        <View style={[StyleSheet.absoluteFillObject, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', paddingBottom: 280 }]}>
           <View
             style={{
               width: 64,
@@ -399,14 +463,31 @@ export default function DeliveryMapScreen({ route, navigation }) {
           >
             <Navigation size={28} color="#059669" />
           </View>
-          <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>Coordinates Incomplete</Text>
-          <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 4, paddingHorizontal: 32 }}>
-            Using address details for navigation. Tap below to navigate with Google Maps.
+          <Text style={{ fontFamily: fonts.bold, fontSize: 18, color: '#0f172a' }}>Coordinates Incomplete</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 4, paddingHorizontal: 32 }}>
+            Using address details for navigation. Open your navigation app for road directions.
           </Text>
+          <Pressable
+            onPress={openExternalMaps}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#ffffff',
+              borderWidth: 1,
+              borderColor: '#059669',
+              paddingHorizontal: 16,
+              paddingVertical: 9,
+              borderRadius: 14,
+              marginTop: 16,
+            }}
+          >
+            <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#059669', marginRight: 4 }}>Open in Maps</Text>
+            <ExternalLink size={13} color="#059669" />
+          </Pressable>
         </View>
       )}
 
-      {/* TOP FLOATING CONTROLS */}
+      {/* TOP FLOATING CONTROLS matching Screenshot 3 & 4 */}
       <View
         style={{
           position: 'absolute',
@@ -465,39 +546,39 @@ export default function DeliveryMapScreen({ route, navigation }) {
               marginRight: 6,
             }}
           />
-          <Text style={{ fontSize: 11.5, fontWeight: '800', color: bgTrackingOn ? '#15803d' : '#64748b' }}>
-            {bgTrackingOn ? 'Live GPS Active' : 'GPS Ready'}
+          <Text style={{ fontFamily: fonts.bold, fontSize: 11.5, color: bgTrackingOn ? '#15803d' : '#64748b' }}>
+            {bgTrackingOn ? 'Live GPS Active' : 'GPS ready'}
           </Text>
         </View>
 
-        {/* Navigate in Google Maps Button */}
+        {/* Navigate button */}
         {hasValidCoordinates && (
           <Pressable
             onPress={openExternalMaps}
             style={{
-              backgroundColor: '#059669',
+              backgroundColor: '#047857',
               paddingHorizontal: 14,
               paddingVertical: 9,
               borderRadius: 20,
               flexDirection: 'row',
               alignItems: 'center',
-              shadowColor: '#059669',
+              shadowColor: '#047857',
               shadowOffset: { width: 0, height: 3 },
               shadowOpacity: 0.25,
               shadowRadius: 6,
               elevation: 4,
             }}
           >
-            <Navigation size={15} color="#ffffff" style={{ marginRight: 6 }} />
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#ffffff' }}>
-              Google Maps
+            <Navigation size={14} color="#ffffff" style={{ marginRight: 6 }} />
+            <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#ffffff' }}>
+              Navigate
             </Text>
             <ExternalLink size={12} color="rgba(255, 255, 255, 0.85)" style={{ marginLeft: 4 }} />
           </Pressable>
         )}
       </View>
 
-      {/* BOTTOM SHEET DELIVERY CARD */}
+      {/* BOTTOM SHEET DELIVERY CARD matching Screenshot 3 & 4 */}
       <View
         style={{
           position: 'absolute',
@@ -528,11 +609,11 @@ export default function DeliveryMapScreen({ route, navigation }) {
         </Pressable>
 
         {/* Order No and Customer details */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginVertical: 10 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginVertical: 8 }}>
           <View style={{ flex: 1, paddingRight: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>
-                Order #{order.orderNo}
+              <Text style={{ fontFamily: fonts.extraBold, fontSize: 20, color: '#0f172a' }}>
+                Order #{order.orderNo || order.id?.slice(-4)}
               </Text>
               <View
                 style={{
@@ -543,32 +624,38 @@ export default function DeliveryMapScreen({ route, navigation }) {
                   borderRadius: 6,
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#059669' }}>
-                  {order.status?.replace(/_/g, ' ')}
+                <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: '#059669', textTransform: 'uppercase' }}>
+                  {order.status === 'OUT_FOR_DELIVERY'
+                    ? 'OUT FOR DELIVERY'
+                    : order.status === 'PENDING_CONFIRMATION'
+                    ? 'WAITING CONFIRMATION'
+                    : order.status?.replace(/_/g, ' ')}
                 </Text>
               </View>
             </View>
 
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1e293b', marginTop: 4 }}>
-              {order.userName || 'Customer'}
+            <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#1e293b', marginTop: 3 }}>
+              {order.userName || order.addressSnapshot?.name || 'Customer'}
             </Text>
 
-            <Text style={{ fontSize: 13, fontWeight: '500', color: '#64748b', marginTop: 2, lineHeight: 18 }}>
+            <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: '#64748b', marginTop: 2, lineHeight: 18 }}>
               {order.addressSnapshot?.houseNo ? `${order.addressSnapshot.houseNo}, ` : ''}
-              {order.addressSnapshot?.street || order.addressSnapshot?.addressLine1 || 'Delivery Address'}
+              {order.addressSnapshot?.street || order.addressSnapshot?.addressLine1 || order.address?.street || 'Delivery Address'}
               {order.addressSnapshot?.landmark ? ` (Near ${order.addressSnapshot.landmark})` : ''}
             </Text>
 
-            {order.notes ? (
+            {order.notes || order.deliveryInstructions ? (
               <View style={{ backgroundColor: '#fffbeb', padding: 8, borderRadius: 8, marginTop: 6, borderWidth: 1, borderColor: '#fef3c7' }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#b45309' }}>
-                  Customer Note: {order.notes}
+                <Text style={{ fontFamily: fonts.semiBold, fontSize: 11.5, color: '#b45309' }}>
+                  Note: {order.notes || (typeof order.deliveryInstructions === 'string'
+                    ? order.deliveryInstructions
+                    : order.deliveryInstructions?.combinedNote || order.deliveryInstructions?.summary)}
                 </Text>
               </View>
             ) : null}
           </View>
 
-          {/* Quick Call Button */}
+          {/* Customer Call Button */}
           <Pressable
             onPress={callCustomer}
             style={{
@@ -586,6 +673,66 @@ export default function DeliveryMapScreen({ route, navigation }) {
           </Pressable>
         </View>
 
+        {/* PAYMENT BANNER: ALWAYS "Paid online · nothing to collect" matching Screenshot 4 */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: '#f8fafc',
+            borderRadius: 12,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            marginVertical: 8,
+            borderWidth: 1,
+            borderColor: '#e2e8f0',
+          }}
+        >
+          <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#0f172a' }}>
+            Paid online · nothing to collect
+          </Text>
+          <Text style={{ fontFamily: fonts.extraBold, fontSize: 15, color: '#0f172a' }}>
+            ₹{orderTotal}
+          </Text>
+        </View>
+
+        {/* EDIT DELIVERY TIME / REPORT DELAY OPTION */}
+        <Pressable
+          onPress={() => setDelayModalVisible(true)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: order.delayReason ? '#fef3c7' : '#f0fdf4',
+            borderWidth: 1,
+            borderColor: order.delayReason ? '#fde68a' : '#bbf7d0',
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: 10,
+            marginBottom: 8,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Clock size={15} color={order.delayReason ? '#b45309' : '#059669'} style={{ marginRight: 6 }} />
+            <Text
+              style={{
+                fontFamily: fonts.semiBold,
+                fontSize: 12,
+                color: order.delayReason ? '#92400e' : '#065f46',
+                flex: 1,
+              }}
+              numberOfLines={1}
+            >
+              {order.delayReason
+                ? `Delay Reported: ${order.delayReason} · Tap to update`
+                : 'Need more time? Report delay (Traffic / Weather)'}
+            </Text>
+          </View>
+          <Text style={{ fontFamily: fonts.bold, fontSize: 11.5, color: order.delayReason ? '#b45309' : '#059669', marginLeft: 6 }}>
+            Edit
+          </Text>
+        </Pressable>
+
         {/* Collapsible Order Items Section */}
         <Pressable
           onPress={() => setIsExpanded(!isExpanded)}
@@ -597,18 +744,17 @@ export default function DeliveryMapScreen({ route, navigation }) {
             borderTopWidth: 1,
             borderBottomWidth: isExpanded ? 1 : 0,
             borderColor: '#f1f5f9',
-            marginTop: 4,
-            marginBottom: isExpanded ? 10 : 12,
+            marginBottom: isExpanded ? 8 : 10,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '800', color: '#475569' }}>
-            Items to Deliver ({order.items?.length || 0}) · ₹{order.total || order.totalAmount || 0}
+          <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#475569' }}>
+            Items to deliver ( {order.items?.length || 0} )
           </Text>
           {isExpanded ? <ChevronUp size={18} color="#64748b" /> : <ChevronDown size={18} color="#64748b" />}
         </Pressable>
 
         {isExpanded && (
-          <ScrollView style={{ maxHeight: 160, marginBottom: 12 }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ maxHeight: 150, marginBottom: 10 }} showsVerticalScrollIndicator={false}>
             {order.items?.map((item, index) => (
               <View
                 key={index}
@@ -616,26 +762,26 @@ export default function DeliveryMapScreen({ route, navigation }) {
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  paddingVertical: 6,
-                  paddingHorizontal: 8,
+                  paddingVertical: 7,
+                  paddingHorizontal: 10,
                   backgroundColor: '#f8fafc',
                   borderRadius: 8,
                   marginBottom: 4,
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{item.name}</Text>
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#0f172a' }}>{item.name}</Text>
                   {item.variantLabel ? (
-                    <Text style={{ fontSize: 11, fontWeight: '500', color: '#64748b' }}>{item.variantLabel}</Text>
+                    <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: '#64748b' }}>{item.variantLabel}</Text>
                   ) : null}
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#0f172a' }}>x{item.qty}</Text>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#0f172a' }}>x{item.qty}</Text>
               </View>
             ))}
           </ScrollView>
         )}
 
-        {/* Action Buttons: Pick Up / Mark Delivered */}
+        {/* Action Button: Mark order delivered matching Screenshot 3 & 4 */}
         {order.status !== 'OUT_FOR_DELIVERY' && order.status !== 'DELIVERED' && order.status !== 'PENDING_CONFIRMATION' ? (
           <Pressable
             onPress={handlePickUp}
@@ -643,11 +789,11 @@ export default function DeliveryMapScreen({ route, navigation }) {
             style={{
               height: 52,
               borderRadius: 16,
-              backgroundColor: '#059669',
+              backgroundColor: '#047857',
               alignItems: 'center',
               justifyContent: 'center',
               flexDirection: 'row',
-              shadowColor: '#059669',
+              shadowColor: '#047857',
               shadowOffset: { width: 0, height: 3 },
               shadowOpacity: 0.25,
               shadowRadius: 8,
@@ -656,7 +802,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
             }}
           >
             <Truck size={20} color="#ffffff" style={{ marginRight: 8 }} />
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#ffffff' }}>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: '#ffffff' }}>
               {updating ? 'Updating...' : 'Start Delivery & Pick Up'}
             </Text>
           </Pressable>
@@ -672,7 +818,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
                   ? '#f97316'
                   : order.status === 'DELIVERED'
                   ? '#94a3b8'
-                  : '#059669',
+                  : '#047857',
               alignItems: 'center',
               justifyContent: 'center',
               flexDirection: 'row',
@@ -685,37 +831,142 @@ export default function DeliveryMapScreen({ route, navigation }) {
             }}
           >
             <CheckCircle size={20} color="#ffffff" style={{ marginRight: 8 }} />
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#ffffff' }}>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: '#ffffff' }}>
               {updating
                 ? 'Updating...'
                 : order.status === 'DELIVERED'
                 ? 'Delivered'
                 : order.status === 'PENDING_CONFIRMATION'
-                ? 'Waiting for Customer...'
-                : 'Mark Order Delivered'}
+                ? 'Waiting for customer...'
+                : 'Mark order delivered'}
             </Text>
           </Pressable>
         )}
       </View>
 
-      {/* CONFIRMATION MODAL */}
+      {/* ── REPORT DELAY MODAL ── */}
+      <Modal
+        visible={delayModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setDelayModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.delayModalCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Clock size={20} color="#059669" style={{ marginRight: 8 }} />
+                <Text style={styles.modalTitle}>Update Delivery Time</Text>
+              </View>
+              <Pressable
+                onPress={() => setDelayModalVisible(false)}
+                hitSlop={10}
+                style={styles.modalCloseBtn}
+              >
+                <X size={18} color="#64748b" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Both the updated time and reason are mandatory. An automatic email and in-app notification will be sent to the customer instantly.
+            </Text>
+
+            {/* Field 1: New Delivery Time (Mandatory) */}
+            <Text style={styles.fieldLabel}>
+              Updated Delivery Time <Text style={{ color: '#dc2626' }}>*</Text>
+            </Text>
+            <View style={styles.chipRow}>
+              {DELAY_PRESET_TIMES.map((timeOption) => (
+                <Pressable
+                  key={timeOption}
+                  onPress={() => {
+                    setSelectedDelayTime(timeOption);
+                    setCustomDelayTime('');
+                  }}
+                  style={[
+                    styles.chipBtn,
+                    selectedDelayTime === timeOption && !customDelayTime && styles.chipBtnActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedDelayTime === timeOption && !customDelayTime && styles.chipTextActive,
+                    ]}
+                  >
+                    {timeOption}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              placeholder="Or enter custom time (e.g. 5:45 PM)"
+              value={customDelayTime}
+              onChangeText={(txt) => setCustomDelayTime(txt)}
+              placeholderTextColor="#94a3b8"
+              style={styles.textInput}
+            />
+
+            {/* Field 2: Delay Reason (Mandatory) */}
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>
+              Reason for Delay <Text style={{ color: '#dc2626' }}>*</Text>
+            </Text>
+            <View style={styles.chipRowWrap}>
+              {DELAY_PRESET_REASONS.map((reasonOption) => (
+                <Pressable
+                  key={reasonOption}
+                  onPress={() => {
+                    setSelectedDelayReason(reasonOption);
+                    setCustomDelayReason('');
+                  }}
+                  style={[
+                    styles.chipBtn,
+                    selectedDelayReason === reasonOption && !customDelayReason && styles.chipBtnActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedDelayReason === reasonOption && !customDelayReason && styles.chipTextActive,
+                    ]}
+                  >
+                    {reasonOption}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              placeholder="Or write custom reason (Mandatory)..."
+              value={customDelayReason}
+              onChangeText={(txt) => setCustomDelayReason(txt)}
+              placeholderTextColor="#94a3b8"
+              multiline
+              numberOfLines={2}
+              style={[styles.textInput, { minHeight: 46 }]}
+            />
+
+            {/* Submit Delay Button */}
+            <Pressable
+              onPress={handleSubmitDelay}
+              disabled={submittingDelay}
+              style={styles.submitDelayBtn}
+            >
+              {submittingDelay ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.submitDelayBtnText}>
+                  Update Time
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* CONFIRMATION / ALERT MODAL */}
       <Modal visible={confirmModal.visible} transparent={true} animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <View
-            style={{
-              width: '100%',
-              maxWidth: 340,
-              backgroundColor: '#ffffff',
-              borderRadius: 22,
-              padding: 22,
-              alignItems: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 6,
-            }}
-          >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmCard}>
             <View
               style={{
                 width: 52,
@@ -730,11 +981,11 @@ export default function DeliveryMapScreen({ route, navigation }) {
               <AlertCircle size={28} color="#059669" />
             </View>
 
-            <Text style={{ fontSize: 18, fontWeight: '900', color: '#0f172a', textAlign: 'center', marginBottom: 6 }}>
+            <Text style={{ fontFamily: fonts.extraBold, fontSize: 18, color: '#0f172a', textAlign: 'center', marginBottom: 6 }}>
               {confirmModal.title}
             </Text>
 
-            <Text style={{ fontSize: 14, fontWeight: '500', color: '#64748b', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
+            <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
               {confirmModal.message}
             </Text>
 
@@ -751,7 +1002,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#475569' }}>Cancel</Text>
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#475569' }}>Cancel</Text>
                 </Pressable>
               )}
 
@@ -769,7 +1020,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ fontSize: 15, fontWeight: '800', color: '#ffffff' }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#ffffff' }}>
                   {confirmModal.isAlert ? 'OK' : 'Confirm'}
                 </Text>
               </Pressable>
@@ -780,3 +1031,127 @@ export default function DeliveryMapScreen({ route, navigation }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  delayModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  modalTitle: {
+    fontFamily: fonts.extraBold,
+    fontSize: 17,
+    color: '#0f172a',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 14,
+    lineHeight: 16,
+  },
+  fieldLabel: {
+    fontFamily: fonts.bold,
+    fontSize: 12.5,
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 6,
+  },
+  chipRowWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 6,
+  },
+  chipBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  chipBtnActive: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#059669',
+  },
+  chipText: {
+    fontFamily: fonts.medium,
+    fontSize: 11.5,
+    color: '#475569',
+  },
+  chipTextActive: {
+    fontFamily: fonts.bold,
+    color: '#059669',
+  },
+  textInput: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontFamily: fonts.regular,
+    fontSize: 12.5,
+    color: '#0f172a',
+  },
+  submitDelayBtn: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  submitDelayBtnText: {
+    fontFamily: fonts.bold,
+    fontSize: 14.5,
+    color: '#ffffff',
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 22,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+});

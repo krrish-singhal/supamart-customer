@@ -1,3 +1,6 @@
+import useStoreStatus from '../hooks/useStoreStatus';
+import { formatDeliveryAddress } from '../utils/addressForm';
+import { orderEstimate } from '../utils/orderEstimate';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -18,26 +21,23 @@ import {
   X,
   CreditCard,
   Building2,
-  Banknote,
   Lock,
   Check,
   RefreshCw,
   Clock,
   ArrowRight,
-  ExternalLink,
-  Smartphone,
   ShieldCheck,
   QrCode,
   ChevronDown,
   ChevronUp,
   AlertCircle,
   AlertTriangle,
-} from 'lucide-react-native';
+} from '../components/icons';
 import QRCode from 'react-native-qrcode-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from '../services/reads';
 import { db } from '../config/firebase';
 import apiClient from '../services/api';
 import { UPI_ID, UPI_PAYEE_NAME } from '../config/global';
@@ -57,6 +57,7 @@ export default function PaymentScreen({ route, navigation }) {
   const [activeIdempotencyKey, setActiveIdempotencyKey] = useState(() => idempotencyKey || Crypto.randomUUID());
   const insets = useSafeAreaInsets();
   const { loadCart } = useCart();
+  const { isOpen: storeOpen } = useStoreStatus();
 
   // Mode: If opened from Profile/Account or Cart 'Change' link without active order payload
   const isDefaultSetupMode = !amount && !payload;
@@ -259,6 +260,11 @@ export default function PaymentScreen({ route, navigation }) {
       return;
     }
 
+    if (!storeOpen && !createdOrder?.id) {
+      Toast.show({ type: 'info', text1: 'The shop is closed', text2: 'Order daily from 10 AM to 11 PM.' });
+      return;
+    }
+
     const currentFormattedAmount = Number(amount || 0).toFixed(2);
     const query = buildUpiParams(currentFormattedAmount, 'MS Traders order');
     const genericUri = `upi://pay?${query}`;
@@ -422,14 +428,13 @@ export default function PaymentScreen({ route, navigation }) {
             onPress={() =>
               navigation.replace('OrderConfirmation', {
                 orderId: createdOrder?.id,
-                orderNo: createdOrder?.orderNo || '10482',
+                orderNo: createdOrder?.orderNo || '—',
                 total: amount,
                 items: createdOrder?.items || payload.cartItems,
                 savings: createdOrder?.discount || 0,
-                address: payload.address?.street
-                  ? `${payload.address.houseNo || 'Home'}, ${payload.address.street}`
-                  : 'Home · [Your delivery address]',
+                address: formatDeliveryAddress(payload.address),
                 paymentMethod: 'UPI app',
+                deliveryTime: orderEstimate(createdOrder) || 'View live order estimate',
               })
             }
             style={{
@@ -1769,89 +1774,7 @@ export default function PaymentScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* SECTION 3: PAY LATER (Coming Soon) matching Image 2 */}
-        <View>
-          <Text
-            style={{
-              fontSize: 12,
-              fontFamily: fonts.bold,
-              fontWeight: 'normal',
-              color: '#64748b',
-              letterSpacing: 0.6,
-              marginBottom: 10,
-              marginLeft: 4,
-            }}
-          >
-            PAY LATER
-          </Text>
 
-          <View
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: '#e2e8f0',
-              overflow: 'hidden',
-            }}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                padding: 16,
-                opacity: 0.7,
-              }}
-            >
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: '#f8fafc',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 14,
-                }}
-              >
-                <Banknote size={22} color="#64748b" strokeWidth={2} />
-              </View>
-
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={{ fontSize: 15, fontFamily: fonts.bold, fontWeight: 'normal', color: '#0f172a' }}>
-                  Cash on delivery
-                </Text>
-                <Text style={{ fontSize: 12, fontFamily: fonts.medium, fontWeight: 'normal', color: '#64748b', marginTop: 2 }}>
-                  Pay in cash or UPI at your door
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View
-                  style={{
-                    backgroundColor: '#f1f5f9',
-                    borderRadius: 8,
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                  }}
-                >
-                  <Text style={{ fontSize: 11, fontFamily: fonts.bold, fontWeight: 'normal', color: '#64748b' }}>
-                    Coming soon
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    borderWidth: 2,
-                    borderColor: '#cbd5e1',
-                    backgroundColor: '#ffffff',
-                  }}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
 
         {/* Security footnote matching Image 2 */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>

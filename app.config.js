@@ -10,9 +10,9 @@ export default {
   "userInterfaceStyle": "automatic",
   "newArchEnabled": true,
   "splash": {
-    "image": "./assets/splash.png",
+    "image": "./assets/branding/ms-traders-symbol-reversed-512.png",
     "resizeMode": "contain",
-    "backgroundColor": "#ffffff"
+    "backgroundColor": "#087e49"
   },
   "ios": {
     "supportsTablet": true,
@@ -29,7 +29,7 @@ export default {
     "versionCode": 4,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A7C47"
     },
     "edgeToEdgeEnabled": true,
     "permissions": [
@@ -37,7 +37,8 @@ export default {
       "android.permission.ACCESS_FINE_LOCATION",
       "android.permission.ACCESS_BACKGROUND_LOCATION",
       "android.permission.FOREGROUND_SERVICE",
-      "android.permission.FOREGROUND_SERVICE_LOCATION"
+      "android.permission.FOREGROUND_SERVICE_LOCATION",
+      "android.permission.POST_NOTIFICATIONS"
     ],
     "blockedPermissions": [
       "android.permission.READ_MEDIA_IMAGES",
@@ -47,12 +48,13 @@ export default {
       "android.permission.WRITE_EXTERNAL_STORAGE",
       "android.permission.RECORD_AUDIO",
       "android.permission.CAMERA"
-    ],
-    "config": {
-      "googleMaps": {
-        "apiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-      }
-    }
+    ]
+  },
+  "web": {
+    "favicon": "./MS-Traders-logo-kit/web/favicon-48.png",
+    "name": "MS Traders",
+    "themeColor": "#0A7C47",
+    "backgroundColor": "#087e49"
   },
   "extra": {
     "eas": {
@@ -63,9 +65,9 @@ export default {
     [
       "expo-splash-screen",
       {
-        "image": "./assets/splash.png",
+        "image": "./assets/branding/ms-traders-symbol-reversed-512.png",
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#087e49"
       }
     ],
     [

@@ -1,0 +1,17 @@
+{
+  "before": {
+    "metadata": 31067,
+    "assets": 46906707,
+    "hermes": 11437450,
+    "total": 58375224
+  },
+  "after": {
+    "metadata": 30013,
+    "assets": 17092860,
+    "hermes": 9486345,
+    "total": 26609218
+  },
+  "reductionBytes": 31766006,
+  "reductionPercent": 54.42,
+  "metric": "Raw production Android Metro export; includes bundled assets, Hermes bytecode and Metro metadata. Excludes native libraries/DEX/resources; not Play Store download size."
+}

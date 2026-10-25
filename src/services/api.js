@@ -14,6 +14,8 @@ const apiClient = create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
+  // A just-completed Firebase sign-in supplies its token before authMode is saved.
+  if (config.headers.Authorization) return config;
   try {
     // 'authMode' === 'firebase' means AuthContext.signIn's fast path is active for this
     // session — use a live Firebase ID token instead of a stored one. getIdToken() returns

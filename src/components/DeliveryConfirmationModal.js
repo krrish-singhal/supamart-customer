@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
-import { Star, AlertCircle, CheckCircle, X } from 'lucide-react-native';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { Star, AlertCircle, CheckCircle, X } from './icons';
+import { collection, query, where, onSnapshot } from '../services/reads';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../config/firebase';
 import { AuthContext } from '../context/AuthContext';
 import apiClient from '../services/api';
 import Toast from 'react-native-toast-message';
+import OrderRatings from './OrderRatings';
 
 export default function DeliveryConfirmationModal() {
   const { userProfile, token } = useContext(AuthContext);
   const [pendingOrder, setPendingOrder] = useState(null);
-  const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [viewState, setViewState] = useState('QUESTION'); // QUESTION, RATING
+  const [viewState, setViewState] = useState('QUESTION'); // 'QUESTION' | 'RATING'
   const [firebaseUid, setFirebaseUid] = useState(auth.currentUser?.uid || null);
 
   useEffect(() => {
@@ -44,16 +44,14 @@ export default function DeliveryConfirmationModal() {
       q,
       (snapshot) => {
         if (!snapshot.empty) {
-          const doc = snapshot.docs[0];
-          setPendingOrder({ id: doc.id, ...doc.data() });
+          const docSnap = snapshot.docs[0];
+          setPendingOrder({ id: docSnap.id, ...docSnap.data() });
           setViewState('QUESTION');
-          setRating(0);
         } else {
           setPendingOrder(null);
         }
       },
       (error) => {
-        // Silently catch permission-denied during auth transitions so it doesn't crash the app
         if (error.code !== 'permission-denied') {
           console.warn('DeliveryConfirmationModal orders listener:', error.message || error);
         }
@@ -63,34 +61,12 @@ export default function DeliveryConfirmationModal() {
     return () => unsubscribe();
   }, [token, userProfile?.id, userProfile?.role, firebaseUid]);
 
-  const submitRating = async (selectedRating) => {
-    if (selectedRating === 0) {
-      Toast.show({ type: 'error', text1: 'Please provide a rating' });
-      return;
-    }
-    setSubmitting(true);
-    
-    const orderId = pendingOrder.id;
-    setPendingOrder(null); // Close instantly for better UX
-    
-    try {
-      await apiClient.patch(`/orders/${orderId}/confirm-delivery`, { rating: selectedRating });
-      Toast.show({ type: 'success', text1: 'Thank you for confirming!' });
-    } catch (error) {
-      console.error(error);
-      Toast.show({ type: 'error', text1: 'Failed to confirm delivery' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleConfirm = () => submitRating(rating);
-
   const handleDispute = async () => {
+    if (!pendingOrder) return;
     setSubmitting(true);
     const orderId = pendingOrder.id;
-    setPendingOrder(null); // Close instantly for better UX
-    
+    setPendingOrder(null);
+
     try {
       await apiClient.patch(`/orders/${orderId}/dispute-delivery`);
       Toast.show({ type: 'info', text1: 'Dispute submitted. We will contact you.' });
@@ -110,87 +86,52 @@ export default function DeliveryConfirmationModal() {
       transparent 
       animationType="slide"
       onRequestClose={() => {
-        // Allow Android back button to dismiss if they are stuck
         setPendingOrder(null);
       }}
     >
       <View style={styles.overlay}>
-        <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={() => setPendingOrder(null)}
-          >
-            <X size={24} color="#94a3b8" />
-          </TouchableOpacity>
-          
-          {viewState === 'QUESTION' ? (
-            <>
-              <View style={styles.iconContainer}>
-                <AlertCircle size={40} color="#f59e0b" />
-              </View>
-              <Text style={styles.title}>Delivery Verification</Text>
-              <Text style={styles.subtitle}>
-                Your delivery partner has marked Order #{pendingOrder.orderNo} as delivered. Did you receive it?
-              </Text>
-              
-              <View style={styles.buttonRow}>
-                <TouchableOpacity 
-                  onPress={handleDispute}
-                  disabled={submitting}
-                  style={[styles.button, styles.buttonFlex, styles.btnDispute]}
-                >
-                  <Text style={styles.btnDisputeText}>No, I did not</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => setViewState('RATING')}
-                  disabled={submitting}
-                  style={[styles.button, styles.buttonFlex, styles.btnConfirm]}
-                >
-                  <Text style={styles.btnConfirmText}>Yes, I got it</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.iconContainer}>
-                <CheckCircle size={40} color="#16a34a" />
-              </View>
-              <Text style={styles.title}>Rate your delivery</Text>
-              <Text style={styles.subtitle}>How was your experience?</Text>
-              
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity 
-                    key={star} 
-                    onPress={() => {
-                      setRating(star);
-                      // Since state updates are async, we pass the selected star directly to a new submit function
-                      submitRating(star);
-                    }}
-                  >
-                    <Star 
-                      size={40} 
-                      color={rating >= star ? "#eab308" : "#d1d5db"} 
-                      fill={rating >= star ? "#eab308" : "transparent"} 
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
-
+        {viewState === 'QUESTION' ? (
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={() => setPendingOrder(null)}
+            >
+              <X size={24} color="#94a3b8" />
+            </TouchableOpacity>
+            
+            <View style={styles.iconContainer}>
+              <AlertCircle size={40} color="#f59e0b" />
+            </View>
+            <Text style={styles.title}>Order Collected?</Text>
+            <Text style={styles.subtitle}>
+              Your delivery partner has marked Order #{pendingOrder.orderNo || pendingOrder.id?.slice(-4)} as delivered. Did you receive it?
+            </Text>
+            
+            <View style={styles.buttonRow}>
               <TouchableOpacity 
-                onPress={handleConfirm}
+                onPress={handleDispute}
                 disabled={submitting}
-                style={[styles.button, styles.btnConfirm, { width: '100%' }]}
+                style={[styles.button, styles.buttonFlex, styles.btnDispute]}
               >
-                {submitting ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.btnConfirmText}>Submit & Confirm</Text>
-                )}
+                <Text style={styles.btnDisputeText}>No, I did not</Text>
               </TouchableOpacity>
-            </>
-          )}
-        </View>
+              <TouchableOpacity 
+                onPress={() => setViewState('RATING')}
+                disabled={submitting}
+                style={[styles.button, styles.buttonFlex, styles.btnConfirm]}
+              >
+                <Text style={styles.btnConfirmText}>Yes, I got it</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.ratingCardContainer}>
+            <OrderRatings
+              order={pendingOrder}
+              onDismiss={() => setPendingOrder(null)}
+            />
+          </View>
+        )}
       </View>
     </Modal>
   );
@@ -282,5 +223,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 24,
-  }
+  },
+  ratingCardContainer: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '92%',
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+  },
 });

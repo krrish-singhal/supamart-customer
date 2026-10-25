@@ -1,3 +1,7 @@
+import useStoreStatus from '../hooks/useStoreStatus';
+import { formatDeliveryAddress } from '../utils/addressForm';
+import { useConfig } from '../context/ConfigContext';
+import { SERVICE_RADIUS_KM } from '../config/deliveryArea';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -16,10 +20,12 @@ import {
   Plus,
   ShoppingBag,
   ChevronLeft,
+  ChevronRight,
+  DoorClosed,
   Tag,
   Clock,
   ShieldCheck,
-} from 'lucide-react-native';
+} from '../components/icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -48,7 +54,18 @@ function getPaymentLogo(app) {
   return require('../../assets/upi.png');
 }
 
-export default function CheckoutScreen({ navigation }) {
+const DEFAULT_DELIVERY_INSTRUCTIONS = {
+  landmark: '',
+  gateDetails: '',
+  selectedDoorOptions: ['leave_door', 'call_arrive'],
+  selectedLabels: ['Leave at the door', 'Call when you arrive'],
+  additionalNotes: '',
+  saveForFuture: true,
+  summary: 'Leave at the door · Call on arrival',
+  combinedNote: 'Leave at the door; Call when you arrive',
+};
+
+export default function CheckoutScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const {
     items,
@@ -61,24 +78,26 @@ export default function CheckoutScreen({ navigation }) {
   } = useCart();
 
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [notes] = useState('');
+  const { isOpen: storeOpen, label: storeHoursLabel } = useStoreStatus();
+  const [deliveryInstructionsData, setDeliveryInstructionsData] = useState(DEFAULT_DELIVERY_INSTRUCTIONS);
+  const [notes, setNotes] = useState(DEFAULT_DELIVERY_INSTRUCTIONS.combinedNote);
+  const [instructions, setInstructions] = useState(DEFAULT_DELIVERY_INSTRUCTIONS.selectedLabels);
   const [deliveryTip] = useState(0);
   const [couponInput, setCouponInput] = useState('');
   const [applying, setApplying] = useState(false);
 
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState(null);
-  const [minOrderValue, setMinOrderValue] = useState(0);
-  const [taxPercent, setTaxPercent] = useState(DEFAULT_TAX_PERCENT);
+  const { config, refreshConfig } = useConfig();
+  const minOrderValue = config?.minOrderValue ?? 0;
+  const taxPercent = config?.taxPercent ?? DEFAULT_TAX_PERCENT;
   const [defaultPayment, setDefaultPayment] = useState({ app: 'Google Pay' });
   const [idempotencyKey] = useState(() => Crypto.randomUUID());
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [configRes, addrRes] = await Promise.all([
-        apiClient.get('/config').catch(() => ({ data: {} })),
+      const [, addrRes] = await Promise.all([
+        refreshConfig().then(data => ({ data })),
         apiClient
           .get('/auth/me')
           .then((res) => apiClient.get(`/users/${res.data.id}/addresses`))
@@ -92,18 +111,14 @@ export default function CheckoutScreen({ navigation }) {
         if (prev && addrList.find((a) => a.id === prev.id)) {
           return addrList.find((a) => a.id === prev.id);
         }
-        return addrList[addrList.length - 1] || null;
+        return defaultAddr || addrList[0] || null;
       });
 
-      const activeSlots = (configRes.data?.slots || []).filter((s) => s.active);
-      setSelectedSlot(activeSlots[0] || { label: 'ASAP (Within 25 mins)', from: 0, to: 0 });
-      setConfig(configRes.data);
-      setMinOrderValue(configRes.data?.minOrderValue || 0);
-      setTaxPercent(configRes.data?.taxPercent ?? DEFAULT_TAX_PERCENT);
+
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshConfig]);
 
   useFocusEffect(
     useCallback(() => {
@@ -133,12 +148,50 @@ export default function CheckoutScreen({ navigation }) {
     }
   }
 
+  useEffect(() => {
+    AsyncStorage.getItem('@supamart_delivery_instructions')
+      .then((saved) => {
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed.landmark === 'Opposite the bus stop') parsed.landmark = '';
+            if (parsed.gateDetails === 'Blue gate, 2nd floor') parsed.gateDetails = '';
+            setDeliveryInstructionsData(parsed);
+            if (Array.isArray(parsed.selectedLabels)) setInstructions(parsed.selectedLabels);
+            if (parsed.combinedNote) setNotes(parsed.combinedNote);
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (route.params?.updatedDeliveryInstructions) {
+      const data = route.params.updatedDeliveryInstructions;
+      setDeliveryInstructionsData(data);
+      if (Array.isArray(data.selectedLabels)) setInstructions(data.selectedLabels);
+      if (data.combinedNote) setNotes(data.combinedNote);
+    }
+  }, [route.params?.updatedDeliveryInstructions]);
+
+  const openDeliveryInstructions = () => {
+    navigation.navigate('DeliveryInstructions', {
+      returnScreen: 'Checkout',
+      address: selectedAddress,
+      initialInstructions: deliveryInstructionsData,
+    });
+  };
+
   const {
     deliveryFee,
     tax,
     toPay: finalToPay,
     withinRadius,
-  } = computeBill(subtotal, discount, taxPercent, config, selectedAddress);
+    coordinatesValid,
+    distanceKm,
+  } = computeBill(subtotal, discount, config?.taxPercent ?? taxPercent, config, selectedAddress);
+  const configReady = Boolean(config && Array.isArray(config.deliveryTiers) && config.deliveryTiers.length > 0);
+  const orderBlocked = !storeOpen || Boolean(selectedAddress) && (!configReady || !withinRadius || (minOrderValue > 0 && subtotal < minOrderValue));
   const belowMinimum = minOrderValue > 0 && subtotal < minOrderValue;
 
   async function placeOrder() {
@@ -146,7 +199,14 @@ export default function CheckoutScreen({ navigation }) {
       navigation.navigate('MyAddresses');
       return;
     }
-    if (!selectedSlot) return;
+    if (!configReady) {
+      Toast.show({ type: 'error', text1: 'Delivery settings are unavailable. Please retry.' });
+      return;
+    }
+    if (!storeOpen) {
+      Toast.show({ type: 'info', text1: 'The shop is closed', text2: 'Order daily from 10 AM to 11 PM. No slots or breaks.' });
+      return;
+    }
     if (belowMinimum) {
       Toast.show({
         type: 'error',
@@ -157,12 +217,12 @@ export default function CheckoutScreen({ navigation }) {
     if (!withinRadius) {
       Toast.show({
         type: 'error',
-        text1: 'Selected address is outside our delivery radius.',
+        text1: coordinatesValid ? 'Delivery is available within 5 km of our shop.' : 'Select a delivery address with a valid map location.',
       });
       return;
     }
 
-    const finalNotes = notes + (deliveryTip > 0 ? `\n[Delivery Tip: ₹${deliveryTip}]` : '');
+    const finalNotes = [...instructions, notes.trim()].filter(Boolean).join('; ') + (deliveryTip > 0 ? `\n[Delivery Tip: ₹${deliveryTip}]` : '');
     const payload = {
       cartItems: items,
       couponCode: couponCode,
@@ -174,7 +234,6 @@ export default function CheckoutScreen({ navigation }) {
         lat: selectedAddress.lat,
         lng: selectedAddress.lng,
       },
-      slot: { label: selectedSlot.label, from: selectedSlot.from, to: selectedSlot.to },
       notes: finalNotes,
       paymentMethod: 'UPI_MANUAL',
       deliveryTip,
@@ -325,32 +384,33 @@ export default function CheckoutScreen({ navigation }) {
               elevation: 2,
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, paddingRight: 12 }}>
                 <View
                   style={{
-                    width: 40,
-                    height: 40,
+                    width: 38,
+                    height: 38,
                     borderRadius: 12,
                     backgroundColor: '#ecfdf5',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginRight: 12,
+                    marginRight: 10,
+                    marginTop: 1,
                   }}
                 >
-                  <MapPin size={20} color="#047857" strokeWidth={2.4} />
+                  <MapPin size={18} color="#047857" strokeWidth={2.4} />
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: fonts.bold, fontSize: 14, fontWeight: 'normal', color: '#0f172a' }}>
-                    {selectedAddress?.type ? `Delivering to ${selectedAddress.type}` : 'Delivering to Home'}
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#0f172a' }}>
+                    {selectedAddress?.label && selectedAddress.label !== 'Current Location' ? `Delivering to ${selectedAddress.label}` : 'Delivery address'}
                   </Text>
                   <Text
-                    style={{ fontFamily: fonts.regular, fontSize: 12.5, fontWeight: 'normal', color: '#64748b', marginTop: 2, lineHeight: 17 }}
+                    style={{ fontFamily: fonts.regular, fontSize: 12.5, color: '#64748b', marginTop: 2, lineHeight: 18 }}
                     numberOfLines={2}
                   >
                     {selectedAddress
-                      ? `${selectedAddress.houseNo ? selectedAddress.houseNo + ', ' : ''}${selectedAddress.street || selectedAddress.area || ''}, ${selectedAddress.city ? selectedAddress.city + ', ' : ''}${selectedAddress.pincode || ''}`
+                      ? formatDeliveryAddress(selectedAddress)
                       : 'No delivery address selected'}
                   </Text>
                 </View>
@@ -366,34 +426,66 @@ export default function CheckoutScreen({ navigation }) {
                   backgroundColor: '#f0fdf4',
                   borderWidth: 1,
                   borderColor: '#bbf7d0',
+                  alignSelf: 'flex-start',
                 }}
               >
-                <Text style={{ fontFamily: fonts.bold, fontSize: 12.5, fontWeight: 'normal', color: '#047857' }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 12.5, color: '#047857' }}>
                   {selectedAddress ? 'Change' : 'Select'}
                 </Text>
               </Pressable>
             </View>
 
-            {/* ETA Sub-row */}
+            {/* ETA & Store Hours Info Row - neatly organized with badge, never truncated */}
             <View
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
                 marginTop: 12,
                 paddingTop: 12,
                 borderTopWidth: 1,
-                borderColor: '#f8fafc',
-                gap: 6,
+                borderColor: '#f1f5f9',
+                rowGap: 8,
               }}
             >
-              <Clock size={15} color="#059669" strokeWidth={2.4} />
-              <Text style={{ fontFamily: fonts.bold, fontSize: 12.5, fontWeight: 'normal', color: '#047857' }}>
-                Delivery in 18-25 mins
-              </Text>
-              <Text style={{ fontSize: 12, color: '#94a3b8' }}>·</Text>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 12, fontWeight: 'normal', color: '#64748b' }}>
-                {selectedSlot?.label || 'Superfast Delivery'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
+                <Clock size={14} color="#059669" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                <Text
+                  style={{
+                    fontFamily: fonts.semiBold,
+                    fontSize: 12,
+                    color: '#047857',
+                  }}
+                >
+                  Delivery estimate after ordering
+                </Text>
+              </View>
+
+              {storeHoursLabel ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: storeOpen ? '#ecfdf5' : '#fef2f2',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3.5,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: storeOpen ? '#a7f3d0' : '#fecaca',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: fonts.bold,
+                      fontSize: 11,
+                      color: storeOpen ? '#047857' : '#b91c1c',
+                    }}
+                  >
+                    {storeOpen ? 'Open until 11 PM' : 'Closed · Opens 10 AM'}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </Animated.View>
@@ -509,6 +601,111 @@ export default function CheckoutScreen({ navigation }) {
           </View>
         </Animated.View>
 
+        {/* 2.5 DELIVERY INSTRUCTIONS CARD */}
+        <Animated.View entering={FadeInUp.duration(340).delay(80)}>
+          <Pressable
+            onPress={openDeliveryInstructions}
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 20,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: '#f1f5f9',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.04,
+              shadowRadius: 6,
+              elevation: 2,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: deliveryInstructionsData?.summary || deliveryInstructionsData?.landmark ? 10 : 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <DoorClosed size={18} color="#047857" strokeWidth={2.4} />
+                <Text style={{ fontFamily: fonts.bold, fontSize: 14.5, color: '#0f172a' }}>
+                  Delivery instructions
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#047857' }}>
+                  {deliveryInstructionsData?.selectedDoorOptions?.length > 0 || deliveryInstructionsData?.landmark ? 'Edit' : 'Add'}
+                </Text>
+                <ChevronRight size={16} color="#047857" strokeWidth={2.4} />
+              </View>
+            </View>
+
+            {deliveryInstructionsData?.summary ? (
+              <View
+                style={{
+                  backgroundColor: '#ecfdf5',
+                  borderWidth: 1,
+                  borderColor: '#a7f3d0',
+                  borderRadius: 12,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ fontFamily: fonts.bold, fontSize: 10.5, color: '#047857', letterSpacing: 0.4, marginBottom: 2 }}>
+                  YOUR DELIVERY PARTNER WILL SEE
+                </Text>
+                <Text style={{ fontFamily: fonts.medium, fontSize: 12.5, color: '#166534' }}>
+                  {deliveryInstructionsData.summary}
+                </Text>
+              </View>
+            ) : null}
+
+            {(deliveryInstructionsData?.landmark || deliveryInstructionsData?.gateDetails) ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                {deliveryInstructionsData?.landmark ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: '#f8fafc',
+                      paddingHorizontal: 9,
+                      paddingVertical: 5,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#e2e8f0',
+                    }}
+                  >
+                    <MapPin size={12} color="#059669" strokeWidth={2.4} style={{ marginRight: 5 }} />
+                    <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: '#334155' }}>
+                      {deliveryInstructionsData.landmark}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {deliveryInstructionsData?.gateDetails ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: '#f8fafc',
+                      paddingHorizontal: 9,
+                      paddingVertical: 5,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#e2e8f0',
+                    }}
+                  >
+                    <DoorClosed size={12} color="#059669" strokeWidth={2.4} style={{ marginRight: 5 }} />
+                    <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: '#334155' }}>
+                      {deliveryInstructionsData.gateDetails}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {!deliveryInstructionsData?.summary && !deliveryInstructionsData?.landmark && (
+              <Text style={{ fontFamily: fonts.regular, fontSize: 12.5, color: '#94a3b8' }}>
+                No delivery instructions added · Tap to customize
+              </Text>
+            )}
+          </Pressable>
+        </Animated.View>
         {/* 3. APPLY COUPON CARD */}
         <Animated.View entering={FadeInUp.duration(340).delay(100)}>
           <View
@@ -639,7 +836,7 @@ export default function CheckoutScreen({ navigation }) {
               {/* GST */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={{ fontFamily: fonts.regular, fontSize: 13.5, fontWeight: 'normal', color: '#64748b' }}>
-                  GST ({taxPercent}%)
+                  GST ({config?.taxPercent ?? taxPercent}%)
                 </Text>
                 <Text style={{ fontFamily: fonts.bold, fontSize: 13.5, fontWeight: 'normal', color: '#0f172a' }}>
                   ₹{tax.toFixed(2)}
@@ -707,7 +904,15 @@ export default function CheckoutScreen({ navigation }) {
           </Animated.View>
         )}
 
-        {!withinRadius && (
+        {!configReady && (
+          <View style={{ padding: 16, gap: 8 }}>
+            <Text>Delivery settings could not be loaded.</Text>
+            <Pressable onPress={loadData} accessibilityRole="button" style={{ minHeight: 44, justifyContent: 'center' }}>
+              <Text style={{ color: '#0A7C47', fontFamily: fonts.semiBold }}>Try again</Text>
+            </Pressable>
+          </View>
+        )}
+        {selectedAddress && !withinRadius && (
           <Animated.View
             entering={FadeInUp.duration(340).delay(180)}
             style={{
@@ -722,8 +927,9 @@ export default function CheckoutScreen({ navigation }) {
               Delivery currently unavailable in your area
             </Text>
             <Text style={{ fontFamily: fonts.medium, fontSize: 12, fontWeight: 'normal', color: '#b91c1c', marginTop: 2 }}>
-              Your selected address is outside our {config?.serviceRadiusKm || 5} KM delivery radius.
+              {coordinatesValid ? `Your saved pin is ${distanceKm?.toFixed(2)} km from the shop, outside our ${SERVICE_RADIUS_KM} km delivery radius. Addresses exactly ${SERVICE_RADIUS_KM} km away are included.` : 'This address needs a valid map location. Please update the address before ordering.'}
             </Text>
+            <Pressable accessibilityRole="button" onPress={() => navigation.navigate('AddAddress', { address: selectedAddress })} style={{ paddingVertical: 12 }}><Text style={{ color: '#047857', fontFamily: fonts.bold }}>Update this address and GPS pin</Text></Pressable>
           </Animated.View>
         )}
 
@@ -854,16 +1060,16 @@ export default function CheckoutScreen({ navigation }) {
 
         <Pressable
           onPress={placeOrder}
-          disabled={belowMinimum || !withinRadius}
+          disabled={orderBlocked}
           style={{
             minWidth: 180,
             height: 50,
             borderRadius: 16,
-            backgroundColor: (!withinRadius || belowMinimum) ? '#94a3b8' : '#047857',
+            backgroundColor: (orderBlocked) ? '#94a3b8' : '#047857',
             paddingHorizontal: 22,
             alignItems: 'center',
             justifyContent: 'center',
-            shadowColor: (!withinRadius || belowMinimum) ? 'transparent' : '#047857',
+            shadowColor: (orderBlocked) ? 'transparent' : '#047857',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.25,
             shadowRadius: 8,
@@ -871,8 +1077,14 @@ export default function CheckoutScreen({ navigation }) {
           }}
         >
           <Text style={{ fontFamily: fonts.bold, fontSize: 15, fontWeight: 'normal', color: '#ffffff' }}>
-            {!selectedAddress
+            {!storeOpen
+              ? 'Closed · Opens 10 AM'
+              : !selectedAddress
               ? 'Select Address'
+              : !configReady
+              ? 'Delivery Settings Unavailable'
+              : !coordinatesValid
+              ? 'Update Address Location'
               : !withinRadius
               ? 'Out of Delivery Area'
               : belowMinimum

@@ -22,7 +22,7 @@ const categoryImages = {
   // Dairy & Breakfast
   "dairy": require("../../assets/Brand_Logos/Milma.webp"),
   "dairy-bread-eggs": require("../../assets/categories/home/dairy-bread-eggs.webp"),
-  "bakery-items": require("../../assets/categories/Breakfast.png"),
+  "bakery-items": require("../../assets/categories/Breakfast.webp"),
 
   // Snacks & Beverages
   "snacks-confectionery": require("../../assets/categories/home/chips-namkeens.webp"),

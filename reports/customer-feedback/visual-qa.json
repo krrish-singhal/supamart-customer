@@ -1,0 +1,74 @@
+{
+  "layouts": [
+    {
+      "width": 320,
+      "height": 568,
+      "text": "Groceries at trader prices ,\ndelivered fast\nLog in with your email and password.\nEmail address\nPassword\nForgot password?\nContinue\nNew to MS Traders? \nCreate an account\nBy continuing, you agree to our Terms of Service and Privacy Policy",
+      "overflow": [
+        {
+          "viewport": 568,
+          "content": 568,
+          "scrolls": false
+        }
+      ],
+      "horizontalOverflow": false
+    },
+    {
+      "width": 360,
+      "height": 640,
+      "text": "Groceries at trader prices ,\ndelivered fast\nLog in with your email and password.\nEmail address\nPassword\nForgot password?\nContinue\nNew to MS Traders? \nCreate an account\nBy continuing, you agree to our Terms of Service and Privacy Policy",
+      "overflow": [
+        {
+          "viewport": 640,
+          "content": 640,
+          "scrolls": false
+        }
+      ],
+      "horizontalOverflow": false
+    },
+    {
+      "width": 393,
+      "height": 852,
+      "text": "Groceries at trader prices ,\ndelivered fast\nLog in with your email and password.\nEmail address\nPassword\nForgot password?\nContinue\nNew to MS Traders? \nCreate an account\nBy continuing, you agree to our Terms of Service and Privacy Policy",
+      "overflow": [
+        {
+          "viewport": 852,
+          "content": 852,
+          "scrolls": false
+        }
+      ],
+      "horizontalOverflow": false
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "text": "Groceries at trader prices ,\ndelivered fast\nLog in with your email and password.\nEmail address\nPassword\nForgot password?\nContinue\nNew to MS Traders? \nCreate an account\nBy continuing, you agree to our Terms of Service and Privacy Policy",
+      "overflow": [
+        {
+          "viewport": 932,
+          "content": 932,
+          "scrolls": false
+        }
+      ],
+      "horizontalOverflow": false
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "text": "Groceries at trader prices ,\ndelivered fast\nLog in with your email and password.\nEmail address\nPassword\nForgot password?\nContinue\nNew to MS Traders? \nCreate an account\nBy continuing, you agree to our Terms of Service and Privacy Policy",
+      "overflow": [
+        {
+          "viewport": 1024,
+          "content": 1024,
+          "scrolls": false
+        }
+      ],
+      "horizontalOverflow": false
+    }
+  ],
+  "motion": {
+    "icons": 8,
+    "changed": 8
+  },
+  "errors": []
+}

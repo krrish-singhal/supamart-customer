@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from '../icons';
 
 export default function SectionHeader({ title, subtitle, actionText, onAction, className = '' }) {
   return (

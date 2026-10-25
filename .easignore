@@ -33,3 +33,9 @@ reports/
 coverage/
 .DS_Store
 output.css
+
+# Local design documentation and validation inputs (runtime splash sources stay included)
+/test/
+/MS-Traders-logo-guide.pdf
+/MS-TRADERS-BRANDING.md
+/README*.md

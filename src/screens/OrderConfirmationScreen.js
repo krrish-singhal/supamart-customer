@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
-import { Check, MapPin, Phone } from 'lucide-react-native';
+import { Check, MapPin, Phone, DoorClosed } from '../components/icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { getProductImageSource } from '../utils/productImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
@@ -19,23 +21,37 @@ export default function OrderConfirmationScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const {
     orderId,
-    orderNo = '10482',
-    total = 246,
+    orderNo = '—',
+    total = 0,
     items = [],
-    savings = 62,
+    savings = 0,
     address = 'Home · [Your delivery address]',
     paymentMethod = 'UPI app',
-    deliveryTime = '18 mins',
+    deliveryTime = 'View live order estimate',
   } = route.params || {};
 
-  const defaultItems = [
-    { name: 'Toor Dal (Unpolished)', unit: '1 kg', qty: 1, price: 158 },
-    { name: 'Tomato (Local)', unit: '500 g', qty: 1, price: 22 },
-    { name: 'Full Cream Milk', unit: '500 ml', qty: 2, price: 66 },
-  ];
+  const [deliveryInstructions, setDeliveryInstructions] = useState(null);
 
-  const displayItems = items && items.length > 0 ? items : defaultItems;
-  const itemCount = displayItems.reduce((acc, item) => acc + (item.qty || 1), 0) || 4;
+  const loadInstructions = useCallback(async () => {
+    try {
+      const val = await AsyncStorage.getItem('@supamart_delivery_instructions');
+      if (val) {
+        const parsed = JSON.parse(val);
+        if (parsed.landmark === 'Opposite the bus stop') parsed.landmark = '';
+        if (parsed.gateDetails === 'Blue gate, 2nd floor') parsed.gateDetails = '';
+        setDeliveryInstructions(parsed);
+      }
+    } catch (_) {}
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadInstructions();
+    }, [loadInstructions])
+  );
+
+  const displayItems = items;
+  const itemCount = displayItems.reduce((acc, item) => acc + (item.qty || 1), 0);
 
   const goHome = () => {
     navigation.reset({
@@ -118,7 +134,7 @@ export default function OrderConfirmationScreen({ route, navigation }) {
               color: 'rgba(255, 255, 255, 0.88)',
             }}
           >
-            Order #{orderNo} · Arriving in {deliveryTime}
+            Order #{orderNo} · {deliveryTime}
           </Text>
         </View>
 
@@ -293,6 +309,159 @@ export default function OrderConfirmationScreen({ route, navigation }) {
                   </Text>
                 </View>
               </View>
+            </View>
+          </Animated.View>
+
+          {/* DELIVERY INSTRUCTIONS CARD matching user requirements */}
+          <Animated.View entering={FadeInUp.duration(350).delay(140)}>
+            <View
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 22,
+                padding: 18,
+                borderWidth: 1,
+                borderColor: '#f1f5f9',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 6,
+                elevation: 2,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 10,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      backgroundColor: '#eaf6ee',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <DoorClosed size={20} color="#087f46" strokeWidth={2.4} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontFamily: fonts.bold,
+                        fontSize: 15,
+                        color: '#0f172a',
+                      }}
+                    >
+                      Delivery instructions
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: fonts.regular,
+                        fontSize: 12,
+                        color: '#64748b',
+                        marginTop: 1,
+                      }}
+                    >
+                      Help your partner deliver smoothly
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate('DeliveryInstructions', {
+                      orderId,
+                      address,
+                      initialInstructions: deliveryInstructions,
+                    })
+                  }
+                  hitSlop={8}
+                  style={{
+                    backgroundColor: '#eaf6ee',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 12.5, color: '#087f46' }}>
+                    {deliveryInstructions?.summary ? 'Edit' : '+ Add'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {deliveryInstructions?.summary ? (
+                <View
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    borderRadius: 14,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: '#f1f5f9',
+                    marginTop: 4,
+                  }}
+                >
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#0f172a' }}>
+                    {deliveryInstructions.summary}
+                  </Text>
+                  {deliveryInstructions.landmark ? (
+                    <Text
+                      style={{
+                        fontFamily: fonts.regular,
+                        fontSize: 12,
+                        color: '#64748b',
+                        marginTop: 4,
+                      }}
+                    >
+                      Landmark: {deliveryInstructions.landmark}
+                    </Text>
+                  ) : null}
+                  {deliveryInstructions.gateDetails ? (
+                    <Text
+                      style={{
+                        fontFamily: fonts.regular,
+                        fontSize: 12,
+                        color: '#64748b',
+                        marginTop: 2,
+                      }}
+                    >
+                      Gate/Door: {deliveryInstructions.gateDetails}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : (
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate('DeliveryInstructions', {
+                      orderId,
+                      address,
+                      initialInstructions: deliveryInstructions,
+                    })
+                  }
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: 14,
+                    paddingVertical: 12,
+                    borderWidth: 1,
+                    borderColor: '#e2e8f0',
+                    borderStyle: 'dashed',
+                    marginTop: 4,
+                    gap: 6,
+                  }}
+                >
+                  <DoorClosed size={15} color="#087f46" strokeWidth={2.4} />
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#087f46' }}>
+                    Add door, gate, or call instructions
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </Animated.View>
 

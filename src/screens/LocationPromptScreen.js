@@ -1,126 +1,23 @@
-import React, { useState, useContext } from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
   Pressable,
   StatusBar,
-  Linking,
-  Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { Search, Navigation as NavIcon, ChevronLeft } from 'lucide-react-native';
-import * as Location from 'expo-location';
-import Toast from 'react-native-toast-message';
+import { Search, Navigation as NavIcon, ChevronLeft } from '../components/icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { AuthContext } from '../context/AuthContext';
-import apiClient from '../services/api';
 import { typography } from '../theme/typography';
 
 export default function LocationPromptScreen({ navigation }) {
   const { userProfile: user, setNeedsAddressPrompt, setNeedsAddressSelection } = useContext(AuthContext);
-  const [locating, setLocating] = useState(false);
+  const locating = false;
 
-  const handleUseCurrentLocation = async () => {
-    setLocating(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Location Permission Required',
-          'Please allow location access to discover items, delivery fees, and quick arrivals in your area.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
-        setLocating(false);
-        return;
-      }
-
-      const isProviderEnabled = await Location.hasServicesEnabledAsync();
-      if (!isProviderEnabled) {
-        Alert.alert(
-          'Location Services Disabled',
-          'Please turn on GPS/Location in your phone quick settings.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Settings',
-              onPress: () => {
-                if (Platform.OS === 'android') {
-                  Location.enableNetworkProviderAsync().catch(() => Linking.openSettings());
-                } else {
-                  Linking.openSettings();
-                }
-              },
-            },
-          ]
-        );
-        setLocating(false);
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const { latitude, longitude } = location.coords;
-
-      let addressName = 'Current Location';
-      let street = 'Current Location';
-      let area = '';
-      let city = '';
-      let pincode = '';
-
-      try {
-        const [geo] = await Location.reverseGeocodeAsync({ latitude, longitude });
-        if (geo) {
-          street = geo.street || geo.name || geo.district || street;
-          area = geo.district || geo.subregion || geo.neighborhood || '';
-          city = geo.city || geo.subregion || '';
-          pincode = geo.postalCode || '';
-        }
-      } catch {
-        // Fallback
-      }
-
-      if (!user?.id) throw new Error('Please sign in again to save your delivery location.');
-
-      const addressPayload = {
-        label: 'Current Location',
-        houseNo: addressName,
-        street,
-        area,
-        city,
-        pincode,
-        lat: latitude,
-        lng: longitude,
-        isDefault: true,
-      };
-      const { data: savedAddresses } = await apiClient.get(`/users/${user.id}/addresses`);
-      const existingLocation = (savedAddresses.items || []).find((address) => address.label === 'Current Location');
-      const { data: saved } = existingLocation?.id
-        ? await apiClient.put(`/users/${user.id}/addresses/${existingLocation.id}`, addressPayload)
-        : await apiClient.post(`/users/${user.id}/addresses`, addressPayload);
-      await apiClient.patch(`/users/${user.id}/addresses/${saved.id}/set-default`);
-
-      Toast.show({ type: 'success', text1: 'Location updated' });
-      setNeedsAddressPrompt?.(false);
-      setNeedsAddressSelection?.(false);
-      navigation.replace('Main');
-    } catch (err) {
-      console.warn('Location detection failed:', err);
-      Toast.show({
-        type: 'error',
-        text1: err.response?.data?.error || err.message || 'Could not save your location',
-        text2: 'Please try again or enter your address manually.',
-      });
-    } finally {
-      setLocating(false);
-    }
-  };
+  const handleUseCurrentLocation = () => navigation.replace('MyAddresses', { fromPrompt: true, autoLocate: true });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top', 'bottom']}>

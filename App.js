@@ -2,7 +2,7 @@ import './src/theme/fontSetup';
 import './global.css';
 import './src/services/backgroundLocation';
 import React, { useEffect, useState } from 'react';
-import { Platform, LogBox, AppState, View, StyleSheet } from 'react-native';
+import { Platform, AppState, View, StyleSheet, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { stopBackgroundTracking } from './src/services/backgroundLocation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -13,6 +13,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from './src/components/ui/ToastConfig';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+import { ConfigProvider } from './src/context/ConfigContext';
 import Navigation from './src/navigation/Navigation';
 import { navigationRef } from './src/navigation/navigationRef';
 import { AuthProvider } from './src/context/AuthContext';
@@ -22,10 +23,13 @@ import { NotificationsProvider } from './src/context/NotificationsContext';
 
 import { NetworkProvider, useNetwork } from './src/context/NetworkContext';
 import OfflineScreen from './src/screens/OfflineScreen';
+import DeliveryDelayNotification from './src/components/DeliveryDelayNotification';
 
 LogBox.ignoreLogs([
-  '@firebase/firestore: Firestore',
-  "WebChannelConnection RPC 'Listen' stream",
+  'Background location is limited in Expo Go',
+  'Non-serializable values were found in the navigation state',
+  '`expo-notifications` functionality is not fully supported in Expo Go',
+  'Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go',
 ]);
 
 configureReanimatedLogger({
@@ -57,6 +61,7 @@ function AppContent() {
   return (
     <>
       <Navigation />
+      <DeliveryDelayNotification />
       {isOffline && !offlineDismissed && (
         <View style={[StyleSheet.absoluteFillObject, { zIndex: 999999, backgroundColor: '#ffffff' }]}>
           <OfflineScreen onRetry={checkConnection} onGoHome={handleGoHome} />
@@ -67,19 +72,20 @@ function AppContent() {
 }
 
 export default function App() {
+  // Legacy Inter keys keep existing screens compatible while rendering Jakarta.
   const [fontsLoaded, fontError] = useFonts({
-    'Inter':                      require('./assets/fonts/Inter-Regular.ttf'),
-    'Inter-Regular':              require('./assets/fonts/Inter-Regular.ttf'),
-    'Inter-Medium':               require('./assets/fonts/Inter-Medium.ttf'),
-    'Inter-SemiBold':             require('./assets/fonts/Inter-SemiBold.ttf'),
-    'Inter-Bold':                 require('./assets/fonts/Inter-Bold.ttf'),
-    'Inter-ExtraBold':            require('./assets/fonts/Inter-ExtraBold.ttf'),
-    'Inter-Black':                require('./assets/fonts/Inter-Black.ttf'),
+    'Inter':                      require('./assets/fonts/PlusJakartaSans-Regular.ttf'),
+    'Inter-Regular':              require('./assets/fonts/PlusJakartaSans-Regular.ttf'),
+    'Inter-Medium':               require('./assets/fonts/PlusJakartaSans-SemiBold.ttf'),
+    'Inter-SemiBold':             require('./assets/fonts/PlusJakartaSans-SemiBold.ttf'),
+    'Inter-Bold':                 require('./assets/fonts/PlusJakartaSans-SemiBold.ttf'),
+    'Inter-ExtraBold':            require('./assets/fonts/PlusJakartaSans-ExtraBold.ttf'),
+    'Inter-Black':                require('./assets/fonts/PlusJakartaSans-ExtraBold.ttf'),
     'PlusJakartaSans':            require('./assets/fonts/PlusJakartaSans-Regular.ttf'),
     'PlusJakartaSans-Regular':    require('./assets/fonts/PlusJakartaSans-Regular.ttf'),
-    'PlusJakartaSans-Medium':     require('./assets/fonts/PlusJakartaSans-Medium.ttf'),
+    'PlusJakartaSans-Medium':     require('./assets/fonts/PlusJakartaSans-SemiBold.ttf'),
     'PlusJakartaSans-SemiBold':   require('./assets/fonts/PlusJakartaSans-SemiBold.ttf'),
-    'PlusJakartaSans-Bold':       require('./assets/fonts/PlusJakartaSans-Bold.ttf'),
+    'PlusJakartaSans-Bold':       require('./assets/fonts/PlusJakartaSans-SemiBold.ttf'),
     'PlusJakartaSans-ExtraBold':  require('./assets/fonts/PlusJakartaSans-ExtraBold.ttf'),
   });
 
@@ -125,6 +131,7 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="dark" backgroundColor="#F8F8F8" />
         <NetworkProvider>
+          <ConfigProvider>
           <AuthProvider>
             <NotificationsProvider>
               <CartProvider>
@@ -134,6 +141,7 @@ export default function App() {
               </CartProvider>
             </NotificationsProvider>
           </AuthProvider>
+          </ConfigProvider>
         </NetworkProvider>
         <Toast
           config={toastConfig}

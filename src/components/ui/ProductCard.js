@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { Plus, Minus, ShoppingBag, Star } from 'lucide-react-native';
+import { Plus, Minus, ShoppingBag, Star } from '../icons';
 import FavoriteButton from './FavoriteButton';
 import { getProductImageSource } from '../../utils/productImages';
 import { fonts } from '../../theme/typography';
@@ -44,18 +44,18 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
     return (
       <View
         style={{
-          height: fullWidth ? 40 : 34,
-          borderRadius: fullWidth ? 0 : 6,
+          height: fullWidth ? 38 : 32,
+          borderRadius: 8,
           backgroundColor: '#fff',
-          borderWidth: 1.5,
+          borderWidth: 1,
           borderColor: '#ef4444',
           alignItems: 'center',
           justifyContent: 'center',
-          width: fullWidth ? '100%' : 64,
+          width: fullWidth ? '100%' : 68,
           paddingHorizontal: 4,
         }}
       >
-        <Text style={{ fontFamily: 'Inter-Bold', fontSize: fullWidth ? 13 : 10, fontWeight: 'normal', color: '#ef4444' }} numberOfLines={1}>
+        <Text style={{ fontFamily: 'Inter-Bold', fontSize: fullWidth ? 12 : 10, fontWeight: 'normal', color: '#ef4444' }} numberOfLines={1}>
           Sold Out
         </Text>
       </View>
@@ -71,11 +71,11 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
         }}
         style={
           fullWidth
-            ? { height: 40, borderRadius: 0, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#16a34a', alignItems: 'center', justifyContent: 'center', width: '100%' }
-            : { height: 34, borderRadius: 6, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center', width: 64 }
+            ? { height: 38, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1.2, borderColor: '#0A7C47', alignItems: 'center', justifyContent: 'center', width: '100%' }
+            : { height: 32, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1.2, borderColor: '#0A7C47', alignItems: 'center', justifyContent: 'center', width: 68 }
         }
       >
-        <Text style={{ fontFamily: 'Inter-Bold', color: fullWidth ? '#16a34a' : '#fff', fontSize: fullWidth ? 13 : 11, fontWeight: 'normal' }} numberOfLines={1}>
+        <Text style={{ fontFamily: 'Inter-Bold', color: '#0A7C47', fontSize: 12.5, fontWeight: 'normal' }} numberOfLines={1}>
           {fullWidth ? 'Add to Cart' : 'ADD'}
         </Text>
       </Pressable>
@@ -88,12 +88,11 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#fff',
-        borderRadius: fullWidth ? 0 : 6,
-        height: fullWidth ? 40 : 34,
-        borderWidth: fullWidth ? 1.5 : 1,
-        borderColor: '#16a34a',
-        width: fullWidth ? '100%' : 84,
+        backgroundColor: '#0A7C47',
+        borderRadius: 8,
+        height: fullWidth ? 38 : 32,
+        width: fullWidth ? '100%' : 70,
+        paddingHorizontal: 4,
       }}
     >
       <Pressable
@@ -101,19 +100,21 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
           e?.stopPropagation?.();
           onDecrement?.();
         }}
-        style={{ width: 34, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 22, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+        hitSlop={6}
       >
-        <Minus size={14} color="#16a34a" strokeWidth={3} />
+        <Minus size={13} color="#ffffff" strokeWidth={3} />
       </Pressable>
-      <Text style={{ fontFamily: 'Inter-Bold', fontSize: 13, fontWeight: 'normal', color: '#0f172a' }}>{qty}</Text>
+      <Text style={{ fontFamily: 'Inter-Bold', fontSize: 12.5, fontWeight: 'normal', color: '#ffffff' }}>{qty}</Text>
       <Pressable
         onPress={(e) => {
           e?.stopPropagation?.();
           onIncrement?.();
         }}
-        style={{ width: 34, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 22, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+        hitSlop={6}
       >
-        <Plus size={14} color="#16a34a" strokeWidth={3} />
+        <Plus size={13} color="#ffffff" strokeWidth={3} />
       </Pressable>
     </View>
   );
@@ -125,7 +126,7 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
 function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, style, layout = 'grid', cardWidth }) {
   const variant = item.variants?.[0];
   const mrp = Number(variant?.mrp ?? variant?.price ?? item.mrp ?? item.price ?? 0);
-  const rawOffer = variant ? variant.offerPrice : item.offerPrice;
+  const rawOffer = variant ? (variant.offerPrice ?? variant.sellingPrice) : item.offerPrice;
   const offerPrice = (rawOffer != null && rawOffer !== '' && !isNaN(Number(rawOffer)) && Number(rawOffer) > 0)
     ? Number(rawOffer)
     : null;
@@ -138,6 +139,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
   const outOfStock = stockStatus.label === 'Out of Stock';
   const imageSource = getProductImageSource(item);
   const unitLabel = variant?.label || item?.unit || '1 Unit';
+  const { fontScale } = useWindowDimensions();
 
   // Compact category card: square image, aligned details, price and cart control.
   if (layout === 'categoryGrid') {
@@ -154,7 +156,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             flexGrow: 0,
             flexShrink: 0,
             backgroundColor: 'transparent',
-            marginBottom: 18,
+            marginBottom: 26,
             overflow: 'hidden',
             opacity: outOfStock ? 0.78 : (pressed ? 0.94 : 1),
           },
@@ -165,8 +167,8 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
         <View
           style={{
             width: '100%',
-            aspectRatio: 1,
             height: cardWidth,
+            aspectRatio: 1,
             borderRadius: 14,
             backgroundColor: '#f8fafc',
             overflow: 'hidden',
@@ -215,20 +217,20 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             <View
               style={{
                 position: 'absolute',
-                top: 6,
-                left: 6,
-                backgroundColor: '#f59e0b',
+                top: 8,
+                left: 8,
+                backgroundColor: '#FFB020',
                 borderRadius: 6,
                 paddingHorizontal: 6,
-                paddingVertical: 2.5,
+                paddingVertical: 4,
                 alignItems: 'center',
                 zIndex: 5,
               }}
             >
-              <Text style={{ fontFamily: fonts.extraBold, fontSize: 9.5, fontWeight: 'normal', color: '#451a03', lineHeight: 11 }}>
+              <Text style={{ fontFamily: fonts.extraBold, fontSize: 9.5, fontWeight: 'normal', color: '#451a03', lineHeight: 14 }}>
                 {discount}%
               </Text>
-              <Text style={{ fontFamily: fonts.extraBold, fontSize: 8.5, fontWeight: 'normal', color: '#451a03', lineHeight: 10 }}>
+              <Text style={{ fontFamily: fonts.extraBold, fontSize: 8.5, fontWeight: 'normal', color: '#451a03', lineHeight: 12 }}>
                 OFF
               </Text>
             </View>
@@ -241,7 +243,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
               top: 6,
               right: 6,
               width: 15,
-              height: 15,
+              minHeight: 16 * fontScale,
               borderWidth: 1.2,
               borderColor: '#16a34a',
               borderRadius: 3.5,
@@ -289,10 +291,10 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
         </View>
 
         {/* Product Details Section directly on screen background matching Image 3 & 4 */}
-        <View style={{ paddingTop: 6, paddingHorizontal: 1, width: '100%', minWidth: 0 }}>
+        <View style={{ paddingTop: 8, paddingHorizontal: 1, paddingBottom: 4, width: '100%', minWidth: 0 }}>
           {/* Unit / Weight Label */}
           <Text
-            style={{ fontFamily: fonts.regular, fontSize: 11, fontWeight: 'normal', color: '#64748b', height: 15 }}
+            style={{ fontFamily: fonts.regular, fontSize: 11, fontWeight: 'normal', color: '#64748b', minHeight: 16 * fontScale }}
             numberOfLines={1}
           >
             {unitLabel}
@@ -307,13 +309,13 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
               color: '#0f172a',
               marginTop: 1,
               lineHeight: 17,
-              height: 17,
+              minHeight: 36 * fontScale,
               width: cardWidth ? cardWidth - 2 : '100%',
               maxWidth: '100%',
               minWidth: 0,
               flexShrink: 1,
             }}
-            numberOfLines={1}
+            numberOfLines={2}
             ellipsizeMode="tail"
           >
             {item.name}
@@ -327,47 +329,56 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
               fontWeight: 'normal',
               color: '#64748b',
               marginTop: 1,
-              height: 14,
+              minHeight: 16 * fontScale,
             }}
             numberOfLines={1}
           >
             {shortNote}
           </Text>
 
-          {/* Bottom Row: Price & Action Control matching Image 3 & 4 */}
+          {/* Bottom Row: Price & Action Control matching HomeScreen & mockups */}
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginTop: 5,
-              height: 34,
+              gap: 4,
+              marginTop: 6,
+              minHeight: 34,
             }}
           >
             {/* Price Column */}
-            <View style={{ justifyContent: 'center', flexShrink: 1, marginRight: 4 }}>
-              <Text style={{ fontFamily: fonts.extraBold, fontSize: 15, fontWeight: '800', color: '#0f172a', lineHeight: 18 }}>
+            <View style={{ justifyContent: 'center', flexShrink: 1, marginRight: 2 }}>
+              <Text
+                style={{
+                  fontFamily: fonts.extraBold,
+                  fontSize: 14.5,
+                  fontWeight: 'normal',
+                  color: '#0f172a',
+                  lineHeight: 18,
+                }}
+                numberOfLines={1}
+              >
                 ₹{sellingPrice.toFixed(0)}
               </Text>
               {hasDiscount && strikeMrp != null ? (
                 <Text
                   style={{
                     fontFamily: fonts.regular,
-                    fontSize: 10.5,
+                    fontSize: 10,
                     fontWeight: 'normal',
                     color: '#94a3b8',
                     textDecorationLine: 'line-through',
                     lineHeight: 12,
                   }}
+                  numberOfLines={1}
                 >
                   ₹{strikeMrp.toFixed(0)}
                 </Text>
-              ) : (
-                <View style={{ height: 12 }} />
-              )}
+              ) : null}
             </View>
 
-            {/* Action Button: ADD or Stepper matching Image 3 & 4 */}
+            {/* Action Button: ADD or Stepper matching HomeScreen */}
             {outOfStock ? (
               <View
                 style={{
@@ -376,12 +387,13 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
                   borderRadius: 8,
                   borderWidth: 1,
                   borderColor: '#ef4444',
+                  backgroundColor: '#ffffff',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <Text style={{ fontFamily: fonts.bold, fontSize: 10.5, fontWeight: '700', color: '#ef4444' }}>Sold out</Text>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: '#ef4444' }}>Sold out</Text>
               </View>
             ) : qty === 0 ? (
               <Pressable
@@ -389,31 +401,33 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
                   e?.stopPropagation?.();
                   (onAdd || onIncrement)?.();
                 }}
+                hitSlop={6}
                 style={{
                   height: 32,
-                  width: 62,
+                  paddingHorizontal: 16,
                   borderRadius: 8,
-                  borderWidth: 1.5,
-                  borderColor: '#059669',
+                  borderWidth: 1.2,
+                  borderColor: '#0A7C47',
                   backgroundColor: '#ffffff',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <Text style={{ fontFamily: fonts.extraBold, fontSize: 12.5, fontWeight: '800', color: '#059669' }}>ADD</Text>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 12.5, fontWeight: 'normal', color: '#0A7C47' }}>ADD</Text>
               </Pressable>
             ) : (
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: '#059669',
+                  backgroundColor: '#0A7C47',
                   borderRadius: 8,
                   height: 32,
-                  width: 62,
                   paddingHorizontal: 4,
                   justifyContent: 'space-between',
+                  minWidth: 68,
+                  maxWidth: 74,
                   flexShrink: 0,
                 }}
               >
@@ -422,12 +436,12 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
                     e?.stopPropagation?.();
                     onDecrement?.();
                   }}
-                  style={{ width: 22, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: 22, height: 32, alignItems: 'center', justifyContent: 'center' }}
                   hitSlop={6}
                 >
                   <Minus size={13} color="#ffffff" strokeWidth={3} />
                 </Pressable>
-                <Text style={{ fontFamily: fonts.extraBold, fontSize: 13, fontWeight: '800', color: '#ffffff' }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 12.5, fontWeight: 'normal', color: '#ffffff', marginHorizontal: 3 }}>
                   {qty}
                 </Text>
                 <Pressable
@@ -435,7 +449,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
                     e?.stopPropagation?.();
                     onIncrement?.();
                   }}
-                  style={{ width: 22, height: '100%', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: 22, height: 32, alignItems: 'center', justifyContent: 'center' }}
                   hitSlop={6}
                 >
                   <Plus size={13} color="#ffffff" strokeWidth={3} />

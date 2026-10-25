@@ -1,11 +1,11 @@
 import React, { useEffect, useContext } from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { View, Pressable, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { navigationRef } from './navigationRef';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, LayoutGrid, Tag, ShoppingBag, Package } from 'lucide-react-native';
+import { Home, LayoutGrid, Tag, ShoppingBag, Package } from '../components/icons';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring,
 } from 'react-native-reanimated';
@@ -17,6 +17,9 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+// Account purchase history and reusable shopping lists.
+import BuyAgainScreen from '../screens/BuyAgainScreen';
+import ShoppingListsScreen from '../screens/ShoppingListsScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CategoryScreen from '../screens/CategoryScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
@@ -34,6 +37,7 @@ import FavoritesScreen from '../screens/FavoritesScreen';
 import AddAddressScreen from '../screens/AddAddressScreen';
 import AccountScreen from '../screens/AccountScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import DeliveryLocationScreen from '../screens/DeliveryLocationScreen';
 import MyAddressesScreen from '../screens/MyAddressesScreen';
 import LocationPromptScreen from '../screens/LocationPromptScreen';
 import ApplyCouponScreen from '../screens/ApplyCouponScreen';
@@ -43,6 +47,10 @@ import RefundStatusScreen from '../screens/RefundStatusScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
 import ReportIssueScreen from '../screens/ReportIssueScreen';
 import OfflineScreen from '../screens/OfflineScreen';
+import TermsScreen from '../screens/TermsScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import DeleteAccountScreen from '../screens/DeleteAccountScreen';
+import DeliveryInstructionsScreen from '../screens/DeliveryInstructionsScreen';
 
 import DeliveryOrdersScreen from '../screens/DeliveryOrdersScreen';
 import DeliveryMapScreen from '../screens/DeliveryMapScreen';
@@ -87,6 +95,7 @@ function TabBarIcon({ Icon, focused }) {
 
 function CustomTabBar({ state, descriptors, navigation, tabs }) {
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const { itemCount } = useCart();
   const currentRoute = state.routes[state.index];
   const currentOptions = descriptors[currentRoute?.key]?.options;
@@ -99,7 +108,7 @@ function CustomTabBar({ state, descriptors, navigation, tabs }) {
     <View
       style={[
         styles.tabBar,
-        { paddingBottom: insets.bottom > 0 ? insets.bottom : 8, height: 60 + (insets.bottom > 0 ? insets.bottom : 8) },
+        { paddingBottom: insets.bottom > 0 ? insets.bottom : 8, minHeight: 60 + 24 * Math.max(0, fontScale - 1) + (insets.bottom > 0 ? insets.bottom : 8) },
       ]}
     >
       {state.routes.map((route, index) => {
@@ -167,7 +176,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
     position: 'relative',
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 4,
   },
   activePill: {
     position: 'absolute',
@@ -180,6 +190,7 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 11.5,
     marginTop: 4,
+    textAlign: 'center',
     letterSpacing: 0.1,
   },
   badge: {
@@ -264,6 +275,9 @@ export default function Navigation() {
           ) : (
             <>
               <Stack.Screen name="Main" component={HomeTabs} />
+              <Stack.Screen name="BuyAgain" component={BuyAgainScreen} />
+              <Stack.Screen name="ShoppingLists" component={ShoppingListsScreen} />
+              <Stack.Screen name="DeliveryLocation" component={DeliveryLocationScreen} />
               <Stack.Screen
                 name="Category"
                 component={CategoryScreen}
@@ -310,6 +324,11 @@ export default function Navigation() {
                 options={{ headerShown: false }}
               />
               <Stack.Screen
+                name="DeleteAccount"
+                component={DeleteAccountScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
                 name="MyAddresses"
                 component={MyAddressesScreen}
                 options={{ headerShown: false }}
@@ -322,6 +341,11 @@ export default function Navigation() {
               <Stack.Screen
                 name="Checkout"
                 component={CheckoutScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="DeliveryInstructions"
+                component={DeliveryInstructionsScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
@@ -379,6 +403,16 @@ export default function Navigation() {
                 component={OfflineScreen}
                 options={{ headerShown: false }}
               />
+              <Stack.Screen
+                name="Terms"
+                component={TermsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="PrivacyPolicy"
+                component={PrivacyPolicyScreen}
+                options={{ headerShown: false }}
+              />
             </>
           )
         ) : (
@@ -411,6 +445,21 @@ export default function Navigation() {
             <Stack.Screen
               name="AddAddress"
               component={AddAddressScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Terms"
+              component={TermsScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="PrivacyPolicy"
+              component={PrivacyPolicyScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="HelpSupport"
+              component={HelpSupportScreen}
               options={{ headerShown: false }}
             />
           </>

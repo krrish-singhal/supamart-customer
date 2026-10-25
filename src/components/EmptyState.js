@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { Package, Wifi, Search, ShoppingCart, AlertCircle, Bell, Truck, Box } from 'lucide-react-native';
+import { Package, Wifi, Search, ShoppingCart, AlertCircle, Bell, Truck, Box } from './icons';
 
 const ICONS = {
   empty:  Package,

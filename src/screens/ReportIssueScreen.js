@@ -17,7 +17,7 @@ import {
   Camera,
   X,
   ShoppingBag,
-} from 'lucide-react-native';
+} from '../components/icons';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';

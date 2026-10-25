@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TextInput } from 'react-native';
-import { Search } from 'lucide-react-native';
+import { Search } from '../icons';
 
 export default function SearchBar({ placeholder = "Search for anything...", value, onChangeText, className = '' }) {
   return (

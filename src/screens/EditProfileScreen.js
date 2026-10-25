@@ -8,21 +8,18 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
-  Modal,
-  StyleSheet,
   TextInput,
+  StyleSheet,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   Camera,
   User,
   Mail,
   Phone,
-  Trash2,
-  AlertTriangle,
   Lock,
-} from 'lucide-react-native';
+} from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -30,50 +27,16 @@ import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
+import { fonts } from '../theme/typography';
 
 export default function EditProfileScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
-  const { userProfile: user, loadToken, deleteAccount } = useContext(AuthContext);
+  const { userProfile: user, loadToken } = useContext(AuthContext);
 
   const [name, setName] = useState(user?.name || '');
   const [mobile, setMobile] = useState(user?.mobile || user?.phone || '');
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [localPhotoUri, setLocalPhotoUri] = useState(null);
-
-  // Account deletion states
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
-
-  const handleDeleteAccount = async () => {
-    if (!deletePassword.trim()) {
-      setDeleteError('Please enter your account password to confirm.');
-      return;
-    }
-    setDeleting(true);
-    setDeleteError('');
-    try {
-      await deleteAccount(deletePassword.trim());
-      setShowDeleteModal(false);
-      Toast.show({
-        type: 'success',
-        text1: 'Account Deleted',
-        text2: 'Your account and personal data have been removed.',
-      });
-    } catch (err) {
-      const msg = err.response?.data?.error || err.message || 'Failed to delete account. Please try again.';
-      setDeleteError(msg);
-      Toast.show({
-        type: 'error',
-        text1: 'Deletion Failed',
-        text2: msg,
-      });
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   const isValid = name.trim().length >= 2;
 
@@ -136,156 +99,73 @@ export default function EditProfileScreen({ navigation }) {
   const initial = (name || user?.name || 'U').trim().charAt(0).toUpperCase();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {/* Header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingTop: 10,
-          paddingBottom: 14,
-          backgroundColor: '#ffffff',
-          borderBottomWidth: 1,
-          borderColor: '#f1f5f9',
-        }}
-      >
+      <View style={styles.header}>
         <Pressable
           onPress={() => navigation.goBack()}
-          hitSlop={10}
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: 8,
-          }}
+          hitSlop={12}
+          accessibilityLabel="Go back"
+          style={styles.backBtn}
         >
           <ChevronLeft size={24} color="#0f172a" strokeWidth={2.4} />
         </Pressable>
-        <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a', letterSpacing: -0.4 }}>
-          Edit Profile
-        </Text>
+        <Text style={styles.headerTitle}>Edit Profile</Text>
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
         >
           {/* Avatar Section */}
-          <Animated.View entering={FadeInDown.duration(350)} style={{ alignItems: 'center', marginVertical: 14 }}>
-            <View style={{ position: 'relative' }}>
-              <View
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 48,
-                  backgroundColor: '#047857',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 6,
-                  elevation: 3,
-                }}
-              >
-                {photoUri ? (
-                  <Image
-                    source={{ uri: optimizeCloudinaryUrl(photoUri, 200) }}
-                    style={{ width: '100%', height: '100%' }}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <Text style={{ fontSize: 36, fontWeight: '900', color: '#ffffff' }}>
-                    {initial}
-                  </Text>
-                )}
-              </View>
+          <Animated.View entering={FadeInDown.duration(320)} style={styles.avatarSection}>
+            <View style={styles.avatarWrapper}>
+              {photoUri ? (
+                <Image
+                  source={{ uri: optimizeCloudinaryUrl(photoUri, 200) }}
+                  style={styles.avatarImg}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarPlaceholderText}>{initial}</Text>
+                </View>
+              )}
 
-              {/* Camera Action Button */}
               <Pressable
                 onPress={pickAndUploadPhoto}
                 disabled={uploadingPhoto}
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
-                  backgroundColor: '#047857',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 2.5,
-                  borderColor: '#ffffff',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 4,
-                }}
+                style={styles.cameraBtn}
+                accessibilityLabel="Change profile picture"
               >
                 {uploadingPhoto ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Camera size={16} color="#ffffff" strokeWidth={2.4} />
+                  <Camera size={16} color="#ffffff" strokeWidth={2.2} />
                 )}
               </Pressable>
             </View>
 
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748b', marginTop: 10 }}>
-              {uploadingPhoto ? 'Uploading photo...' : 'Tap camera icon to change photo'}
-            </Text>
+            <Text style={styles.changePhotoText}>Tap camera to update photo</Text>
           </Animated.View>
 
           {/* Card: Personal Details */}
           <Animated.View
-            entering={FadeInDown.duration(350).delay(80)}
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 20,
-              padding: 18,
-              borderWidth: 1,
-              borderColor: '#f1f5f9',
-              marginBottom: 16,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.03,
-              shadowRadius: 4,
-              elevation: 1,
-            }}
+            entering={FadeInDown.duration(320).delay(60)}
+            style={styles.card}
           >
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', marginBottom: 14 }}>
-              Personal Details
-            </Text>
+            <Text style={styles.cardTitle}>Personal Details</Text>
 
             {/* Name */}
-            <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Full Name *
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#ffffff',
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                  borderRadius: 14,
-                  paddingHorizontal: 14,
-                  height: 48,
-                }}
-              >
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Full Name *</Text>
+              <View style={styles.inputBox}>
                 <User size={18} color="#047857" style={{ marginRight: 10 }} />
                 <TextInput
                   value={name}
@@ -293,28 +173,15 @@ export default function EditProfileScreen({ navigation }) {
                   placeholder="Your full name"
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="words"
-                  style={{ flex: 1, fontSize: 14.5, color: '#0f172a', fontWeight: '500' }}
+                  style={styles.textInput}
                 />
               </View>
             </View>
 
             {/* Mobile Number */}
-            <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Mobile Number
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#ffffff',
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                  borderRadius: 14,
-                  paddingHorizontal: 14,
-                  height: 48,
-                }}
-              >
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Mobile Number</Text>
+              <View style={styles.inputBox}>
                 <Phone size={18} color="#047857" style={{ marginRight: 10 }} />
                 <TextInput
                   value={mobile}
@@ -323,251 +190,221 @@ export default function EditProfileScreen({ navigation }) {
                   placeholderTextColor="#94a3b8"
                   keyboardType="phone-pad"
                   maxLength={10}
-                  style={{ flex: 1, fontSize: 14.5, color: '#0f172a', fontWeight: '500' }}
+                  style={styles.textInput}
                 />
               </View>
             </View>
 
             {/* Email (Read only) */}
-            <View>
-              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Email Address
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#f8fafc',
-                  borderWidth: 1,
-                  borderColor: '#f1f5f9',
-                  borderRadius: 14,
-                  paddingHorizontal: 14,
-                  height: 48,
-                }}
-              >
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <View style={[styles.inputBox, styles.inputBoxDisabled]}>
                 <Mail size={18} color="#94a3b8" style={{ marginRight: 10 }} />
-                <Text style={{ flex: 1, fontSize: 14, color: '#64748b', fontWeight: '600' }}>
+                <Text style={styles.disabledEmailText}>
                   {user?.email || 'No email associated'}
                 </Text>
                 <Lock size={15} color="#94a3b8" />
               </View>
-              <Text style={{ fontSize: 11, fontWeight: '500', color: '#94a3b8', marginTop: 4, marginLeft: 2 }}>
+              <Text style={styles.helperText}>
                 Used for sign-in and cannot be changed here
               </Text>
             </View>
           </Animated.View>
-
-          {/* Account Deletion Card */}
-          <Animated.View
-            entering={FadeInDown.duration(350).delay(120)}
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 20,
-              padding: 18,
-              borderWidth: 1,
-              borderColor: '#fee2e2',
-              marginBottom: 16,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  backgroundColor: '#fef2f2',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 10,
-                }}
-              >
-                <Trash2 size={16} color="#ef4444" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: '#dc2626' }}>
-                  Delete Account
-                </Text>
-                <Text style={{ fontSize: 12, fontWeight: '500', color: '#94a3b8' }}>
-                  Permanently remove profile and data
-                </Text>
-              </View>
-            </View>
-
-            <Text style={{ fontSize: 12.5, lineHeight: 18, color: '#64748b', marginVertical: 10 }}>
-              Deleting your account will remove your profile, addresses, cart items, and notifications.
-            </Text>
-
-            <Pressable
-              onPress={() => {
-                setDeletePassword('');
-                setDeleteError('');
-                setShowDeleteModal(true);
-              }}
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: '#fca5a5',
-                backgroundColor: '#fef2f2',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#dc2626' }}>
-                Delete Account
-              </Text>
-            </Pressable>
-          </Animated.View>
         </ScrollView>
 
-        {/* Sticky Bottom Save Changes Button */}
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: '#ffffff',
-            paddingHorizontal: 16,
-            paddingTop: 12,
-            paddingBottom: Math.max(insets.bottom, 16) + 6,
-            borderTopWidth: 1,
-            borderColor: '#f1f5f9',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 6,
-            elevation: 4,
-          }}
-        >
+        {/* Save button */}
+        <View style={styles.bottomBar}>
           <Pressable
             onPress={save}
             disabled={saving || !isValid}
-            style={{
-              height: 52,
-              borderRadius: 14,
-              backgroundColor: isValid && !saving ? '#047857' : '#94a3b8',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#047857',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: isValid && !saving ? 0.25 : 0,
-              shadowRadius: 6,
-              elevation: isValid && !saving ? 3 : 0,
-            }}
+            style={[
+              styles.saveBtn,
+              (!isValid || saving) && styles.saveBtnDisabled,
+            ]}
           >
             {saving ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#ffffff' }}>
-                Save Changes
-              </Text>
+              <Text style={styles.saveBtnText}>Save Changes</Text>
             )}
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-
-      {/* Account Deletion Confirmation Modal */}
-      <Modal
-        visible={showDeleteModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => !deleting && setShowDeleteModal(false)}
-      >
-        <View style={[StyleSheet.absoluteFill, { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 }]}>
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 24, width: '100%', maxWidth: 360, padding: 22, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 8 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#fef2f2', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12 }}>
-              <AlertTriangle size={24} color="#dc2626" />
-            </View>
-
-            <Text style={{ fontSize: 18, fontWeight: '900', color: '#0f172a', textAlign: 'center', marginBottom: 4 }}>
-              Delete Account?
-            </Text>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#dc2626', textAlign: 'center', marginBottom: 14 }}>
-              This action cannot be undone
-            </Text>
-
-            <View style={{ backgroundColor: '#f8fafc', borderRadius: 14, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#f1f5f9' }}>
-              <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 18 }}>
-                Your profile, saved addresses, and active carts will be permanently deleted.
-              </Text>
-            </View>
-
-            <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
-                Enter Password to Confirm
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#ffffff',
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                  borderRadius: 12,
-                  paddingHorizontal: 12,
-                  height: 46,
-                }}
-              >
-                <Lock size={16} color="#94a3b8" style={{ marginRight: 8 }} />
-                <TextInput
-                  value={deletePassword}
-                  onChangeText={(val) => {
-                    setDeletePassword(val);
-                    if (deleteError) setDeleteError('');
-                  }}
-                  placeholder="Account password"
-                  placeholderTextColor="#94a3b8"
-                  secureTextEntry
-                  style={{ flex: 1, fontSize: 14, color: '#0f172a' }}
-                />
-              </View>
-              {deleteError ? (
-                <Text style={{ fontSize: 11.5, color: '#dc2626', fontWeight: '600', marginTop: 4 }}>
-                  {deleteError}
-                </Text>
-              ) : null}
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Pressable
-                onPress={() => {
-                  if (!deleting) {
-                    setShowDeleteModal(false);
-                    setDeletePassword('');
-                    setDeleteError('');
-                  }
-                }}
-                disabled={deleting}
-                style={{ flex: 1, height: 46, borderRadius: 12, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569' }}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleDeleteAccount}
-                disabled={deleting || !deletePassword.trim()}
-                style={{
-                  flex: 1,
-                  height: 46,
-                  borderRadius: 12,
-                  backgroundColor: '#dc2626',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: deleting || !deletePassword.trim() ? 0.6 : 1,
-                }}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#ffffff' }}>Delete</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f4f6f4',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  backBtn: {
+    padding: 4,
+    marginRight: 6,
+  },
+  headerTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: '#0f172a',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 36,
+    maxWidth: 540,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    width: 96,
+    height: 96,
+  },
+  avatarImg: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+  avatarPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#047857',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPlaceholderText: {
+    fontFamily: fonts.bold,
+    fontSize: 38,
+    color: '#ffffff',
+  },
+  cameraBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#047857',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  changePhotoText: {
+    fontFamily: fonts.medium,
+    fontSize: 12.5,
+    color: '#64748b',
+    marginTop: 10,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#edf2ed',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 15.5,
+    color: '#0f172a',
+    marginBottom: 14,
+  },
+  inputGroup: {
+    marginBottom: 14,
+  },
+  inputLabel: {
+    fontFamily: fonts.bold,
+    fontSize: 12.5,
+    color: '#475569',
+    marginBottom: 6,
+  },
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 48,
+  },
+  inputBoxDisabled: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#f1f5f9',
+  },
+  textInput: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: '#0f172a',
+    padding: 0,
+  },
+  disabledEmailText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: '#64748b',
+  },
+  helperText: {
+    fontFamily: fonts.regular,
+    fontSize: 11.5,
+    color: '#94a3b8',
+    marginTop: 4,
+    marginLeft: 2,
+  },
+  bottomBar: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  saveBtn: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#047857',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#047857',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  saveBtnDisabled: {
+    backgroundColor: '#94a3b8',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  saveBtnText: {
+    fontFamily: fonts.bold,
+    fontSize: 15.5,
+    color: '#ffffff',
+  },
+});

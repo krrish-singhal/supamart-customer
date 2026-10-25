@@ -1,3 +1,5 @@
+import { formatDeliveryAddress } from '../utils/addressForm';
+import { useConfig } from '../context/ConfigContext';
 import React, { useEffect, useState, useCallback, useContext, useRef } from 'react';
 import {
   View,
@@ -21,10 +23,10 @@ import {
   ShoppingBag,
   ArrowRight,
   ShieldCheck,
-} from 'lucide-react-native';
+} from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
-import { collection, query, limit, getDocs, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, limit, getDocs, where, onSnapshot } from '../services/reads';
 import { db } from '../config/firebase';
 import { Skeleton } from '../components/ui';
 import { useCart } from '../context/CartContext';
@@ -73,7 +75,8 @@ export default function CartScreen({ navigation }) {
   const [loadingRecs, setLoadingRecs] = useState(true);
   const rawProductsRef = useRef([]);
   const [defaultAddress, setDefaultAddress] = useState(null);
-  const [taxPercent, setTaxPercent] = useState(undefined);
+  const { config: deliveryConfig, refreshConfig } = useConfig();
+  const taxPercent = deliveryConfig?.taxPercent;
   const [popularProducts, setPopularProducts] = useState([]);
   const [emptyCategories, setEmptyCategories] = useState([]);
   const [defaultPayment, setDefaultPayment] = useState({ app: 'UPI app' });
@@ -116,23 +119,21 @@ export default function CartScreen({ navigation }) {
     };
   }, []);
 
-  // Fetch config
-  useEffect(() => {
-    apiClient.get('/config').then(({ data }) => setTaxPercent(data.taxPercent)).catch(() => {});
-  }, []);
-
   // Fetch default address
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    refreshConfig();
     if (!user?.id) return;
+    let active = true;
     apiClient
       .get(`/users/${user.id}/addresses`, { __skipErrorToast: true })
       .then(({ data }) => {
         const addrs = data.items || [];
         const def = addrs.find((a) => a.isDefault) || addrs[0] || null;
-        setDefaultAddress(def);
+        if (active) setDefaultAddress(def);
       })
       .catch(() => {});
-  }, [user?.id]);
+    return () => { active = false; };
+  }, [user?.id, refreshConfig]));
 
   // Fetch quick add recommendations for "Did you forget?" section
   useEffect(() => {
@@ -183,7 +184,7 @@ export default function CartScreen({ navigation }) {
   );
 
   // Compute bill
-  const { deliveryFee, toPay } = computeBill(subtotal, discount, taxPercent);
+  const { deliveryFee, toPay } = computeBill(subtotal, discount, taxPercent, deliveryConfig, defaultAddress);
 
   // Calculate total MRP savings
   const totalMrp = items.reduce((sum, item) => {
@@ -536,11 +537,7 @@ export default function CartScreen({ navigation }) {
     );
   }
 
-  const addressSubtitle = defaultAddress
-    ? `Delivering to ${defaultAddress.label || 'Home'} · ${
-        defaultAddress.houseNo || defaultAddress.street || defaultAddress.landmark || 'Current location'
-      }`
-    : 'Delivering to Home · Set your address';
+  const addressSubtitle = defaultAddress ? `Delivering to ${formatDeliveryAddress(defaultAddress)}` : 'Select a delivery address';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }} edges={['top']}>
@@ -641,7 +638,7 @@ export default function CartScreen({ navigation }) {
                   </>
                 ) : (
                   <Text style={{ fontFamily: fonts.semiBold, fontWeight: 'normal', color: '#334155' }}>
-                    Superfast delivery in <Text style={{ fontFamily: fonts.extraBold, color: '#047857', fontWeight: 'normal' }}>18 mins</Text>
+                    Delivery to your <Text style={{ fontFamily: fonts.extraBold, color: '#047857', fontWeight: 'normal' }}>saved address</Text>
                   </Text>
                 )
               )}
@@ -689,7 +686,7 @@ export default function CartScreen({ navigation }) {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Clock size={16} color="#047857" strokeWidth={2.4} style={{ marginRight: 6 }} />
               <Text style={{ fontFamily: fonts.extraBold, fontSize: 14.5, fontWeight: 'normal', color: '#0f172a' }}>
-                Arriving in 18 mins
+                Delivery estimate appears after ordering
               </Text>
             </View>
             <Text style={{ fontFamily: fonts.semiBold, fontSize: 13, fontWeight: 'normal', color: '#64748b' }}>

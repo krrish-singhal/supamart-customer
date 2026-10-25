@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { X, Plus, Minus, ArrowRight, ChevronRight, ShoppingBag } from 'lucide-react-native';
+import { X, Plus, Minus, ArrowRight, ChevronRight, ShoppingBag } from './icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../context/CartContext';

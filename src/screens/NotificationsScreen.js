@@ -8,9 +8,10 @@ import {
   Truck,
   XCircle,
   Bell,
+  Clock,
   ChevronRight,
   ArrowRight,
-} from 'lucide-react-native';
+} from '../components/icons';
 import { useNotifications } from '../context/NotificationsContext';
 import EmptyState from '../components/EmptyState';
 
@@ -19,6 +20,23 @@ function getNotifConfig(item) {
   const status = item.data?.status;
   const title = (item.title || '').toLowerCase();
   const body = (item.body || '').toLowerCase();
+
+  // Delivery Delay notification
+  if (
+    type === 'DELIVERY_DELAY' ||
+    title.includes('delay') ||
+    body.includes('delay') ||
+    Boolean(item.data?.delayReason)
+  ) {
+    return {
+      Icon: Clock,
+      iconColor: '#b45309',
+      iconBg: '#fffbeb',
+      iconBorder: '#fde68a',
+      actionText: 'Track order',
+      actionColor: '#b45309',
+    };
+  }
 
   // Restock alerts carry productId (not orderId) and open that product directly.
   if (type === 'RESTOCK' || (item.data?.productId && title.includes('stock'))) {
@@ -215,6 +233,7 @@ export default function NotificationsScreen({ navigation }) {
     return notifications.filter(
       (n) =>
         n.data?.type === 'ORDER_STATUS' ||
+        n.data?.type === 'DELIVERY_DELAY' ||
         n.data?.orderId ||
         n.data?.status ||
         n.title?.toLowerCase().includes('order') ||
@@ -230,6 +249,7 @@ export default function NotificationsScreen({ navigation }) {
       return notifications.filter(
         (n) =>
           n.data?.type === 'ORDER_STATUS' ||
+          n.data?.type === 'DELIVERY_DELAY' ||
           n.data?.orderId ||
           n.data?.status ||
           n.title?.toLowerCase().includes('order') ||

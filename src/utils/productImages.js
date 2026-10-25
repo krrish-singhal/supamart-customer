@@ -26,18 +26,18 @@ const productImages = {
   "Toor Dal": require("../../assets/Cleaned_Products/Kadala Paruppu Chana Dal.webp"),
   "Full Cream Milk": require("../../assets/Brand_Logos/Milma.webp"),
   "Milk": require("../../assets/Brand_Logos/Milma.webp"),
-  "Tomato (Local)": require("../../assets/categories/home/fresh-vegetables.webp"),
-  "Tomato": require("../../assets/categories/home/fresh-vegetables.webp"),
-  "Sweet Corn": require("../../assets/Cleaned_Products/Sweet Corn.webp"),
-  "Green Chilli": require("../../assets/Cleaned_Products/Green Chilly.webp"),
+  "Tomato (Local)": require("../../assets/Fresh Vegetables/tomato-local__prod-tomato-local.webp"),
+  "Tomato": require("../../assets/Fresh Vegetables/tomato-local__prod-tomato-local.webp"),
+  "Sweet Corn": require("../../assets/Fresh Vegetables/sweet-corn__prod-sweet-corn.webp"),
+  "Green Chilli": require("../../assets/Fresh Vegetables/green-chilli__prod-green-chilli.webp"),
   "Bottle Gourd": require("../../assets/Cleaned_Products/Bottle Gourd.webp"),
-  "Onion": require("../../assets/Cleaned_Products/Onion.webp"),
-  "Potato": require("../../assets/Cleaned_Products/Potato.webp"),
+  "Onion": require("../../assets/Fresh Vegetables/onion__prod-onion.webp"),
+  "Potato": require("../../assets/Fresh Vegetables/potato__ywIos8c1XC5PEAUUZ8f0.webp"),
   "Local Greens (Bal Chambu)": require("../../assets/Cleaned_Products/Local Greens Bal Chambu.webp"),
   "Vada Paruppu (Urad Dal)": require("../../assets/Cleaned_Products/Vada Paruppu Urad Dal.webp"),
   "Dream Cream Orange / Cashewnut": require("../../assets/Cleaned_Products/Dream Cream Orange Cashewnut.webp"),
-  "Ginger": require("../../assets/Cleaned_Products/Ginger.webp"),
-  "Dates Syrup": require("../../assets/Cleaned_Products/Dates Syrup.webp"),
+  "Ginger": require("../../assets/Fresh Vegetables/ginger__embA4YBbzdWPk6HiKodE.webp"),
+  "Dates Syrup": require("../../assets/Dry Fruits & Nuts/dates-syrup__Ym4Ei0GmBtFhGsSSwYFs.webp"),
   "TT Asafoetida Cake": require("../../assets/Cleaned_Products/TT Asafoetida Cake.webp"),
   "Power Soap": require("../../assets/Cleaned_Products/Power Soap.webp"),
   "Milma Ghee": require("../../assets/Cleaned_Products/Milma Ghee.webp"),
@@ -58,22 +58,22 @@ const productImages = {
   "AVT Premium Tea": require("../../assets/Cleaned_Products/AVT Premium Tea.webp"),
   "Bakers Kasuri Methi": require("../../assets/Cleaned_Products/Bakers Kasuri Methi.webp"),
   "Banana Flower (Ullie Poo)": require("../../assets/Cleaned_Products/Banana Flower Ullie Poo.webp"),
-  "Beans": require("../../assets/Cleaned_Products/Beans.webp"),
-  "Beet Root": require("../../assets/Cleaned_Products/Beet Root.webp"),
+  "Beans": require("../../assets/Fresh Vegetables/beans__uqYEvkNgva7SIgQ5orFn.webp"),
+  "Beet Root": require("../../assets/Fresh Vegetables/beet-root__cPPZggLI450T7cE3Diia.webp"),
   "Bharath Doppi Rice": require("../../assets/Cleaned_Products/Bharath Doppi Rice.webp"),
-  "Black Pepper Powder": require("../../assets/Cleaned_Products/Black Pepper Powder.webp"),
+  "Black Pepper Powder": require("../../assets/Spices & Masala/black-pepper-powder__vz0IU7RfU2jzaP3Y2WOm.webp"),
   "Boost 200 gm Pouch": require("../../assets/Cleaned_Products/Boost 200 gm Pouch.webp"),
   "Boost 500 gm Jar": require("../../assets/Cleaned_Products/Boost 500 gm Jar.webp"),
   "Bounty (S.Bounty)": require("../../assets/Cleaned_Products/Bounty S.Bounty.webp"),
-  "Brinjal": require("../../assets/Cleaned_Products/Brinjal.webp"),
+  "Brinjal": require("../../assets/Fresh Vegetables/brinjal__Cjp3EMDiYrwMlhV1o640.webp"),
   "Bru Coffee Instant": require("../../assets/Cleaned_Products/Bru Coffee Instant.webp"),
   "Bru Coffee Pure": require("../../assets/Cleaned_Products/Bru Coffee Pure.webp"),
   "Capsicum (Green)": require("../../assets/Cleaned_Products/Capsicum Green.webp"),
   "Carrot": require("../../assets/Cleaned_Products/Carrot.webp"),
-  "Cashew Split": require("../../assets/Cleaned_Products/Cashew Split.webp"),
-  "Cheru Paruppu (Moong Dal)": require("../../assets/Cleaned_Products/Cheru Paruppu Moong Dal.webp"),
-  "Chicken Masala Powder": require("../../assets/Cleaned_Products/Chicken Masala Powder.webp"),
-  "Chilli Powder": require("../../assets/Cleaned_Products/Chilli Powder.webp"),
+  "Cashew Split": require("../../assets/Dry Fruits & Nuts/cashew-split__DOCUVuLTTkIO0DCgtTH9.webp"),
+  "Cheru Paruppu (Moong Dal)": require("../../assets/Rice Atta & Grains/cheru-paruppu-moong-dal__XOFSm9gAddt4WEyLcv1N.webp"),
+  "Chicken Masala Powder": require("../../assets/Spices & Masala/chicken-masala-powder__TCQzph6z2cm8ypODaKU1.webp"),
+  "Chilli Powder": require("../../assets/Spices & Masala/chilli-powder__ZH7rtHh55An2JyyQ98qE.webp"),
   "Chocolate Horlicks Refill 1Kg": require("../../assets/Cleaned_Products/Chocolate Horlicks Refill 1Kg.webp"),
   "Chocolate Horlicks Sachet 75g": require("../../assets/Cleaned_Products/Chocolate Horlicks Sachet 75g.webp"),
   "Clear Hair Oil 75ml": require("../../assets/Cleaned_Products/Clear Hair Oil 75ml.webp"),
@@ -87,11 +87,11 @@ const productImages = {
   "Close Up Toothpaste Ever Fresh Red Hot Gel 40g": require("../../assets/Cleaned_Products/Close Up Toothpaste Ever Fresh Red Hot Gel 40g.webp"),
   "Comfort Fabric Conditioner Blue 220ml": require("../../assets/Cleaned_Products/Comfort Fabric Conditioner Blue 220ml.webp"),
   "Comfort Fabric Conditioner Pink 220ml": require("../../assets/Cleaned_Products/Comfort Fabric Conditioner Pink 220ml.webp"),
-  "Coriander Leaves (Malli)": require("../../assets/Cleaned_Products/Coriander Leaves Malli.webp"),
-  "Coriander Powder": require("../../assets/Cleaned_Products/Coriander Powder.webp"),
-  "Cucumber": require("../../assets/Cleaned_Products/Cucumber.webp"),
+  "Coriander Leaves (Malli)": require("../../assets/Fresh Vegetables/coriander-leaves-malli__aAB6ouRQd8ijH7kzPkoF.webp"),
+  "Coriander Powder": require("../../assets/Spices & Masala/coriander-powder__2foB8BGN2Uyb9tlm7Euf.webp"),
+  "Cucumber": require("../../assets/Fresh Vegetables/cucumber__vk2AoARLUO7mwJ5DRLys.webp"),
   "Cumin (Jeera) Powder": require("../../assets/Cleaned_Products/Cumin Jeera Powder.webp"),
-  "Curry Leaves (K. Leaves)": require("../../assets/Cleaned_Products/Curry Leaves K. Leaves.webp"),
+  "Curry Leaves (K. Leaves)": require("../../assets/Fresh Vegetables/curry-leaves-k-leaves__mp7RsN7Fr9ixuDjwTDp7.webp"),
   "Cycle 3-in-1 Agarbathi": require("../../assets/Cleaned_Products/Cycle 3-in-1 Agarbathi.webp"),
   "Dabur Almond Hair Oil": require("../../assets/Cleaned_Products/Dabur Almond Hair Oil.webp"),
   "Dabur Amla Hair Oil": require("../../assets/Cleaned_Products/Dabur Amla Hair Oil.webp"),
@@ -135,7 +135,7 @@ const productImages = {
   "Dove Pink Serum Beauty Bar": require("../../assets/Cleaned_Products/Dove Pink Serum Beauty Bar.webp"),
   "Drumstick (Salladu)": require("../../assets/Cleaned_Products/Drumstick Salladu.webp"),
   "E-fee Washing Liquid": require("../../assets/Cleaned_Products/E-fee Washing Liquid.webp"),
-  "Egg Masala Powder": require("../../assets/Cleaned_Products/Egg Masala Powder.webp"),
+  "Egg Masala Powder": require("../../assets/Spices & Masala/egg-masala-powder__LJDZij61suRxIHo3r1MN.webp"),
   "Elite Atta": require("../../assets/Cleaned_Products/Elite Atta.webp"),
   "Elite Maida": require("../../assets/Cleaned_Products/Elite Maida.webp"),
   "Elite Rava": require("../../assets/Cleaned_Products/Elite Rava.webp"),
@@ -151,8 +151,8 @@ const productImages = {
   "Good Day Cashew": require("../../assets/Cleaned_Products/Good Day Cashew.webp"),
   "Good Day Chocochip": require("../../assets/Cleaned_Products/Good Day Chocochip.webp"),
   "Good Day Pista Badam": require("../../assets/Cleaned_Products/Good Day Pista Badam.webp"),
-  "Gooseberry (Nelli Kai)": require("../../assets/Cleaned_Products/Gooseberry Nelli Kai.webp"),
-  "Green Chilly": require("../../assets/Cleaned_Products/Green Chilly.webp"),
+  "Gooseberry (Nelli Kai)": require("../../assets/Fresh Vegetables/gooseberry-nelli-kai__86HqFg4mAEPpPERJZrYb.webp"),
+  "Green Chilly": require("../../assets/Fresh Vegetables/green-chilly__e2BR5zJ1G2TFJ8uovSJI.webp"),
   "Green Peas 1st": require("../../assets/Cleaned_Products/Green Peas 1st.webp"),
   "Hamam Soap": require("../../assets/Cleaned_Products/Hamam Soap.webp"),
   "Hellmann's Mayo Smoky Tandoori 85g": require("../../assets/Cleaned_Products/Hellmann's Mayo Smoky Tandoori 85g.webp"),
@@ -162,7 +162,7 @@ const productImages = {
   "Idiyappam Podi (steamed)": require("../../assets/Cleaned_Products/Idiyappam Podi steamed.webp"),
   "Indulekha Hair Shampoo Bringha Hair Fall Cleanser": require("../../assets/Cleaned_Products/Indulekha Hair Shampoo Bringha Hair Fall Cleanser.webp"),
   "Kadala Mavu (Chickpea Flour)": require("../../assets/Cleaned_Products/Kadala Mavu Chickpea Flour.webp"),
-  "Kadala Paruppu (Chana Dal)": require("../../assets/Cleaned_Products/Kadala Paruppu Chana Dal.webp"),
+  "Kadala Paruppu (Chana Dal)": require("../../assets/Rice Atta & Grains/kadala-paruppu-chana-dal__bsJzTmYafFijM3dEAGpP.webp"),
   "Kashmiri Chilli Powder": require("../../assets/Cleaned_Products/Kashmiri Chilli Powder.webp"),
   "Kellogg's Chocos": require("../../assets/Cleaned_Products/Kellogg's Chocos.webp"),
   "Kellogg's Corn Flakes": require("../../assets/Cleaned_Products/Kellogg's Corn Flakes.webp"),
@@ -183,8 +183,8 @@ const productImages = {
   "Knorr Cup A Soup Instant Tomato Chatpata 16g": require("../../assets/Cleaned_Products/Knorr Cup A Soup Instant Tomato Chatpata 16g.webp"),
   "KP Herbal Paste": require("../../assets/Cleaned_Products/KP Herbal Paste.webp"),
   "KPR Jaya Rice": require("../../assets/Cleaned_Products/KPR Jaya Rice.webp"),
-  "Ladies Finger": require("../../assets/Cleaned_Products/Ladies Finger.webp"),
-  "Lemon": require("../../assets/Cleaned_Products/Lemon.webp"),
+  "Ladies Finger": require("../../assets/Fresh Vegetables/ladies-finger__Xs96pFXTQuEtroJX1bTO.webp"),
+  "Lemon": require("../../assets/Fresh Vegetables/lemon__Ylce3S5MpG2p29IT3Rfr.webp"),
   "Lifebuoy Bathing Soap Care 100% Stronger Germ Protection": require("../../assets/Cleaned_Products/Lifebuoy Bathing Soap Care 100% Stronger Germ Protection.webp"),
   "Lifebuoy Bathing Soap Lemon Fresh": require("../../assets/Cleaned_Products/Lifebuoy Bathing Soap Lemon Fresh.webp"),
   "Lifebuoy Bathing Soap Total 10 4x65g": require("../../assets/Cleaned_Products/Lifebuoy Bathing Soap Total 10 4x65g.webp"),
@@ -198,7 +198,7 @@ const productImages = {
   "Lipton Green Tea Clear & Light 10s TB": require("../../assets/Cleaned_Products/Lipton Green Tea Clear and Light 10s TB.webp"),
   "Lipton Green Tea Honey Lemon 100g": require("../../assets/Cleaned_Products/Lipton Green Tea Honey Lemon 100g.webp"),
   "Liril Bathing Soap Lime 75g": require("../../assets/Cleaned_Products/Liril Bathing Soap Lime 75g.webp"),
-  "Long Beans (Payeru)": require("../../assets/Cleaned_Products/Long Beans Payeru.webp"),
+  "Long Beans (Payeru)": require("../../assets/Fresh Vegetables/long-beans-payeru__xIJlLuBAMpcDOhpDnSHh.webp"),
   "Lux Advanced Bright Glow": require("../../assets/Cleaned_Products/Lux Advanced Bright Glow.webp"),
   "Lux Bathing Soap Fresh Flash Water Lily & Cooling": require("../../assets/Cleaned_Products/Lux Bathing Soap Fresh Flash Water Lily and Cooling.webp"),
   "Lux Bathing Soap International Creamy Perfume": require("../../assets/Cleaned_Products/Lux Bathing Soap International Creamy Perfume.webp"),
@@ -253,7 +253,7 @@ const productImages = {
   "QK Multigrain Oats": require("../../assets/Cleaned_Products/QK Multigrain Oats.webp"),
   "Quaker Oats": require("../../assets/Cleaned_Products/Quaker Oats.webp"),
   "R.G. Palm Oil": require("../../assets/Cleaned_Products/R.G. Palm Oil.webp"),
-  "Raw Mango (Amrai)": require("../../assets/Cleaned_Products/Raw Mango Amrai.webp"),
+  "Raw Mango (Amrai)": require("../../assets/Fresh Vegetables/raw-mango-amrai__BeJ4UFsyYUXWKpoRNfBy.webp"),
   "Red Chilly Sauce": require("../../assets/Cleaned_Products/Red Chilly Sauce.webp"),
   "Red Label Tea Leaf Carton 250g": require("../../assets/Cleaned_Products/Red Label Tea Leaf Carton 250g.webp"),
   "Red Label Tea Leaf Poly 100g": require("../../assets/Cleaned_Products/Red Label Tea Leaf Poly 100g.webp"),
@@ -269,7 +269,7 @@ const productImages = {
   "Sambar Powder": require("../../assets/Cleaned_Products/Sambar Powder.webp"),
   "Santoor Soap (White/Set)": require("../../assets/Cleaned_Products/Santoor Soap White Set.webp"),
   "Sara Soap Podi (washing powder)": require("../../assets/Cleaned_Products/Sara Soap Podi washing powder.webp"),
-  "Sarkara (Jaggery)": require("../../assets/Cleaned_Products/Sarkara Jaggery.webp"),
+  "Sarkara (Jaggery)": require("../../assets/Rice Atta & Grains/sarkara-jaggery__EOnHVrjQVeACECWMU3ot.webp"),
   "Refined Sugar": require("../../assets/Cleaned_Products/Refined Sugar.webp"),
   "Iodized Crystal Salt": require("../../assets/Cleaned_Products/Iodized Crystal Salt.webp"),
   "Sensodyne Fresh Gel Paste": require("../../assets/Cleaned_Products/Sensodyne Fresh Gel Paste.webp"),
@@ -327,12 +327,93 @@ const productImages = {
   "Yardley Red Rose Talc": require("../../assets/Cleaned_Products/Yardley Red Rose Talc.webp"),
   "Yippee Magic Masala Noodles": require("../../assets/Cleaned_Products/Yippee Magic Masala Noodles.webp"),
   "DH Chicken Masala Idiyappam Mix": require("../../assets/Cleaned_Products/DH Idiyappam Appam Podi.webp"),
-  "White Kadala / Black Benny": require("../../assets/Cleaned_Products/Kadala Paruppu Chana Dal.webp"),
+  "White Kadala / Black Benny": require("../../assets/Rice Atta & Grains/white-kadala-black-benny__DAVRPArMCFzszKirLBHZ.webp"),
   "Bourbon Neapolitan Cream (BNC) - Pineapple/Orange/Elaichi": require("../../assets/Cleaned_Products/Dark Fantasy Bourbon.webp"),
-  "Dry Grapes Seedless (HD)": require("../../assets/Cleaned_Products/Kismiss Medium Raisins Seedless.webp"),
-  "Yam (Senai Kilangu)": require("../../assets/Cleaned_Products/Potato.webp"),
-  "Ivy Gourd (Kovai Kai)": require("../../assets/Cleaned_Products/Beans.webp"),
+  "Dry Grapes Seedless (HD)": require("../../assets/Dry Fruits & Nuts/dry-grapes-seedless-hd__BLoT5GShMb2t70ZWRdKq.webp"),
+  "Dry Grapes Seedless": require("../../assets/Dry Fruits & Nuts/dry-grapes-seedless-hd__BLoT5GShMb2t70ZWRdKq.webp"),
+  "Yam (Senai Kilangu)": require("../../assets/Fresh Vegetables/yam-senai-kilangu__IJrk76dw3552oAgKdVj6.webp"),
+  "Yam": require("../../assets/Fresh Vegetables/yam-senai-kilangu__IJrk76dw3552oAgKdVj6.webp"),
+  "Ivy Gourd (Kovai Kai)": require("../../assets/Fresh Vegetables/ivy-gourd-kovai-kai__MsWrcPOhCz4PBNv8F2ug.webp"),
+  "Ivy Gourd": require("../../assets/Fresh Vegetables/ivy-gourd-kovai-kai__MsWrcPOhCz4PBNv8F2ug.webp"),
   "Pulari Rice Bran (rice)": require("../../assets/Cleaned_Products/Bharath Doppi Rice.webp"),
+
+  // Products from user-copied folders (Dry Fruits, Veggies, Grains, Spices)
+
+
+
+
+
+  "Coriander Leaves": require("../../assets/Fresh Vegetables/coriander-leaves-malli__aAB6ouRQd8ijH7kzPkoF.webp"),
+
+
+  "Curry Leaves": require("../../assets/Fresh Vegetables/curry-leaves-k-leaves__mp7RsN7Fr9ixuDjwTDp7.webp"),
+
+  "Gooseberry": require("../../assets/Fresh Vegetables/gooseberry-nelli-kai__86HqFg4mAEPpPERJZrYb.webp"),
+
+
+
+
+  "Long Beans": require("../../assets/Fresh Vegetables/long-beans-payeru__xIJlLuBAMpcDOhpDnSHh.webp"),
+
+  "Raw Mango": require("../../assets/Fresh Vegetables/raw-mango-amrai__BeJ4UFsyYUXWKpoRNfBy.webp"),
+
+  "Cheru Paruppu": require("../../assets/Rice Atta & Grains/cheru-paruppu-moong-dal__XOFSm9gAddt4WEyLcv1N.webp"),
+  "Moong Dal": require("../../assets/Rice Atta & Grains/cheru-paruppu-moong-dal__XOFSm9gAddt4WEyLcv1N.webp"),
+
+  "Kadala Paruppu": require("../../assets/Rice Atta & Grains/kadala-paruppu-chana-dal__bsJzTmYafFijM3dEAGpP.webp"),
+  "Chana Dal": require("../../assets/Rice Atta & Grains/kadala-paruppu-chana-dal__bsJzTmYafFijM3dEAGpP.webp"),
+
+  "Sarkara": require("../../assets/Rice Atta & Grains/sarkara-jaggery__EOnHVrjQVeACECWMU3ot.webp"),
+  "Jaggery": require("../../assets/Rice Atta & Grains/sarkara-jaggery__EOnHVrjQVeACECWMU3ot.webp"),
+
+
+
+
+
+};
+
+// Direct Firestore Product ID mapping for newly user-provided local assets
+export const productImagesById = {
+  // Dry Fruits & Nuts
+  "DOCUVuLTTkIO0DCgtTH9": require("../../assets/Dry Fruits & Nuts/cashew-split__DOCUVuLTTkIO0DCgtTH9.webp"),
+  "Ym4Ei0GmBtFhGsSSwYFs": require("../../assets/Dry Fruits & Nuts/dates-syrup__Ym4Ei0GmBtFhGsSSwYFs.webp"),
+  "BLoT5GShMb2t70ZWRdKq": require("../../assets/Dry Fruits & Nuts/dry-grapes-seedless-hd__BLoT5GShMb2t70ZWRdKq.webp"),
+
+  // Fresh Vegetables
+  "uqYEvkNgva7SIgQ5orFn": require("../../assets/Fresh Vegetables/beans__uqYEvkNgva7SIgQ5orFn.webp"),
+  "cPPZggLI450T7cE3Diia": require("../../assets/Fresh Vegetables/beet-root__cPPZggLI450T7cE3Diia.webp"),
+  "Cjp3EMDiYrwMlhV1o640": require("../../assets/Fresh Vegetables/brinjal__Cjp3EMDiYrwMlhV1o640.webp"),
+  "aAB6ouRQd8ijH7kzPkoF": require("../../assets/Fresh Vegetables/coriander-leaves-malli__aAB6ouRQd8ijH7kzPkoF.webp"),
+  "vk2AoARLUO7mwJ5DRLys": require("../../assets/Fresh Vegetables/cucumber__vk2AoARLUO7mwJ5DRLys.webp"),
+  "mp7RsN7Fr9ixuDjwTDp7": require("../../assets/Fresh Vegetables/curry-leaves-k-leaves__mp7RsN7Fr9ixuDjwTDp7.webp"),
+  "embA4YBbzdWPk6HiKodE": require("../../assets/Fresh Vegetables/ginger__embA4YBbzdWPk6HiKodE.webp"),
+  "86HqFg4mAEPpPERJZrYb": require("../../assets/Fresh Vegetables/gooseberry-nelli-kai__86HqFg4mAEPpPERJZrYb.webp"),
+  "prod-green-chilli": require("../../assets/Fresh Vegetables/green-chilli__prod-green-chilli.webp"),
+  "e2BR5zJ1G2TFJ8uovSJI": require("../../assets/Fresh Vegetables/green-chilly__e2BR5zJ1G2TFJ8uovSJI.webp"),
+  "MsWrcPOhCz4PBNv8F2ug": require("../../assets/Fresh Vegetables/ivy-gourd-kovai-kai__MsWrcPOhCz4PBNv8F2ug.webp"),
+  "Xs96pFXTQuEtroJX1bTO": require("../../assets/Fresh Vegetables/ladies-finger__Xs96pFXTQuEtroJX1bTO.webp"),
+  "Ylce3S5MpG2p29IT3Rfr": require("../../assets/Fresh Vegetables/lemon__Ylce3S5MpG2p29IT3Rfr.webp"),
+  "xIJlLuBAMpcDOhpDnSHh": require("../../assets/Fresh Vegetables/long-beans-payeru__xIJlLuBAMpcDOhpDnSHh.webp"),
+  "Q9X0g6BEyT1AA6DwHv2e": require("../../assets/Fresh Vegetables/mango__Q9X0g6BEyT1AA6DwHv2e.webp"),
+  "prod-onion": require("../../assets/Fresh Vegetables/onion__prod-onion.webp"),
+  "ywIos8c1XC5PEAUUZ8f0": require("../../assets/Fresh Vegetables/potato__ywIos8c1XC5PEAUUZ8f0.webp"),
+  "BeJ4UFsyYUXWKpoRNfBy": require("../../assets/Fresh Vegetables/raw-mango-amrai__BeJ4UFsyYUXWKpoRNfBy.webp"),
+  "prod-sweet-corn": require("../../assets/Fresh Vegetables/sweet-corn__prod-sweet-corn.webp"),
+  "prod-tomato-local": require("../../assets/Fresh Vegetables/tomato-local__prod-tomato-local.webp"),
+  "IJrk76dw3552oAgKdVj6": require("../../assets/Fresh Vegetables/yam-senai-kilangu__IJrk76dw3552oAgKdVj6.webp"),
+
+  // Rice Atta & Grains
+  "XOFSm9gAddt4WEyLcv1N": require("../../assets/Rice Atta & Grains/cheru-paruppu-moong-dal__XOFSm9gAddt4WEyLcv1N.webp"),
+  "bsJzTmYafFijM3dEAGpP": require("../../assets/Rice Atta & Grains/kadala-paruppu-chana-dal__bsJzTmYafFijM3dEAGpP.webp"),
+  "EOnHVrjQVeACECWMU3ot": require("../../assets/Rice Atta & Grains/sarkara-jaggery__EOnHVrjQVeACECWMU3ot.webp"),
+  "DAVRPArMCFzszKirLBHZ": require("../../assets/Rice Atta & Grains/white-kadala-black-benny__DAVRPArMCFzszKirLBHZ.webp"),
+
+  // Spices & Masala
+  "vz0IU7RfU2jzaP3Y2WOm": require("../../assets/Spices & Masala/black-pepper-powder__vz0IU7RfU2jzaP3Y2WOm.webp"),
+  "TCQzph6z2cm8ypODaKU1": require("../../assets/Spices & Masala/chicken-masala-powder__TCQzph6z2cm8ypODaKU1.webp"),
+  "ZH7rtHh55An2JyyQ98qE": require("../../assets/Spices & Masala/chilli-powder__ZH7rtHh55An2JyyQ98qE.webp"),
+  "2foB8BGN2Uyb9tlm7Euf": require("../../assets/Spices & Masala/coriander-powder__2foB8BGN2Uyb9tlm7Euf.webp"),
+  "LJDZij61suRxIHo3r1MN": require("../../assets/Spices & Masala/egg-masala-powder__LJDZij61suRxIHo3r1MN.webp"),
 };
 
 // Every seeded product's `images` array is empty ([]) unless an admin has uploaded a
@@ -341,23 +422,35 @@ const productImages = {
 const GENERIC_STOCK_PHOTO = /res\.cloudinary\.com\/demo\//;
 
 // Resolves the best available image source for a product:
-//  1. A real admin-uploaded photo (item.images[0], if not the generic seed stock photo)
-//     — lets an admin replace a product's picture (e.g. new packaging) without an app
-//     rebuild, since this is just a live Firestore field, unlike the bundled ones below.
-//     Rewritten through optimizeCloudinaryUrl() so the app decodes a ~width-sized image
-//     instead of Cloudinary's raw full-resolution upload — this is the fix for slow image
-//     loading, since most catalog products go through this admin-uploaded path.
-//  2. A locally-bundled require() asset for this exact product name (this file).
-//  3. The (possibly still-generic) remote URL, so something shows rather than nothing.
+//  1. Locally-bundled require() asset matched by product ID or exact product name.
+//  2. Real admin-uploaded photo (item.images[0]) via optimizeCloudinaryUrl().
+//  3. Fallback case-insensitive product name matching.
 //  4. null — caller renders its own empty-state icon.
-//
-// `width` defaults to cover the biggest product-card box in the app (grid/list cards are
-// ~96-150px, but phones commonly run 2-3x pixel density) — pass a larger value for a
-// full-width hero image (e.g. ProductDetailScreen).
 export function getProductImageSource(item, width = 320) {
   if (!item) return null;
 
-  // Extract candidate URI from various schema shapes (array, string, single field)
+  // 1. Direct ID lookup in bundled assets (including newly provided assets)
+  const id = item?.id || item?.productId;
+  if (id && productImagesById[id]) {
+    return productImagesById[id];
+  }
+
+  // 2. Direct Name lookup in bundled assets
+  const name = (item?.name || '').trim();
+  if (name && productImages[name]) {
+    return productImages[name];
+  }
+
+  // 3. Fallback case-insensitive search in bundled assets
+  if (name) {
+    const lowerName = name.toLowerCase();
+    const foundKey = Object.keys(productImages).find(
+      (k) => k.toLowerCase() === lowerName || lowerName.includes(k.toLowerCase())
+    );
+    if (foundKey) return productImages[foundKey];
+  }
+
+  // 4. Remote URI from Cloudinary (admin uploads or synced catalog images)
   const rawUri =
     (Array.isArray(item?.images) ? item.images[0] : null) ||
     (typeof item?.images === 'string' ? item.images : null) ||
@@ -373,22 +466,7 @@ export function getProductImageSource(item, width = 320) {
     }
   }
 
-  // Locally bundled require() lookup by exact name or normalized name
-  const name = (item?.name || '').trim();
-  if (name && productImages[name]) {
-    return productImages[name];
-  }
-
-  // Fallback case-insensitive search in bundled assets
-  if (name) {
-    const lowerName = name.toLowerCase();
-    const foundKey = Object.keys(productImages).find(
-      (k) => k.toLowerCase() === lowerName || lowerName.includes(k.toLowerCase())
-    );
-    if (foundKey) return productImages[foundKey];
-  }
-
-  // Return Cloudinary / generic uri if available as fallback
+  // 5. Fallback generic uri if available
   if (rawUri && typeof rawUri === 'string' && rawUri.trim().length > 0) {
     return { uri: optimizeCloudinaryUrl(rawUri.trim(), width) };
   }

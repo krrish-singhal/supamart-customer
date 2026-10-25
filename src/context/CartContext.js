@@ -170,6 +170,28 @@ export function CartProvider({ children }) {
     await putCart(newItems);
   };
 
+  const addItems = async (entries) => {
+    const next = items.map(item => ({ ...item }));
+    let added = 0;
+    for (const { product, variant, qty = 1 } of entries) {
+      if (!product?.id || !variant?.id || isProductUnavailable(product, variant)) continue;
+      const existing = next.find(item => item.productId === product.id && item.variantId === variant.id);
+      const available = variant.stock == null ? qty : Math.max(0, Number(variant.stock) - (existing?.qty || 0));
+      const count = Math.min(qty, available);
+      if (count <= 0) continue;
+      if (existing) existing.qty += count;
+      else next.push({ productId: product.id, variantId: variant.id, name: product.name, variantLabel: variant.label, price: variant.offerPrice ?? variant.price, images: product.images || [], qty: count, availability: product.availability, isAvailableToday: product.isAvailableToday, variantAvailability: variant.availability, stock: variant.stock });
+      added += count;
+    }
+    if (added > 0) {
+      setItems(next);
+      computeTotals(next);
+      await putCart(next);
+    }
+    Toast.show({ type: added ? 'success' : 'info', text1: added ? `${added} item(s) added to cart` : 'These items are currently unavailable', text2: 'Current prices and stock apply.' });
+    return added;
+  };
+
   const removeItem = async (productId, variantId) => {
     const newItems = items.filter(
       (i) => !(i.productId === productId && i.variantId === variantId)
@@ -307,6 +329,7 @@ export function CartProvider({ children }) {
         loading,
         itemCount,
         addItem,
+        addItems,
         removeItem,
         updateQty,
         clearCart,

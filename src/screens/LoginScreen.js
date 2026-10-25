@@ -14,10 +14,11 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff } from '../components/icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import BrandBadge from '../components/BrandBadge';
 import { AuthContext } from '../context/AuthContext';
+import { fonts } from '../theme/typography';
 
 const GROCERY_GRID = [
   { id: 'tomatoes', source: require('../../assets/categories/home/fresh-vegetables.webp') },
@@ -30,7 +31,11 @@ const GROCERY_GRID = [
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
+  const usableHeight = height - insets.top - insets.bottom;
+  const compact = usableHeight < 760;
+  const tiny = usableHeight < 620;
+  const spacing = tiny ? 4 : 8;
   const contentWidth = Math.min(width, 480);
   const { signIn } = useContext(AuthContext);
   const scrollViewRef = useRef(null);
@@ -74,12 +79,12 @@ export default function LoginScreen({ navigation }) {
   };
 
   // 3-column card sizing for the grocery grid
-  const gridWidth = Math.min(contentWidth - 44, 296);
+  const gridWidth = Math.min(contentWidth - 44, Math.max(96, Math.min(270, (usableHeight - 510 * Math.max(1, fontScale)) * 1.1)));
   const gridItemSize = Math.floor((gridWidth - 20) / 3);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#e2ece4' }} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#e2ece4" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F2' }} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F3F5F2" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -98,11 +103,11 @@ export default function LoginScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           {/* TOP BRAND & GROCERY HERO SECTION */}
-          <View style={{ backgroundColor: '#e2ece4', paddingHorizontal: 22, paddingTop: 10, paddingBottom: 22 }}>
+          <View style={{ backgroundColor: '#F3F5F2', paddingHorizontal: 22, paddingTop: 6, paddingBottom: spacing }}>
             {/* Header: Official App Logo + MS Traders Wordmark */}
             <Animated.View
               entering={FadeInDown.duration(400)}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 28 }}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing }}
             >
               <BrandBadge size={34} showName />
             </Animated.View>
@@ -111,6 +116,7 @@ export default function LoginScreen({ navigation }) {
             <View
               style={{
                 width: gridWidth,
+                display: usableHeight < 560 || keyboardVisible ? 'none' : 'flex',
                 alignSelf: 'center',
                 flexDirection: 'row',
                 flexWrap: 'wrap',
@@ -156,18 +162,17 @@ export default function LoginScreen({ navigation }) {
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               paddingHorizontal: 24,
-              paddingTop: 28,
-              paddingBottom: Math.max(insets.bottom, 16) + 12,
+              paddingTop: spacing,
+              paddingBottom: spacing,
             }}
           >
             {/* Main Headline: "Groceries at trader prices ," \n "delivered fast" */}
             <Text
               style={{
-                fontFamily: 'Inter-ExtraBold',
-                fontSize: 27,
-                fontWeight: '800',
-                color: '#0f172a',
-                lineHeight: 34,
+                fontFamily: fonts.extraBold,
+                fontSize: tiny ? 20 : compact ? 23 : 25,
+                color: '#121712',
+                lineHeight: tiny ? 25 : compact ? 29 : 31,
                 letterSpacing: -0.6,
               }}
             >
@@ -177,12 +182,11 @@ export default function LoginScreen({ navigation }) {
             {/* Subtitle: "Log in with your email and password." */}
             <Text
               style={{
-                fontFamily: 'Inter-Regular',
+                fontFamily: fonts.regular,
                 fontSize: 14,
-                fontWeight: '400',
                 color: '#64748b',
                 marginTop: 8,
-                marginBottom: 20,
+                marginBottom: spacing,
                 letterSpacing: -0.2,
               }}
             >
@@ -190,13 +194,12 @@ export default function LoginScreen({ navigation }) {
             </Text>
 
             {/* Field: Email */}
-            <View style={{ marginBottom: 14 }}>
+            <View style={{ marginBottom: tiny ? 8 : 14 }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13.5,
-                  fontWeight: '700',
-                  color: '#0f172a',
+                  color: '#121712',
                   marginBottom: 6,
                 }}
               >
@@ -208,24 +211,23 @@ export default function LoginScreen({ navigation }) {
                   alignItems: 'center',
                   backgroundColor: '#ffffff',
                   borderWidth: 1.2,
-                  borderColor: focusedInput === 'email' ? '#047857' : '#e2e8f0',
+                  borderColor: focusedInput === 'email' ? '#0A7C47' : '#e2e8f0',
                   borderRadius: 14,
-                  height: 50,
+                  height: tiny ? 44 : 50,
                   paddingHorizontal: 14,
                 }}
               >
                 <Mail
                   size={18}
-                  color={focusedInput === 'email' ? '#047857' : '#94a3b8'}
+                  color={focusedInput === 'email' ? '#0A7C47' : '#94a3b8'}
                   style={{ marginRight: 10 }}
                 />
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: 'Inter-Regular',
+                    fontFamily: fonts.regular,
                     fontSize: 14,
-                    fontWeight: '400',
-                    color: '#0f172a',
+                    color: '#121712',
                     paddingVertical: 0,
                   }}
                   placeholder="Enter your email"
@@ -244,10 +246,9 @@ export default function LoginScreen({ navigation }) {
             <View style={{ marginBottom: 8 }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13.5,
-                  fontWeight: '700',
-                  color: '#0f172a',
+                  color: '#121712',
                   marginBottom: 6,
                 }}
               >
@@ -259,24 +260,23 @@ export default function LoginScreen({ navigation }) {
                   alignItems: 'center',
                   backgroundColor: '#ffffff',
                   borderWidth: 1.2,
-                  borderColor: focusedInput === 'password' ? '#047857' : '#e2e8f0',
+                  borderColor: focusedInput === 'password' ? '#0A7C47' : '#e2e8f0',
                   borderRadius: 14,
-                  height: 50,
+                  height: tiny ? 44 : 50,
                   paddingHorizontal: 14,
                 }}
               >
                 <Lock
                   size={18}
-                  color={focusedInput === 'password' ? '#047857' : '#94a3b8'}
+                  color={focusedInput === 'password' ? '#0A7C47' : '#94a3b8'}
                   style={{ marginRight: 10 }}
                 />
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: 'Inter-Regular',
+                    fontFamily: fonts.regular,
                     fontSize: 14,
-                    fontWeight: '400',
-                    color: '#0f172a',
+                    color: '#121712',
                     paddingVertical: 0,
                   }}
                   placeholder="Enter your password"
@@ -307,14 +307,13 @@ export default function LoginScreen({ navigation }) {
             <Pressable
               onPress={() => navigation.navigate('ForgotPassword')}
               hitSlop={8}
-              style={{ alignSelf: 'flex-end', marginBottom: 18, marginTop: 4 }}
+              style={{ alignSelf: 'flex-end', marginBottom: tiny ? 4 : compact ? 8 : 12, marginTop: 4 }}
             >
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13,
-                  fontWeight: '700',
-                  color: '#047857',
+                  color: '#0A7C47',
                 }}
               >
                 Forgot password?
@@ -326,12 +325,12 @@ export default function LoginScreen({ navigation }) {
               onPress={handleSignIn}
               disabled={!canSubmit}
               style={{
-                backgroundColor: canSubmit ? '#047857' : '#d8e4db',
+                backgroundColor: canSubmit ? '#0A7C47' : '#d8e4db',
                 borderRadius: 14,
-                height: 52,
+                height: tiny ? 48 : 52,
                 alignItems: 'center',
                 justifyContent: 'center',
-                shadowColor: canSubmit ? '#047857' : 'transparent',
+                shadowColor: canSubmit ? '#0A7C47' : 'transparent',
                 shadowOffset: { width: 0, height: 3 },
                 shadowOpacity: 0.15,
                 shadowRadius: 6,
@@ -343,9 +342,8 @@ export default function LoginScreen({ navigation }) {
               ) : (
                 <Text
                   style={{
-                    fontFamily: 'Inter-Bold',
+                    fontFamily: fonts.bold,
                     fontSize: 16,
-                    fontWeight: '700',
                     color: canSubmit ? '#ffffff' : '#5c6d62',
                     letterSpacing: -0.2,
                   }}
@@ -361,15 +359,14 @@ export default function LoginScreen({ navigation }) {
                 flexDirection: 'row',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginTop: 22,
-                marginBottom: 20,
+                marginTop: spacing,
+                marginBottom: spacing,
               }}
             >
               <Text
                 style={{
-                  fontFamily: 'Inter-Regular',
+                  fontFamily: fonts.regular,
                   fontSize: 13.5,
-                  fontWeight: '400',
                   color: '#334155',
                 }}
               >
@@ -381,10 +378,9 @@ export default function LoginScreen({ navigation }) {
               >
                 <Text
                   style={{
-                    fontFamily: 'Inter-Bold',
+                    fontFamily: fonts.bold,
                     fontSize: 13.5,
-                    fontWeight: '700',
-                    color: '#047857',
+                    color: '#0A7C47',
                   }}
                 >
                   Create an account
@@ -393,12 +389,11 @@ export default function LoginScreen({ navigation }) {
             </View>
 
             {/* Footer Terms & Privacy Policy matching Screen 01 */}
-            <View style={{ marginTop: 'auto', paddingTop: 28, alignItems: 'center' }}>
+            <View style={{ marginTop: 'auto', paddingTop: spacing, alignItems: 'center' }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Regular',
+                  fontFamily: fonts.regular,
                   fontSize: 11.5,
-                  fontWeight: '400',
                   color: '#64748b',
                   textAlign: 'center',
                   lineHeight: 18,
@@ -407,20 +402,20 @@ export default function LoginScreen({ navigation }) {
               >
                 By continuing, you agree to our{' '}
                 <Text
+                  onPress={() => navigation.navigate('Terms')}
                   style={{
-                    fontFamily: 'Inter-Bold',
-                    fontWeight: '700',
-                    color: '#047857',
+                    fontFamily: fonts.bold,
+                    color: '#0A7C47',
                   }}
                 >
                   Terms of Service
                 </Text>{' '}
                 and{' '}
                 <Text
+                  onPress={() => navigation.navigate('PrivacyPolicy')}
                   style={{
-                    fontFamily: 'Inter-Bold',
-                    fontWeight: '700',
-                    color: '#047857',
+                    fontFamily: fonts.bold,
+                    color: '#0A7C47',
                   }}
                 >
                   Privacy Policy

@@ -9,6 +9,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        brand: { green: '#0A7C47', amber: '#FFB020', ink: '#121712', shelf: '#F3F5F2' },
         primary: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -16,14 +17,14 @@ module.exports = {
           300: '#86efac',
           400: '#4ade80',
           500: '#22c55e',
-          600: '#16a34a',
+          600: '#0A7C47',
           700: '#15803d',
           800: '#166534',
           900: '#14532d',
-          DEFAULT: '#16a34a',
+          DEFAULT: '#0A7C47',
         },
         surface: {
-          50: '#f8fafc',
+          50: '#F3F5F2',
           100: '#f1f5f9',
           200: '#e2e8f0',
           300: '#cbd5e1',
@@ -31,7 +32,7 @@ module.exports = {
           DEFAULT: '#ffffff',
         },
         text: {
-          primary: '#0f172a',
+          primary: '#121712',
           secondary: '#64748b',
           tertiary: '#94a3b8',
         },
@@ -42,13 +43,13 @@ module.exports = {
         }
       },
       fontFamily: {
-        sans: ['Inter-Regular'],
-        normal: ['Inter-Regular'],
-        medium: ['Inter-Medium'],
-        semibold: ['Inter-SemiBold'],
-        bold: ['Inter-Bold'],
-        extrabold: ['Inter-ExtraBold'],
-        black: ['Inter-Black'],
+        sans: ['PlusJakartaSans-Regular'],
+        normal: ['PlusJakartaSans-Regular'],
+        medium: ['PlusJakartaSans-SemiBold'],
+        semibold: ['PlusJakartaSans-SemiBold'],
+        bold: ['PlusJakartaSans-SemiBold'],
+        extrabold: ['PlusJakartaSans-ExtraBold'],
+        black: ['PlusJakartaSans-ExtraBold'],
       },
       boxShadow: {
         'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',

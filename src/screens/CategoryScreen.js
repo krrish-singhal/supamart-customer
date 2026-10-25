@@ -1,3 +1,4 @@
+import { getGridMetrics } from '../utils/responsiveLayout';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, FlatList, Pressable, StatusBar, ScrollView, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,9 +10,9 @@ import {
   LayoutGrid,
   Star,
   Tag,
-} from 'lucide-react-native';
+} from '../components/icons';
 import { Image } from 'expo-image';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from '../services/reads';
 import { db } from '../config/firebase';
 import apiClient from '../services/api';
 import { Skeleton, ProductCard, CartBar, CART_BAR_SPACER } from '../components/ui';
@@ -23,6 +24,7 @@ import {
   sortProducts,
   countActiveFilters,
   EMPTY_FILTERS,
+  compareProductsDeterministic,
 } from '../utils/productFilters';
 import { getCategoryVisual } from '../utils/categoryImages';
 import { fonts } from '../theme/typography';
@@ -38,17 +40,36 @@ const SIDEBAR_WIDTH = 78;
 const GRID_PADDING = 10;
 const GRID_GAP = 10;
 
+let cachedAllCategories = [];
+
+export function setCachedCategories(categories) {
+  if (Array.isArray(categories) && categories.length > 0) {
+    cachedAllCategories = categories;
+  }
+}
+
+export function getCachedCategories() {
+  return cachedAllCategories;
+}
+
 export default function CategoryScreen({ route, navigation }) {
   const initialId = route.params?.id;
   const initialName = route.params?.name;
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, fontScale } = useWindowDimensions();
   const { items, addItem, updateQty, getQty } = useCart();
 
   const [paneWidth, setPaneWidth] = useState(null);
   // Measure the actual product pane, including split-screen and navigation constraints.
   const availableWidth = paneWidth ?? (windowWidth - SIDEBAR_WIDTH);
-  const cardWidth = Math.max(1, (availableWidth - GRID_PADDING * 2 - GRID_GAP) / 2);
+  const isTablet = windowWidth >= 600;
+  const { columns, cardWidth } = getGridMetrics(availableWidth, {
+    padding: GRID_PADDING,
+    gap: GRID_GAP,
+    minCardWidth: 110,
+    minColumns: 2,
+    maxColumns: isTablet ? 4 : 2,
+  });
 
   const [currentCatId, setCurrentCatId] = useState(initialId);
   const [currentCatName, setCurrentCatName] = useState(initialName);
@@ -57,7 +78,13 @@ export default function CategoryScreen({ route, navigation }) {
   const [subCategories, setSubCategories] = useState([]);
   const [activeSubCategory, setActiveSubCategory] = useState(null);
   const [brands, setBrands] = useState([]);
-  const [allCategories, setAllCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState(() => {
+    if (route.params?.allCategories?.length) {
+      cachedAllCategories = route.params.allCategories;
+      return route.params.allCategories;
+    }
+    return cachedAllCategories;
+  });
   const [initialLoading, setInitialLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -103,7 +130,11 @@ export default function CategoryScreen({ route, navigation }) {
       setCurrentCatId(route.params.id);
       setCurrentCatName(route.params?.name || '');
     }
-  }, [route.params?.id, route.params?.name]);
+    if (route.params?.allCategories?.length) {
+      cachedAllCategories = route.params.allCategories;
+      setAllCategories(route.params.allCategories);
+    }
+  }, [route.params?.id, route.params?.name, route.params?.allCategories]);
 
   // Initial load of all categories and brands
   useEffect(() => {
@@ -114,7 +145,9 @@ export default function CategoryScreen({ route, navigation }) {
       (snapshot) => {
         if (isCancelled) return;
         receivedLiveCategories = true;
-        setAllCategories(snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+        const liveCats = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+        cachedAllCategories = liveCats;
+        setAllCategories(liveCats);
       },
       () => {} // The public categories API below remains available as a fallback.
     );
@@ -126,7 +159,11 @@ export default function CategoryScreen({ route, navigation }) {
         ]);
         if (isCancelled) return;
         const cats = catRes.status === 'fulfilled' ? catRes.value.data.items || [] : [];
-        if (!receivedLiveCategories) setAllCategories(cats.filter((c) => c.isActive !== false));
+        if (!receivedLiveCategories) {
+          const activeCats = cats.filter((c) => c.isActive !== false);
+          cachedAllCategories = activeCats;
+          setAllCategories(activeCats);
+        }
         if (brandRes.status === 'fulfilled') setBrands(brandRes.value.data.items || []);
       } catch (_e) {
         // Fallback
@@ -187,7 +224,7 @@ export default function CategoryScreen({ route, navigation }) {
       // first Firestore category chunk while that complete result is loading.
       if (!apiLoadFinished || (!apiLoadSucceeded && initialSnapshotsReceived < chunks.length)) return;
       const list = Array.from(productsMap.values());
-      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      list.sort(compareProductsDeterministic);
       setProducts(list);
       setProductsLoading(false);
       setInitialLoading(false);
@@ -220,7 +257,11 @@ export default function CategoryScreen({ route, navigation }) {
     // 2. Real-time Firestore onSnapshot listeners for live pricing & stock changes
     try {
       chunks.forEach((batch) => {
-        const q = query(collection(db, 'products'), where('categoryId', 'in', batch));
+        const q = query(
+          collection(db, 'products'),
+          where('categoryId', 'in', batch),
+          orderBy('createdAt', 'desc')
+        );
         const unsub = onSnapshot(
           q,
           (snapshot) => {
@@ -237,7 +278,7 @@ export default function CategoryScreen({ route, navigation }) {
             updateProductsFromMap();
           },
           (err) => {
-            console.error('Category products snapshot error:', err);
+            console.warn('Category products snapshot error:', err.message || err);
             initialSnapshotsReceived += 1;
             updateProductsFromMap();
             if (!isCancelled && productsMap.size === 0) {
@@ -476,7 +517,7 @@ export default function CategoryScreen({ route, navigation }) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               paddingVertical: 6,
-              paddingBottom: CART_BAR_SPACER + 24,
+              paddingBottom: CART_BAR_SPACER * Math.max(1, fontScale) + 24,
             }}
           >
             {sidebarItems.map((item) => {
@@ -727,15 +768,16 @@ export default function CategoryScreen({ route, navigation }) {
             <EmptyState icon="search" message="No products match your selection" />
           ) : (
             <FlatList
-              key={`cat-grid-${currentCatId}`}
+              key={`cat-grid-${currentCatId}-${columns}`}
               data={visibleProducts}
               keyExtractor={(item) => item.id}
               extraData={items}
-              numColumns={2}
-              columnWrapperStyle={{ gap: GRID_GAP, paddingHorizontal: GRID_PADDING, justifyContent: 'flex-start' }}
+              numColumns={columns}
+              columnWrapperStyle={columns > 1 ? { gap: GRID_GAP, justifyContent: 'flex-start' } : undefined}
               contentContainerStyle={{
+                paddingHorizontal: GRID_PADDING,
                 paddingTop: 8,
-                paddingBottom: CART_BAR_SPACER + 24,
+                paddingBottom: CART_BAR_SPACER * Math.max(1, fontScale) + 24,
               }}
               style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
