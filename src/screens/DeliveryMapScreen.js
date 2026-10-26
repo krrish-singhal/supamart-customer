@@ -42,6 +42,7 @@ import {
 import { fonts } from '../theme/typography';
 import { db } from '../config/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import BrandBadge from '../components/BrandBadge';
 
 const DELAY_PRESET_REASONS = [
   'Heavy Traffic Congestion',
@@ -344,29 +345,6 @@ export default function DeliveryMapScreen({ route, navigation }) {
     });
   };
 
-  if (!order) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <StatusBar barStyle="dark-content" />
-        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-          <AlertCircle size={32} color="#64748b" />
-        </View>
-        <Text style={{ fontFamily: fonts.bold, fontSize: 18, color: '#0f172a', marginBottom: 6 }}>
-          Order Details Unavailable
-        </Text>
-        <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
-          Could not load the requested delivery details.
-        </Text>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={{ backgroundColor: '#059669', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 }}
-        >
-          <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#ffffff' }}>Back to Deliveries</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   const addr = order?.addressSnapshot || order?.address || {};
   const rawDestLat = Number(addr?.lat ?? addr?.latitude ?? order?.lat ?? order?.latitude);
   const rawDestLng = Number(addr?.lng ?? addr?.longitude ?? order?.lng ?? order?.longitude);
@@ -387,7 +365,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
   }), []);
 
   const routeOrigin = partnerLocation || origin;
-  const orderTotal = Math.round(Number(order.total || order.totalAmount) || 0);
+  const orderTotal = Math.round(Number(order?.total || order?.totalAmount) || 0);
 
   // Resume handler: refresh GPS location and re-align map when app returns from background
   useEffect(() => {
@@ -432,6 +410,29 @@ export default function DeliveryMapScreen({ route, navigation }) {
       return () => clearTimeout(timer);
     }, [destination, origin, partnerLocation])
   );
+
+  if (!order) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <StatusBar barStyle="dark-content" />
+        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <AlertCircle size={32} color="#64748b" />
+        </View>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 18, color: '#0f172a', marginBottom: 6 }}>
+          Order Details Unavailable
+        </Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+          Could not load the requested delivery details.
+        </Text>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={{ backgroundColor: '#059669', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 }}
+        >
+          <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#ffffff' }}>Back to Deliveries</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
@@ -499,25 +500,44 @@ export default function DeliveryMapScreen({ route, navigation }) {
           justifyContent: 'space-between',
         }}
       >
-        <Pressable
-          onPress={() => navigation.goBack()}
-          hitSlop={10}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: '#ffffff',
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.12,
-            shadowRadius: 6,
-            elevation: 4,
-          }}
-        >
-          <ArrowLeft size={20} color="#0f172a" strokeWidth={2.6} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: '#ffffff',
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.12,
+              shadowRadius: 6,
+              elevation: 4,
+            }}
+          >
+            <ArrowLeft size={20} color="#0f172a" strokeWidth={2.6} />
+          </Pressable>
+          <View
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 22,
+              height: 44,
+              paddingHorizontal: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
+            <BrandBadge size={26} />
+          </View>
+        </View>
 
         {/* Live GPS Broadcast Indicator */}
         <View
@@ -781,8 +801,26 @@ export default function DeliveryMapScreen({ route, navigation }) {
           </ScrollView>
         )}
 
-        {/* Action Button: Mark order delivered matching Screenshot 3 & 4 */}
-        {order.status !== 'OUT_FOR_DELIVERY' && order.status !== 'DELIVERED' && order.status !== 'PENDING_CONFIRMATION' ? (
+        {/* Action Button: Pickup, Deliver, or Awaiting Confirmation */}
+        {order.deliveryAcceptanceStatus === 'REJECTED' ? (
+          <View
+            style={{
+              height: 52,
+              borderRadius: 16,
+              backgroundColor: '#fee2e2',
+              borderWidth: 1,
+              borderColor: '#fca5a5',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'row',
+            }}
+          >
+            <AlertCircle size={20} color="#b91c1c" style={{ marginRight: 8 }} />
+            <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#b91c1c' }}>
+              Order Assignment Rejected
+            </Text>
+          </View>
+        ) : order.status !== 'OUT_FOR_DELIVERY' && order.status !== 'DELIVERED' && order.status !== 'PENDING_CONFIRMATION' ? (
           <Pressable
             onPress={handlePickUp}
             disabled={updating}
@@ -815,7 +853,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
               borderRadius: 16,
               backgroundColor:
                 order.status === 'PENDING_CONFIRMATION'
-                  ? '#f97316'
+                  ? '#ea580c'
                   : order.status === 'DELIVERED'
                   ? '#94a3b8'
                   : '#047857',
@@ -830,14 +868,18 @@ export default function DeliveryMapScreen({ route, navigation }) {
               opacity: updating ? 0.6 : 1,
             }}
           >
-            <CheckCircle size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            {order.status === 'PENDING_CONFIRMATION' ? (
+              <Clock size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            ) : (
+              <CheckCircle size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            )}
             <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: '#ffffff' }}>
               {updating
                 ? 'Updating...'
                 : order.status === 'DELIVERED'
-                ? 'Delivered'
+                ? 'Delivered (Confirmed)'
                 : order.status === 'PENDING_CONFIRMATION'
-                ? 'Waiting for customer...'
+                ? 'Waiting for customer confirmation...'
                 : 'Mark order delivered'}
             </Text>
           </Pressable>

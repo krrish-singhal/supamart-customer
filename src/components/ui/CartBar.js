@@ -18,7 +18,7 @@ export const CART_BAR_SPACER = 84;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export default function CartBar({ items, onPress, variant = 'default' }) {
+export default function CartBar({ items, onPress, variant = 'default', bottom, style }) {
   const insets = useSafeAreaInsets();
   const bounceScale = useSharedValue(1);
 
@@ -50,10 +50,11 @@ export default function CartBar({ items, onPress, variant = 'default' }) {
       pointerEvents="box-none"
       style={{
         position: 'absolute',
-        bottom: Math.max(insets.bottom, 14) + 10,
+        bottom: bottom !== undefined ? bottom : (insets.bottom > 0 ? insets.bottom : 12),
         left: 12,
         right: 12,
         zIndex: 99,
+        ...style,
       }}
     >
       <AnimatedPressable

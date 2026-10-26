@@ -33,6 +33,7 @@ import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { Loader } from '../components/ui';
 import EmptyState from '../components/EmptyState';
+import BrandBadge from '../components/BrandBadge';
 import { fonts } from '../theme/typography';
 import { db } from '../config/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
@@ -42,7 +43,7 @@ const STATUS_THEME = {
   ORDER_PLACED: { bg: '#fef3c7', text: '#b45309', label: 'Placed' },
   ORDER_ACCEPTED: { bg: '#e0f2fe', text: '#0369a1', label: 'Accepted' },
   OUT_FOR_DELIVERY: { bg: '#dcfce7', text: '#047857', label: 'Out for delivery' },
-  PENDING_CONFIRMATION: { bg: '#e5e7eb', text: '#374151', label: 'Delivered' },
+  PENDING_CONFIRMATION: { bg: '#fff7ed', text: '#c2410c', label: 'Awaiting Confirmation' },
   DELIVERED: { bg: '#e5e7eb', text: '#374151', label: 'Delivered' },
   CANCELLED: { bg: '#fee2e2', text: '#b91c1c', label: 'Cancelled' },
 };
@@ -114,7 +115,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
         const pending = items.find(
           (o) =>
             o.deliveryAcceptanceStatus === 'PENDING' &&
-            !['DELIVERED', 'PENDING_CONFIRMATION', 'CANCELLED'].includes(o.status)
+            !['DELIVERED', 'CANCELLED'].includes(o.status)
         );
         setIncomingOrder(pending || null);
       },
@@ -265,9 +266,14 @@ export default function DeliveryOrdersScreen({ navigation }) {
   // Reject incoming order
   const handleRejectIncomingOrder = async () => {
     if (!incomingOrder?.id) return;
+    const rejectingId = incomingOrder.id;
     setRespondingToOrder(true);
     try {
-      await apiClient.patch(`/orders/${incomingOrder.id}/reject-assignment`);
+      await apiClient.patch(`/orders/${rejectingId}/reject-assignment`);
+      // Immediately reflect rejection in local state so it is excluded from active orders
+      setOrders((prev) =>
+        prev.map((o) => (o.id === rejectingId ? { ...o, deliveryAcceptanceStatus: 'REJECTED' } : o))
+      );
       Toast.show({
         type: 'info',
         text1: 'Order Rejected',
@@ -284,6 +290,14 @@ export default function DeliveryOrdersScreen({ navigation }) {
 
   // Open "View & Deliver": ensure location is synced, then navigate
   const handleViewAndDeliver = async (orderItem) => {
+    if (orderItem.deliveryAcceptanceStatus === 'REJECTED') {
+      Toast.show({
+        type: 'error',
+        text1: 'Order Rejected',
+        text2: 'This order was rejected and cannot be delivered.',
+      });
+      return;
+    }
     const fiveMinutes = 5 * 60 * 1000;
     if (Date.now() - (lastSyncedAt || 0) > fiveMinutes) {
       await handleUpdateLocation(true);
@@ -293,9 +307,13 @@ export default function DeliveryOrdersScreen({ navigation }) {
 
   if (loading) return <Loader />;
 
+  // Orders are only completed when finalized as DELIVERED or CANCELLED.
+  // PENDING_CONFIRMATION remains active until customer confirms delivery!
   const isOrderCompleted = (status) =>
-    ['DELIVERED', 'PENDING_CONFIRMATION', 'CANCELLED'].includes(status);
-  const activeOrders = orders.filter((o) => !isOrderCompleted(o.status));
+    ['DELIVERED', 'CANCELLED'].includes(status);
+  const activeOrders = orders.filter(
+    (o) => !isOrderCompleted(o.status) && o.deliveryAcceptanceStatus !== 'REJECTED'
+  );
   const completedOrders = orders.filter((o) => isOrderCompleted(o.status));
   const displayOrders = selectedTab === 'ACTIVE' ? activeOrders : completedOrders;
 
@@ -603,35 +621,61 @@ export default function DeliveryOrdersScreen({ navigation }) {
           </View>
 
           {!isCompleted ? (
-            <Pressable
-              onPress={() => handleViewAndDeliver(item)}
-              hitSlop={6}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#047857',
-                paddingHorizontal: 15,
-                paddingVertical: 9.5,
-                borderRadius: 10,
-                shadowColor: '#047857',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3,
-                elevation: 3,
-              }}
-            >
-              <Navigation size={13} color="#ffffff" style={{ marginRight: 5 }} />
-              <Text
+            item.status === 'PENDING_CONFIRMATION' ? (
+              <View
                 style={{
-                  fontFamily: fonts.bold,
-                  fontSize: 13,
-                  color: '#ffffff',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#fff7ed',
+                  borderWidth: 1.2,
+                  borderColor: '#fed7aa',
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 10,
                 }}
               >
-                View & deliver
-              </Text>
-              <ChevronRight size={14} color="#ffffff" style={{ marginLeft: 3 }} />
-            </Pressable>
+                <Clock size={13} color="#ea580c" style={{ marginRight: 5 }} />
+                <Text
+                  style={{
+                    fontFamily: fonts.bold,
+                    fontSize: 12,
+                    color: '#ea580c',
+                  }}
+                >
+                  Waiting for customer...
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => handleViewAndDeliver(item)}
+                hitSlop={6}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#047857',
+                  paddingHorizontal: 15,
+                  paddingVertical: 9.5,
+                  borderRadius: 10,
+                  shadowColor: '#047857',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3,
+                  elevation: 3,
+                }}
+              >
+                <Navigation size={13} color="#ffffff" style={{ marginRight: 5 }} />
+                <Text
+                  style={{
+                    fontFamily: fonts.bold,
+                    fontSize: 13,
+                    color: '#ffffff',
+                  }}
+                >
+                  View & deliver
+                </Text>
+                <ChevronRight size={14} color="#ffffff" style={{ marginLeft: 3 }} />
+              </Pressable>
+            )
           ) : (
             <Pressable
               onPress={() => handleViewAndDeliver(item)}
@@ -688,34 +732,39 @@ export default function DeliveryOrdersScreen({ navigation }) {
           }}
         >
           <View style={{ flex: 1, marginRight: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <BrandBadge size={28} showName />
               <View
                 style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 3.5,
-                  backgroundColor: '#047857',
-                  marginRight: 6,
-                }}
-              />
-              <Text
-                style={{
-                  fontFamily: fonts.bold,
-                  fontSize: 11.5,
-                  color: '#047857',
-                  letterSpacing: 0.6,
-                  textTransform: 'uppercase',
+                  backgroundColor: '#ecfdf5',
+                  borderWidth: 1,
+                  borderColor: '#a7f3d0',
+                  borderRadius: 6,
+                  paddingHorizontal: 6,
+                  paddingVertical: 1.5,
+                  marginLeft: 8,
                 }}
               >
-                MS TRADERS DELIVERY
-              </Text>
+                <Text
+                  style={{
+                    fontFamily: fonts.bold,
+                    fontWeight: 'normal',
+                    fontSize: 9.5,
+                    color: '#047857',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  DELIVERY
+                </Text>
+              </View>
             </View>
             <Text
               style={{
                 fontFamily: fonts.extraBold,
-                fontSize: 22,
+                fontWeight: 'normal',
+                fontSize: 19,
                 color: '#0f172a',
-                marginTop: 3,
+                marginTop: 2,
               }}
               numberOfLines={1}
             >
@@ -994,6 +1043,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
           <View
             style={{
               paddingVertical: 40,
+              width: '100%',
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -1003,9 +1053,16 @@ export default function DeliveryOrdersScreen({ navigation }) {
               message={
                 selectedTab === 'ACTIVE'
                   ? isOnDuty
-                    ? 'No active deliveries right now. New assignments will appear here.'
-                    : "You're currently off duty. Turn duty on to receive new delivery orders."
-                  : 'No completed deliveries recorded yet.'
+                    ? 'No active deliveries right now'
+                    : "You're currently off duty"
+                  : 'No completed deliveries recorded yet'
+              }
+              subtitle={
+                selectedTab === 'ACTIVE'
+                  ? isOnDuty
+                    ? 'New order assignments will appear here automatically.'
+                    : 'Turn duty on above to start receiving delivery orders.'
+                  : 'Orders you complete will be listed here for reference.'
               }
             />
           </View>

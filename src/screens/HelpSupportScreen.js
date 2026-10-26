@@ -6,6 +6,7 @@ import {
   Pressable,
   StatusBar,
   Linking,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -23,7 +24,6 @@ import {
   X,
   Package,
 } from '../components/icons';
-import { Modal } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';

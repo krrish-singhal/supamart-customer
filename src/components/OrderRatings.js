@@ -47,7 +47,7 @@ function StarRatingRow({ value, onChange, size = 22, disabled = false }) {
   );
 }
 
-export default function OrderRatings({ order, onDismiss }) {
+export default function OrderRatings({ order, onDismiss, inModal = false }) {
   const [orderRating, setOrderRating] = useState(
     order.ratings?.orderRating || order.deliveryRating || 0
   );
@@ -66,15 +66,15 @@ export default function OrderRatings({ order, onDismiss }) {
   }
 
   const products = [
-    ...new Map((order.items || []).map((item) => [item.productId, item])).values(),
+    ...new Map((order.items || []).map((item) => [item.productId || item.id, item])).values(),
   ];
 
   // Delivery status formatting
   const orderNumber = order.orderNo || order.id?.slice(-5) || '10482';
   const itemCount = order.items?.length || 0;
-  const totalAmount = order.totalAmount || order.finalToPay || 0;
+  const totalAmount = Number(order.total || order.totalAmount || order.pricing?.total || order.finalToPay || 0);
   const partnerName = order.deliveryPartnerName || order.driverName || 'Delivery partner';
-  const partnerInitial = partnerName.trim().charAt(0).toUpperCase() || 'R';
+  const partnerInitial = partnerName.trim().charAt(0).toUpperCase() || 'D';
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -85,7 +85,7 @@ export default function OrderRatings({ order, onDismiss }) {
     if (!orderRating || busy) return;
     setBusy(true);
     try {
-      await apiClient.patch(`/orders/${order.id}/ratings`, {
+      await apiClient.patch(`/orders/${order.id || order.orderNo}/ratings`, {
         orderRating,
         review,
         productRatings: Object.entries(productRatings).map(([productId, rating]) => ({
@@ -96,8 +96,13 @@ export default function OrderRatings({ order, onDismiss }) {
       });
       Toast.show({ type: 'success', text1: 'Thanks! Your ratings have been saved.' });
       setDismissed(true);
-    } catch {
-      // API reports failures or toasts
+      if (onDismiss) onDismiss();
+    } catch (err) {
+      console.error('Submit rating error:', err.response?.data || err.message);
+      Toast.show({
+        type: 'error',
+        text1: err.response?.data?.error || 'Failed to submit rating. Please try again.',
+      });
     } finally {
       setBusy(false);
     }
@@ -106,7 +111,7 @@ export default function OrderRatings({ order, onDismiss }) {
   const canSubmit = orderRating > 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, inModal && styles.containerInModal]}>
       {/* Top Bar matching Image 5 */}
       <View style={styles.topBar}>
         <Pressable onPress={handleDismiss} hitSlop={10} style={styles.closeBtn}>
@@ -303,12 +308,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#edf2ed',
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+  },
+  containerInModal: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    padding: 0,
+    marginBottom: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   topBar: {
     flexDirection: 'row',
@@ -499,7 +513,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#047857',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    marginTop: 8,
+    marginBottom: 12,
   },
   submitBtnDisabled: {
     backgroundColor: '#e2e8f0',

@@ -9,6 +9,7 @@ import {
   Switch,
   Modal,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -29,6 +30,7 @@ import {
   X,
   Phone,
   Clock,
+  Mail,
 } from '../components/icons';
 import Toast from 'react-native-toast-message';
 import { AuthContext } from '../context/AuthContext';
@@ -174,7 +176,10 @@ export default function AccountScreen({ navigation }) {
         <Text style={styles.title}>Account</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
         {/* Profile Card Header */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
@@ -321,54 +326,103 @@ export default function AccountScreen({ navigation }) {
               <Text style={styles.aboutModalTitle}>About MS Traders</Text>
               <Pressable
                 onPress={() => setShowAboutModal(false)}
-                hitSlop={8}
+                hitSlop={10}
                 style={styles.aboutModalClose}
+                accessibilityLabel="Close"
               >
-                <X size={20} color="#0f172a" strokeWidth={2.2} />
+                <X size={18} color="#475569" strokeWidth={2.4} />
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ flexShrink: 1, marginBottom: 14 }}
+              contentContainerStyle={{ paddingBottom: 6 }}
+            >
               <Text style={styles.aboutDescription}>
-                MS Traders is your trusted neighborhood grocery destination, delivering farm-fresh produce, pantry essentials, and daily necessities to your doorstep in 10-15 minutes.
+                MS Traders is your trusted neighborhood grocery destination, delivering farm-fresh produce, pantry essentials, and daily necessities to your doorstep in 10–15 minutes.
               </Text>
 
               <View style={styles.aboutInfoBox}>
                 <View style={styles.aboutInfoRow}>
-                  <Clock size={16} color="#047857" strokeWidth={2} style={{ marginRight: 10 }} />
+                  <View style={styles.aboutIconBadge}>
+                    <Clock size={16} color="#047857" strokeWidth={2.4} />
+                  </View>
                   <Text style={styles.aboutInfoText}>Open 10:00 AM – 11:00 PM every day</Text>
                 </View>
+
                 <View style={styles.aboutInfoRow}>
-                  <MapPin size={16} color="#047857" strokeWidth={2} style={{ marginRight: 10 }} />
+                  <View style={styles.aboutIconBadge}>
+                    <MapPin size={16} color="#047857" strokeWidth={2.4} />
+                  </View>
                   <Text style={styles.aboutInfoText}>Delivery available within 5 km of our store</Text>
                 </View>
-                <View style={styles.aboutInfoRow}>
-                  <Phone size={16} color="#047857" strokeWidth={2} style={{ marginRight: 10 }} />
-                  <Text style={styles.aboutInfoText}>Customer Support: support@mstraders.in</Text>
-                </View>
+
+                <Pressable
+                  onPress={() => Linking.openURL('mailto:hassanramla31@gmail.com').catch(() => {})}
+                  style={styles.aboutInfoRow}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+                    <View style={styles.aboutIconBadge}>
+                      <Mail size={16} color="#047857" strokeWidth={2.4} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.aboutInfoLabel}>Customer Support</Text>
+                      <Text style={styles.aboutInfoTextBold}>hassanramla31@gmail.com</Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => Linking.openURL('tel:+919037655180').catch(() => {})}
+                  style={[styles.aboutInfoRow, { marginBottom: 0 }]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+                    <View style={styles.aboutIconBadge}>
+                      <Phone size={16} color="#047857" strokeWidth={2.4} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.aboutInfoLabel}>Helpline</Text>
+                      <Text style={styles.aboutInfoTextBold}>+91 90376 55180</Text>
+                    </View>
+                  </View>
+                </Pressable>
               </View>
 
-              <View style={styles.aboutLinks}>
+              {/* Organized Terms of Service & Privacy Policy List Card */}
+              <View style={styles.aboutLegalCard}>
                 <Pressable
                   onPress={() => {
                     setShowAboutModal(false);
                     navigation.navigate('Terms');
                   }}
-                  style={styles.aboutLinkItem}
+                  style={styles.aboutLegalRow}
                 >
-                  <Text style={styles.aboutLinkText}>Terms of Service</Text>
-                  <ChevronRight size={16} color="#047857" />
+                  <View style={styles.aboutLegalRowContent}>
+                    <View style={styles.aboutLegalIconBadge}>
+                      <FileText size={16} color="#047857" strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.aboutLegalTitle}>Terms of Service</Text>
+                    <ChevronRight size={16} color="#94a3b8" strokeWidth={2.4} />
+                  </View>
                 </Pressable>
+
+                <View style={styles.aboutLegalDivider} />
 
                 <Pressable
                   onPress={() => {
                     setShowAboutModal(false);
                     navigation.navigate('PrivacyPolicy');
                   }}
-                  style={styles.aboutLinkItem}
+                  style={styles.aboutLegalRow}
                 >
-                  <Text style={styles.aboutLinkText}>Privacy Policy</Text>
-                  <ChevronRight size={16} color="#047857" />
+                  <View style={styles.aboutLegalRowContent}>
+                    <View style={styles.aboutLegalIconBadge}>
+                      <ShieldCheck size={16} color="#047857" strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.aboutLegalTitle}>Privacy Policy</Text>
+                    <ChevronRight size={16} color="#94a3b8" strokeWidth={2.4} />
+                  </View>
                 </Pressable>
               </View>
             </ScrollView>
@@ -412,7 +466,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 560,
     alignSelf: 'center',
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   profileCard: {
     flexDirection: 'row',
@@ -473,7 +527,9 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   body: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 0,
   },
   clubBanner: {
     flexDirection: 'row',
@@ -600,8 +656,8 @@ const styles = StyleSheet.create({
   deleteAccountLink: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    marginBottom: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
   },
   deleteAccountText: {
     fontFamily: fonts.bold,
@@ -613,6 +669,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94a3b8',
     textAlign: 'center',
+    marginBottom: 6,
   },
   modalOverlay: {
     flex: 1,
@@ -623,15 +680,16 @@ const styles = StyleSheet.create({
   },
   aboutModalCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 20,
     width: '100%',
-    maxWidth: 420,
+    maxWidth: 400,
+    maxHeight: '85%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
   aboutModalHeader: {
     flexDirection: 'row',
@@ -640,64 +698,125 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   aboutModalTitle: {
-    fontFamily: fonts.bold,
-    fontSize: 18,
+    fontFamily: fonts.extraBold,
+    fontWeight: 'normal',
+    fontSize: 20,
     color: '#0f172a',
+    letterSpacing: -0.3,
   },
   aboutModalClose: {
-    padding: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   aboutDescription: {
     fontFamily: fonts.regular,
     fontSize: 13.5,
-    lineHeight: 20,
+    lineHeight: 21,
     color: '#475569',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   aboutInfoBox: {
     backgroundColor: '#f8fafc',
-    borderRadius: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     padding: 14,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   aboutInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+  },
+  aboutIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  aboutInfoLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    color: '#64748b',
+    marginBottom: 1,
   },
   aboutInfoText: {
     fontFamily: fonts.medium,
-    fontSize: 12.5,
+    fontSize: 13,
     color: '#334155',
     flex: 1,
+    lineHeight: 18,
   },
-  aboutLinks: {
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 10,
-    marginBottom: 16,
+  aboutInfoTextBold: {
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    color: '#0f172a',
   },
-  aboutLinkItem: {
+  aboutLegalCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  aboutLegalRow: {
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  aboutLegalRowContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    width: '100%',
   },
-  aboutLinkText: {
+  aboutLegalIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  aboutLegalTitle: {
+    flex: 1,
     fontFamily: fonts.bold,
-    fontSize: 13.5,
-    color: '#047857',
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  aboutLegalDivider: {
+    height: 1,
+    backgroundColor: '#edf2f7',
+    marginLeft: 58,
   },
   aboutDoneBtn: {
-    height: 46,
+    height: 48,
     borderRadius: 14,
     backgroundColor: '#047857',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#047857',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
   },
   aboutDoneBtnText: {
     fontFamily: fonts.bold,
-    fontSize: 14.5,
+    fontSize: 15,
     color: '#ffffff',
   },
 });

@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
 import { FREE_DELIVERY_THRESHOLD } from '../utils/pricing';
+import { postSystemNotification } from '../services/notifications';
+
 export default function FreeDeliveryNotification({ active = false }) {
   const { subtotal, itemCount } = useCart();
   const { config } = useConfig();
@@ -18,7 +20,14 @@ export default function FreeDeliveryNotification({ active = false }) {
       setVisible(false);
       return;
     }
-    if (unlocked && !previous.current) setVisible(true);
+    if (unlocked && !previous.current) {
+      setVisible(true);
+      postSystemNotification({
+        title: 'Yay! Free delivery unlocked',
+        body: 'No delivery fee on this order — keep shopping or proceed to checkout.',
+        data: { type: 'FREE_DELIVERY' },
+      });
+    }
     if (!unlocked) setVisible(false);
     previous.current = unlocked;
   }, [active, unlocked]);

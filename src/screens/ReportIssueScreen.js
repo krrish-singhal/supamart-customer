@@ -150,7 +150,7 @@ export default function ReportIssueScreen({ route, navigation }) {
         : description;
 
       await apiClient.post('/issues', {
-        orderId: order?.id || orderId || 'demo-order',
+        orderId: order?.id || order?.orderNo || orderId || routeOrderNo || 'demo-order',
         affectedItems,
         issueType: resolvedIssueType,
         photos,

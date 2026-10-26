@@ -9,10 +9,14 @@ export default {
   "scheme": "mstraders",
   "userInterfaceStyle": "automatic",
   "newArchEnabled": true,
+  "notification": {
+    "icon": "./assets/notification-icon.png",
+    "color": "#0A7C47"
+  },
   "splash": {
-    "image": "./assets/branding/ms-traders-symbol-reversed-512.png",
+    "image": "./assets/branding/transparent-splash.png",
     "resizeMode": "contain",
-    "backgroundColor": "#087e49"
+    "backgroundColor": "#0A7C47"
   },
   "ios": {
     "supportsTablet": true,
@@ -27,6 +31,7 @@ export default {
   "android": {
     "package": "in.mstraders.grocery",
     "versionCode": 4,
+    "usesCleartextTraffic": true,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#0A7C47"
@@ -54,7 +59,7 @@ export default {
     "favicon": "./MS-Traders-logo-kit/web/favicon-48.png",
     "name": "MS Traders",
     "themeColor": "#0A7C47",
-    "backgroundColor": "#087e49"
+    "backgroundColor": "#0A7C47"
   },
   "extra": {
     "eas": {
@@ -65,9 +70,9 @@ export default {
     [
       "expo-splash-screen",
       {
-        "image": "./assets/branding/ms-traders-symbol-reversed-512.png",
+        "image": "./assets/branding/transparent-splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#087e49"
+        "backgroundColor": "#0A7C47"
       }
     ],
     [

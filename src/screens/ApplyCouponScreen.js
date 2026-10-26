@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,78 +6,20 @@ import {
   ScrollView,
   Pressable,
   StatusBar,
-  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { ChevronLeft, Check, ChevronRight } from '../components/icons';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
 import { useCart } from '../context/CartContext';
 import { fonts } from '../theme/typography';
 
+const COUPON_PRIORITY = ['TEA15', 'DETERGENT20', 'BULK100', 'FIRSTORDER', 'MSCLUB10', 'WELCOME50', 'FRESH20', 'FLAT10OFF'];
+
 const DEFAULT_OFFERS = [
-  {
-    code: 'WELCOME50',
-    tag: 'NEW',
-    tagColor: '#065f46',
-    title: 'Save ₹50 on your first order',
-    description: 'Valid on first order above ₹199.',
-    minValue: 199,
-    value: 50,
-    kind: 'FLAT',
-  },
-  {
-    code: 'MSCLUB10',
-    tag: 'CLUB',
-    tagColor: '#1e293b',
-    title: 'Extra 10% off (up to ₹60)',
-    description: 'For MS Club members on any order.',
-    minValue: 0,
-    value: 10,
-    maxDiscount: 60,
-    kind: 'PERCENT',
-  },
-  {
-    code: 'FRESH20',
-    tag: 'FRESH',
-    tagColor: '#4d7c0f',
-    title: '₹20 off on fresh fruits & vegetables',
-    description: 'Applies to fresh items in your cart above ₹149.',
-    minValue: 149,
-    value: 20,
-    kind: 'FLAT',
-  },
-  {
-    code: 'BULK100',
-    tag: 'BULK',
-    tagColor: '#b45309',
-    title: 'Save ₹100 on stock-up orders',
-    description: 'Valid on orders above ₹999.',
-    minValue: 999,
-    value: 100,
-    kind: 'FLAT',
-  },
-  {
-    code: 'FLAT10OFF',
-    tag: 'FLAT',
-    tagColor: '#0891b2',
-    title: 'Flat ₹10 off on orders',
-    description: 'Valid on orders above ₹100.',
-    minValue: 100,
-    value: 10,
-    kind: 'FLAT',
-  },
-  {
-    code: 'FIRSTORDER',
-    tag: 'FIRST',
-    tagColor: '#7c3aed',
-    title: 'Flat ₹100 off on your first order',
-    description: 'Valid on orders above ₹500.',
-    minValue: 500,
-    value: 100,
-    kind: 'FLAT',
-  },
   {
     code: 'TEA15',
     tag: 'TEA',
@@ -100,53 +42,135 @@ const DEFAULT_OFFERS = [
     maxDiscount: 100,
     kind: 'PERCENT',
   },
+  {
+    code: 'BULK100',
+    tag: 'BULK',
+    tagColor: '#b45309',
+    title: 'Monthly Stock-Up Saver',
+    description: 'Save ₹100 on bulk stock-up orders above ₹999.',
+    minValue: 999,
+    value: 100,
+    kind: 'FLAT',
+  },
+  {
+    code: 'FIRSTORDER',
+    tag: 'FIRST',
+    tagColor: '#7c3aed',
+    title: 'First Order Special',
+    description: 'Flat ₹100 off on your order above ₹500.',
+    minValue: 500,
+    value: 100,
+    kind: 'FLAT',
+  },
+  {
+    code: 'MSCLUB10',
+    tag: 'CLUB',
+    tagColor: '#1e293b',
+    title: 'MS Club Discount',
+    description: 'Extra 10% off (up to ₹60) for Club members.',
+    minValue: 0,
+    value: 10,
+    maxDiscount: 60,
+    kind: 'PERCENT',
+  },
+  {
+    code: 'WELCOME50',
+    tag: 'NEW',
+    tagColor: '#065f46',
+    title: 'Welcome Offer',
+    description: 'Save ₹50 on your first order above ₹199.',
+    minValue: 199,
+    value: 50,
+    kind: 'FLAT',
+  },
+  {
+    code: 'FRESH20',
+    tag: 'FRESH',
+    tagColor: '#4d7c0f',
+    title: 'Fresh Harvest Offer',
+    description: '₹20 off on orders above ₹149.',
+    minValue: 149,
+    value: 20,
+    kind: 'FLAT',
+  },
+  {
+    code: 'FLAT10OFF',
+    tag: 'FLAT',
+    tagColor: '#0891b2',
+    title: 'Everyday Savings',
+    description: 'Flat ₹10 off on orders above ₹100.',
+    minValue: 100,
+    value: 10,
+    kind: 'FLAT',
+  },
 ];
 
 const TAG_COLOR_MAP = {
-  WELCOME50: { tag: 'NEW', color: '#065f46' },
-  MSCLUB10: { tag: 'CLUB', color: '#1e293b' },
-  FRESH20: { tag: 'FRESH', color: '#4d7c0f' },
-  BULK100: { tag: 'BULK', color: '#b45309' },
-  FLAT10OFF: { tag: 'FLAT', color: '#0891b2' },
-  FIRSTORDER: { tag: 'FIRST', color: '#7c3aed' },
   TEA15: { tag: 'TEA', color: '#d97706' },
   DETERGENT20: { tag: 'HOME', color: '#2563eb' },
+  BULK100: { tag: 'BULK', color: '#b45309' },
+  FIRSTORDER: { tag: 'FIRST', color: '#7c3aed' },
+  MSCLUB10: { tag: 'CLUB', color: '#1e293b' },
+  WELCOME50: { tag: 'NEW', color: '#065f46' },
+  FRESH20: { tag: 'FRESH', color: '#4d7c0f' },
+  FLAT10OFF: { tag: 'FLAT', color: '#0891b2' },
+  FLAT100OFF: { tag: 'FLAT', color: '#0891b2' },
 };
 
 export default function ApplyCouponScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { subtotal, discount, couponCode, applyCoupon, removeCoupon } = useCart();
   const [inputCode, setInputCode] = useState('');
   const [applying, setApplying] = useState(false);
   const [serverOffers, setServerOffers] = useState([]);
-  const [loadingOffers, setLoadingOffers] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch live active offers from Admin Portal / Backend
-  useEffect(() => {
-    let isCancelled = false;
-    apiClient
-      .get('/offers/active', { __skipErrorToast: true })
-      .then(({ data }) => {
-        if (!isCancelled && data?.items && data.items.length > 0) {
-          setServerOffers(data.items);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!isCancelled) setLoadingOffers(false);
-      });
-
-    return () => {
-      isCancelled = true;
-    };
+  const fetchOffers = useCallback(async () => {
+    try {
+      const { data } = await apiClient.get('/offers/active', { __skipErrorToast: true });
+      if (data?.items && data.items.length > 0) {
+        setServerOffers(data.items);
+      }
+    } catch (_) {}
   }, []);
+
+  // Fetch live active offers from Admin Portal / Backend on focus
+  useFocusEffect(
+    useCallback(() => {
+      let isCancelled = false;
+      fetchOffers().then(() => {});
+
+      return () => {
+        isCancelled = true;
+      };
+    }, [fetchOffers])
+  );
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchOffers();
+    setRefreshing(false);
+  }, [fetchOffers]);
 
   const displayCartAmount = subtotal || 0;
 
-  // Format all active offers with tags, colors, and calculated savings
+  // Format all active offers with tags, colors, and calculated savings with deterministic ordering
   const formattedOffers = useMemo(() => {
     const rawList = serverOffers.length > 0 ? serverOffers : DEFAULT_OFFERS;
-    return rawList.map((o) => {
+    const sorted = [...rawList].sort((a, b) => {
+      const codeA = (a.code || '').toUpperCase();
+      const codeB = (b.code || '').toUpperCase();
+      const idxA = COUPON_PRIORITY.indexOf(codeA);
+      const idxB = COUPON_PRIORITY.indexOf(codeB);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return codeA.localeCompare(codeB);
+    });
+
+    return sorted.map((o) => {
       const code = (o.code || '').toUpperCase();
+      const isUsed = Boolean(o.isUsed || o.alreadyUsed);
       const preset = TAG_COLOR_MAP[code];
       const tag = preset?.tag || (o.kind === 'PERCENT' ? `${o.value}%` : 'SAVE');
       const tagColor = preset?.color || (o.kind === 'PERCENT' ? '#047857' : '#0284c7');
@@ -176,6 +200,8 @@ export default function ApplyCouponScreen({ navigation }) {
       return {
         ...o,
         code,
+        isUsed,
+        alreadyUsed: isUsed,
         tag,
         tagColor,
         headline,
@@ -211,7 +237,7 @@ export default function ApplyCouponScreen({ navigation }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* TOP HEADER: < Apply coupon | Your cart: ₹246 */}
+      {/* TOP HEADER: < Apply coupon | Your cart: ₹XXX */}
       <View
         style={{
           backgroundColor: '#ffffff',
@@ -232,7 +258,7 @@ export default function ApplyCouponScreen({ navigation }) {
             borderRadius: 19,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: 6,
+            marginRight: 8,
           }}
         >
           <ChevronLeft size={24} color="#0f172a" strokeWidth={2.6} />
@@ -242,8 +268,8 @@ export default function ApplyCouponScreen({ navigation }) {
           <Text
             style={{
               fontFamily: fonts.extraBold,
+              fontWeight: 'normal',
               fontSize: 19,
-              fontWeight: '900',
               color: '#0f172a',
               letterSpacing: -0.3,
             }}
@@ -253,8 +279,8 @@ export default function ApplyCouponScreen({ navigation }) {
           <Text
             style={{
               fontFamily: fonts.medium,
+              fontWeight: 'normal',
               fontSize: 12.5,
-              fontWeight: '500',
               color: '#64748b',
               marginTop: 1,
             }}
@@ -266,256 +292,302 @@ export default function ApplyCouponScreen({ navigation }) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#047857']}
+            tintColor="#047857"
+          />
+        }
         contentContainerStyle={{
           padding: 16,
-          paddingBottom: couponCode ? 100 : 40,
+          paddingBottom: couponCode
+            ? Math.max(insets.bottom + 96, 120)
+            : Math.max(insets.bottom + 32, 48),
         }}
       >
-        {/* DASHED INPUT BOX matching Image 1 */}
-        <Animated.View entering={FadeInDown.duration(280)}>
-          <View
+        {/* DASHED INPUT BOX */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#ffffff',
+            borderRadius: 16,
+            borderWidth: 1.5,
+            borderColor: '#cbd5e1',
+            borderStyle: 'dashed',
+            height: 54,
+            paddingHorizontal: 16,
+            marginBottom: 20,
+          }}
+        >
+          <TextInput
+            value={inputCode}
+            onChangeText={setInputCode}
+            placeholder="ENTER COUPON CODE"
+            placeholderTextColor="#94a3b8"
+            autoCapitalize="characters"
+            autoCorrect={false}
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#ffffff',
-              borderRadius: 16,
-              borderWidth: 1.5,
-              borderColor: '#cbd5e1',
-              borderStyle: 'dashed',
-              height: 54,
-              paddingHorizontal: 16,
-              marginBottom: 22,
+              flex: 1,
+              fontFamily: fonts.bold,
+              fontWeight: 'normal',
+              fontSize: 14,
+              color: '#0f172a',
+              letterSpacing: 0.5,
             }}
+          />
+
+          <Pressable
+            onPress={() => handleApply(inputCode)}
+            disabled={applying || !inputCode.trim()}
+            hitSlop={8}
           >
-            <TextInput
-              value={inputCode}
-              onChangeText={setInputCode}
-              placeholder="ENTER COUPON CODE"
-              placeholderTextColor="#94a3b8"
-              autoCapitalize="characters"
-              autoCorrect={false}
+            <Text
               style={{
-                flex: 1,
-                fontFamily: fonts.bold,
+                fontFamily: fonts.extraBold,
+                fontWeight: 'normal',
                 fontSize: 14,
-                fontWeight: '700',
-                color: '#0f172a',
+                color: inputCode.trim() ? '#047857' : '#94a3b8',
                 letterSpacing: 0.5,
               }}
-            />
-
-            <Pressable
-              onPress={() => handleApply(inputCode)}
-              disabled={applying || !inputCode.trim()}
-              hitSlop={8}
             >
-              <Text
-                style={{
-                  fontFamily: fonts.extraBold,
-                  fontSize: 14,
-                  fontWeight: '900',
-                  color: inputCode.trim() ? '#047857' : '#94a3b8',
-                  letterSpacing: 0.5,
-                }}
-              >
-                APPLY
-              </Text>
-            </Pressable>
-          </View>
-        </Animated.View>
+              APPLY
+            </Text>
+          </Pressable>
+        </View>
 
-        {/* SECTION HEADER: AVAILABLE OFFERS matching Image 1 */}
+        {/* SECTION HEADER: AVAILABLE OFFERS */}
         <Text
           style={{
             fontFamily: fonts.bold,
+            fontWeight: 'normal',
             fontSize: 12.5,
-            fontWeight: '800',
             color: '#64748b',
             letterSpacing: 0.8,
-            marginBottom: 14,
+            marginBottom: 12,
+            textTransform: 'uppercase',
           }}
         >
-          AVAILABLE OFFERS
+          Available Offers
         </Text>
 
-        {/* OFFERS CARDS LIST matching Image 1 */}
-        <View style={{ gap: 14 }}>
-          {formattedOffers.map((offer, idx) => {
+        {/* OFFERS CARDS LIST — Pure, high-performance Views without Reanimated layout overlap glitches */}
+        <View>
+          {formattedOffers.map((offer) => {
             const isApplied = couponCode === offer.code;
-            const isLocked = offer.minOrder > 0 && displayCartAmount < offer.minOrder;
+            const isUsed = Boolean(offer.isUsed || offer.alreadyUsed);
+            const isLocked = isUsed || (offer.minOrder > 0 && displayCartAmount < offer.minOrder);
             const diff = Math.max(0, offer.minOrder - displayCartAmount);
 
             return (
-              <Animated.View
+              <View
                 key={offer.code}
-                entering={FadeInDown.duration(300).delay(idx * 60)}
+                style={{
+                  marginBottom: 14,
+                  backgroundColor: '#ffffff',
+                  borderRadius: 18,
+                  overflow: 'hidden',
+                  flexDirection: 'row',
+                  borderWidth: isApplied ? 2 : 1.5,
+                  borderColor: isApplied ? '#059669' : '#f1f5f9',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 5,
+                  elevation: 2,
+                  opacity: isUsed ? 0.75 : 1,
+                }}
               >
+                {/* Left Vertical Ribbon */}
                 <View
                   style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: 18,
-                    overflow: 'hidden',
-                    flexDirection: 'row',
-                    borderWidth: 1.5,
-                    borderColor: isApplied ? '#059669' : '#f1f5f9',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.04,
-                    shadowRadius: 4,
-                    elevation: 1,
+                    width: 48,
+                    backgroundColor: isUsed ? '#94a3b8' : offer.tagColor,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 14,
                   }}
                 >
-                  {/* Left Vertical Ribbon matching Image 1 */}
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      transform: [{ rotate: '-90deg' }],
+                      fontFamily: fonts.extraBold,
+                      fontWeight: 'normal',
+                      fontSize: 11,
+                      color: '#ffffff',
+                      letterSpacing: 1.5,
+                    }}
+                  >
+                    {offer.tag}
+                  </Text>
+                </View>
+
+                {/* Right Details Container */}
+                <View style={{ flex: 1, padding: 16 }}>
                   <View
                     style={{
-                      width: 48,
-                      backgroundColor: offer.tagColor,
+                      flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      paddingVertical: 14,
+                      justifyContent: 'space-between',
                     }}
                   >
                     <Text
                       style={{
-                        transform: [{ rotate: '-90deg' }],
                         fontFamily: fonts.extraBold,
-                        fontSize: 11,
-                        fontWeight: '900',
-                        color: '#ffffff',
-                        letterSpacing: 1.5,
+                        fontWeight: 'normal',
+                        fontSize: 16,
+                        color: isUsed ? '#64748b' : '#0f172a',
+                        letterSpacing: 0.3,
                       }}
                     >
-                      {offer.tag}
+                      {offer.code}
                     </Text>
-                  </View>
 
-                  {/* Right Details Container */}
-                  <View style={{ flex: 1, padding: 16 }}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <Text
+                    {isApplied ? (
+                      <Pressable
+                        onPress={removeCoupon}
+                        hitSlop={8}
                         style={{
-                          fontFamily: fonts.extraBold,
-                          fontSize: 16,
-                          fontWeight: '900',
-                          color: '#0f172a',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#dcfce7',
+                          paddingHorizontal: 10,
+                          paddingVertical: 4.5,
+                          borderRadius: 10,
                         }}
                       >
-                        {offer.code}
-                      </Text>
-
-                      {isApplied ? (
-                        <Pressable
-                          onPress={removeCoupon}
-                          hitSlop={8}
+                        <Text
                           style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: '#dcfce7',
-                            paddingHorizontal: 10,
-                            paddingVertical: 4.5,
-                            borderRadius: 10,
+                            fontFamily: fonts.bold,
+                            fontWeight: 'normal',
+                            fontSize: 12,
+                            color: '#047857',
+                            letterSpacing: 0.3,
                           }}
                         >
-                          <Text
-                            style={{
-                              fontFamily: fonts.bold,
-                              fontSize: 12,
-                              fontWeight: '800',
-                              color: '#047857',
-                              letterSpacing: 0.3,
-                            }}
-                          >
-                            APPLIED
-                          </Text>
-                          <Check
-                            size={13}
-                            color="#047857"
-                            strokeWidth={3.2}
-                            style={{ marginLeft: 3 }}
-                          />
-                        </Pressable>
-                      ) : (
-                        <Pressable
-                          onPress={() => handleApply(offer.code)}
-                          disabled={applying || isLocked}
-                          hitSlop={8}
+                          APPLIED
+                        </Text>
+                        <Check
+                          size={13}
+                          color="#047857"
+                          strokeWidth={3.2}
+                          style={{ marginLeft: 3 }}
+                        />
+                      </Pressable>
+                    ) : isUsed ? (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#f1f5f9',
+                          paddingHorizontal: 10,
+                          paddingVertical: 4.5,
+                          borderRadius: 10,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: fonts.bold,
+                            fontWeight: 'normal',
+                            fontSize: 12,
+                            color: '#94a3b8',
+                            letterSpacing: 0.3,
+                          }}
                         >
-                          <Text
-                            style={{
-                              fontFamily: fonts.extraBold,
-                              fontSize: 13.5,
-                              fontWeight: '900',
-                              color: isLocked ? '#94a3b8' : '#047857',
-                              letterSpacing: 0.5,
-                            }}
-                          >
-                            APPLY
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
+                          ALREADY USED
+                        </Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => handleApply(offer.code)}
+                        disabled={applying || isLocked}
+                        hitSlop={8}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: fonts.extraBold,
+                            fontWeight: 'normal',
+                            fontSize: 13.5,
+                            color: isLocked ? '#94a3b8' : '#047857',
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          APPLY
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
 
-                    {/* Headline in dark green matching Image 1 */}
+                  {/* Headline in dark green */}
+                  <Text
+                    style={{
+                      fontFamily: fonts.bold,
+                      fontWeight: 'normal',
+                      fontSize: 14,
+                      color: isUsed ? '#64748b' : '#047857',
+                      marginTop: 4,
+                    }}
+                  >
+                    {offer.headline}
+                  </Text>
+
+                  {/* Terms */}
+                  <Text
+                    style={{
+                      fontFamily: fonts.regular,
+                      fontWeight: 'normal',
+                      fontSize: 12,
+                      color: '#64748b',
+                      marginTop: 2,
+                      lineHeight: 17,
+                    }}
+                  >
+                    {offer.terms}
+                  </Text>
+
+                  {/* Locked notice for BULK100 or already used */}
+                  {isUsed ? (
                     <Text
                       style={{
                         fontFamily: fonts.bold,
-                        fontSize: 14,
-                        fontWeight: '700',
-                        color: '#047857',
-                        marginTop: 4,
+                        fontWeight: 'normal',
+                        fontSize: 12,
+                        color: '#dc2626',
+                        marginTop: 6,
                       }}
                     >
-                      {offer.headline}
+                      • Already redeemed on a previous order (single use only)
                     </Text>
-
-                    {/* Terms */}
+                  ) : isLocked && diff > 0 ? (
                     <Text
                       style={{
-                        fontFamily: fonts.regular,
+                        fontFamily: fonts.bold,
+                        fontWeight: 'normal',
                         fontSize: 12,
-                        fontWeight: '500',
-                        color: '#64748b',
-                        marginTop: 2,
+                        color: '#b45309',
+                        marginTop: 6,
                       }}
                     >
-                      {offer.terms}
+                      Add ₹{diff} more to unlock
                     </Text>
-
-                    {/* Locked notice for BULK100 matching Image 1 */}
-                    {isLocked && (
-                      <Text
-                        style={{
-                          fontFamily: fonts.bold,
-                          fontSize: 12.5,
-                          fontWeight: '700',
-                          color: '#b45309',
-                          marginTop: 6,
-                        }}
-                      >
-                        Add ₹{diff} more to unlock
-                      </Text>
-                    )}
-                  </View>
+                  ) : null}
                 </View>
-              </Animated.View>
+              </View>
             );
           })}
         </View>
       </ScrollView>
 
-      {/* BOTTOM DIV: When coupon is applied matching Image 1 */}
+      {/* BOTTOM DIV: When coupon is applied */}
       {Boolean(couponCode) && (
         <Animated.View
           entering={FadeInUp.duration(260)}
           style={{
             position: 'absolute',
-            bottom: 12,
+            bottom: Math.max(insets.bottom, 14),
             left: 16,
             right: 16,
           }}
@@ -541,8 +613,8 @@ export default function ApplyCouponScreen({ navigation }) {
               <Text
                 style={{
                   fontFamily: fonts.regular,
+                  fontWeight: 'normal',
                   fontSize: 12.5,
-                  fontWeight: '500',
                   color: '#a7f3d0',
                 }}
               >
@@ -551,8 +623,8 @@ export default function ApplyCouponScreen({ navigation }) {
               <Text
                 style={{
                   fontFamily: fonts.extraBold,
+                  fontWeight: 'normal',
                   fontSize: 18,
-                  fontWeight: '900',
                   color: '#ffffff',
                   marginTop: 2,
                 }}
@@ -573,8 +645,8 @@ export default function ApplyCouponScreen({ navigation }) {
               <Text
                 style={{
                   fontFamily: fonts.bold,
+                  fontWeight: 'normal',
                   fontSize: 15,
-                  fontWeight: '800',
                   color: '#ffffff',
                 }}
               >

@@ -184,6 +184,9 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
               style={{ width: '100%', height: '100%' }}
               contentFit="contain"
               cachePolicy="memory-disk"
+              priority="high"
+              transition={0}
+              recyclingKey={item.id}
             />
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -474,7 +477,15 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
       >
         <View style={{ width: 96, height: 96, borderRadius: 4, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           {imageSource ? (
-            <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
+            <Image
+              source={imageSource}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={0}
+              recyclingKey={item.id}
+            />
           ) : (
             <ShoppingBag size={28} color="#cbd5e1" />
           )}
@@ -534,7 +545,15 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
     >
       <View style={{ width: '100%', height: 110, backgroundColor: '#f8fafc' }}>
         {imageSource ? (
-          <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
+          <Image
+            source={imageSource}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            priority="high"
+            transition={0}
+            recyclingKey={item.id}
+          />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ShoppingBag size={28} color="#cbd5e1" />

@@ -5,6 +5,7 @@ import { FREE_DELIVERY_THRESHOLD } from '../utils/pricing';
 import useActiveOrder from '../hooks/useActiveOrder';
 import HeroBanner, { HOME_BANNERS } from '../components/ui/HeroBanner';
 import React, { useEffect, useState, useContext, useCallback, useRef, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -43,7 +44,7 @@ import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
-import { setCachedCategories } from './CategoryScreen';
+import { setCachedCategories, getCachedCategoryProducts, setCachedCategoryProducts } from './CategoryScreen';
 import { getProductImageSource } from '../utils/productImages';
 import { getCategoryVisual } from '../utils/categoryImages';
 import slugify from '../utils/slugify';
@@ -212,9 +213,49 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch products, categories, and default address
+  // Hydrate from local cache immediately on mount so the user never sees an empty screen
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      AsyncStorage.getItem('@supamart_cached_home_products'),
+      AsyncStorage.getItem('@supamart_cached_home_categories'),
+      AsyncStorage.getItem('@supamart_cached_default_address'),
+    ])
+      .then(([cachedProds, cachedCats, cachedAddr]) => {
+        if (!active) return;
+        if (cachedProds) {
+          try {
+            const parsed = JSON.parse(cachedProds);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProducts(parsed);
+              setLoading(false);
+            }
+          } catch (_e) {}
+        }
+        if (cachedCats) {
+          try {
+            const parsed = JSON.parse(cachedCats);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setAllCategories(parsed);
+              setCachedCategories(parsed);
+            }
+          } catch (_e) {}
+        }
+        if (cachedAddr) {
+          try {
+            const parsed = JSON.parse(cachedAddr);
+            if (parsed) setDefaultAddress(parsed);
+          } catch (_e) {}
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Fetch products, categories, and default address with stale-while-revalidate persistence
   const loadData = useCallback(async () => {
-    setLoading(true);
     try {
       const [prodRes, catRes] = await Promise.allSettled([
         apiClient.get('/products', {
@@ -225,12 +266,32 @@ export default function HomeScreen({ navigation }) {
       ]);
 
       if (prodRes.status === 'fulfilled') {
-        setProducts(prodRes.value.data?.items || []);
+        const items = prodRes.value.data?.items || [];
+        if (items.length > 0) {
+          setProducts(items);
+          AsyncStorage.setItem('@supamart_cached_home_products', JSON.stringify(items)).catch(() => {});
+
+          const grouped = {};
+          items.forEach((p) => {
+            if (p.categoryId) {
+              if (!grouped[p.categoryId]) grouped[p.categoryId] = [];
+              grouped[p.categoryId].push(p);
+            }
+          });
+          Object.entries(grouped).forEach(([catId, prods]) => {
+            if (prods.length >= 2) {
+              setCachedCategoryProducts(catId, prods);
+            }
+          });
+        }
       }
       if (catRes.status === 'fulfilled') {
         const cats = catRes.value.data?.items || [];
-        setAllCategories(cats);
-        setCachedCategories(cats);
+        if (cats.length > 0) {
+          setAllCategories(cats);
+          setCachedCategories(cats);
+          AsyncStorage.setItem('@supamart_cached_home_categories', JSON.stringify(cats)).catch(() => {});
+        }
       }
     } catch {
       // Fallback
@@ -258,7 +319,12 @@ export default function HomeScreen({ navigation }) {
           || addresses.find((address) => address.id === userProfile.defaultAddressId)
           || addresses[0]
           || null;
-        if (active) setDefaultAddress(selected);
+        if (active) {
+          setDefaultAddress(selected);
+          if (selected) {
+            AsyncStorage.setItem('@supamart_cached_default_address', JSON.stringify(selected)).catch(() => {});
+          }
+        }
       })
       .catch(() => {
         if (active) setDefaultAddress(null);
@@ -632,6 +698,21 @@ export default function HomeScreen({ navigation }) {
                     if (cat.id === 'all') {
                       setActiveCategory('all');
                     } else {
+                      if (!getCachedCategoryProducts(cat.id)) {
+                        apiClient
+                          .get('/products', { params: { categoryId: cat.id, limit: 30 }, __skipErrorToast: true })
+                          .then((res) => {
+                            const prods = res.data?.items || [];
+                            if (prods.length > 0) {
+                              setCachedCategoryProducts(cat.id, prods);
+                              const imgUrls = prods
+                                .map((p) => p.imageUrl || p.image || p.images?.[0])
+                                .filter((url) => typeof url === 'string' && url.startsWith('http'));
+                              if (imgUrls.length > 0) Image.prefetch(imgUrls);
+                            }
+                          })
+                          .catch(() => {});
+                      }
                       navigation.navigate('Category', {
                         id: cat.id,
                         name: cat.name || cat.label,
@@ -824,7 +905,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 16 }}>
-          {[{ name: 'Buy again', screen: 'BuyAgain' }, { name: 'Shopping lists', screen: 'ShoppingLists' }].map(action => <Pressable key={action.screen} accessibilityRole="button" onPress={() => navigation.navigate(action.screen)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#f0fdf4', borderRadius: 12 }}><Text style={{ fontFamily: fonts.bold, color: '#047857' }}>{action.name}</Text><ChevronRight size={16} color="#047857" /></Pressable>)}
+          {[{ name: 'Buy again', screen: 'BuyAgain' }, { name: 'Shopping lists', screen: 'ShoppingLists' }].map(action => <Pressable key={action.screen} accessibilityRole="button" onPress={() => (navigation.getParent() || navigation).navigate(action.screen)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#f0fdf4', borderRadius: 12 }}><Text style={{ fontFamily: fonts.bold, color: '#047857' }}>{action.name}</Text><ChevronRight size={16} color="#047857" /></Pressable>)}
         </View>
         {/* DAILY ESSENTIALS SECTION matching Images 1, 2, 3 */}
         <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
@@ -901,6 +982,21 @@ export default function HomeScreen({ navigation }) {
                     navigation.navigate('ProductList', { title: 'Daily essentials' });
                   } else {
                     const selected = allCategories.find((c) => c.id === activeCategory);
+                    if (activeCategory && !getCachedCategoryProducts(activeCategory)) {
+                      apiClient
+                        .get('/products', { params: { categoryId: activeCategory, limit: 30 }, __skipErrorToast: true })
+                        .then((res) => {
+                          const prods = res.data?.items || [];
+                          if (prods.length > 0) {
+                            setCachedCategoryProducts(activeCategory, prods);
+                            const imgUrls = prods
+                              .map((p) => p.imageUrl || p.image || p.images?.[0])
+                              .filter((url) => typeof url === 'string' && url.startsWith('http'));
+                            if (imgUrls.length > 0) Image.prefetch(imgUrls);
+                          }
+                        })
+                        .catch(() => {});
+                    }
                     navigation.navigate('Category', {
                       id: activeCategory,
                       name: selected?.name || 'Category',
@@ -1450,6 +1546,21 @@ export default function HomeScreen({ navigation }) {
                 <Pressable
                   key={cat.id}
                   onPress={() => {
+                    if (!getCachedCategoryProducts(cat.id)) {
+                      apiClient
+                        .get('/products', { params: { categoryId: cat.id, limit: 30 }, __skipErrorToast: true })
+                        .then((res) => {
+                          const prods = res.data?.items || [];
+                          if (prods.length > 0) {
+                            setCachedCategoryProducts(cat.id, prods);
+                            const imgUrls = prods
+                              .map((p) => p.imageUrl || p.image || p.images?.[0])
+                              .filter((url) => typeof url === 'string' && url.startsWith('http'));
+                            if (imgUrls.length > 0) Image.prefetch(imgUrls);
+                          }
+                        })
+                        .catch(() => {});
+                    }
                     navigation.navigate('Category', {
                       id: cat.id,
                       name: cat.name,

@@ -65,30 +65,30 @@ export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
           paddingHorizontal: 28,
         }}
       >
-        <Animated.View entering={FadeInDown.duration(320)} style={{ alignItems: 'center' }}>
+        <Animated.View entering={FadeInDown.duration(300)} style={{ alignItems: 'center' }}>
           {/* Circular Off-grid Badge matching Image 1 */}
           <View
             style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
+              width: 100,
+              height: 100,
+              borderRadius: 50,
               backgroundColor: '#f1f5f9',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: 24,
+              marginBottom: 20,
             }}
           >
-            <WifiOff size={44} color="#475569" strokeWidth={2.4} />
+            <WifiOff size={44} color="#8c95a3" strokeWidth={2} />
           </View>
 
           {/* Title matching Image 1 */}
           <Text
             style={{
-              fontFamily: fonts.extraBold,
+              fontFamily: fonts.bold,
               fontSize: 22,
-              fontWeight: '900',
-              color: '#0f172a',
-              letterSpacing: -0.4,
+              fontWeight: '700',
+              color: '#111827',
+              letterSpacing: -0.3,
               marginBottom: 8,
               textAlign: 'center',
             }}
@@ -99,13 +99,13 @@ export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
           {/* Subtitle matching Image 1 */}
           <Text
             style={{
-              fontFamily: fonts.medium,
-              fontSize: 14,
-              fontWeight: '500',
+              fontFamily: fonts.regular,
+              fontSize: 13.5,
+              fontWeight: '400',
               color: '#64748b',
               textAlign: 'center',
-              lineHeight: 22,
-              maxWidth: 290,
+              lineHeight: 20,
+              maxWidth: 280,
             }}
           >
             Check your mobile data or Wi-Fi and try again.{'\n'}Your cart is saved.
@@ -114,28 +114,24 @@ export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
       </View>
 
       {/* BOTTOM BUTTONS matching Image 1 */}
-      <View style={{ paddingHorizontal: 20, paddingBottom: 24, gap: 12 }}>
+      <View style={{ paddingHorizontal: 20, paddingBottom: 28, gap: 12 }}>
         <Pressable
           onPress={handleRetry}
           disabled={checking}
-          style={{
-            height: 52,
-            borderRadius: 16,
-            backgroundColor: '#047857',
+          style={({ pressed }) => ({
+            height: 50,
+            borderRadius: 12,
+            backgroundColor: '#0d7a46',
             alignItems: 'center',
             justifyContent: 'center',
-            shadowColor: '#047857',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.25,
-            shadowRadius: 6,
-            elevation: 3,
-          }}
+            opacity: pressed ? 0.9 : (checking ? 0.75 : 1),
+          })}
         >
           <Text
             style={{
               fontFamily: fonts.bold,
               fontSize: 15.5,
-              fontWeight: '800',
+              fontWeight: '700',
               color: '#ffffff',
             }}
           >
@@ -145,18 +141,19 @@ export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
 
         <Pressable
           onPress={handleGoHome}
-          style={{
-            paddingVertical: 12,
+          style={({ pressed }) => ({
+            paddingVertical: 10,
             alignItems: 'center',
             justifyContent: 'center',
-          }}
+            opacity: pressed ? 0.7 : 1,
+          })}
         >
           <Text
             style={{
               fontFamily: fonts.bold,
               fontSize: 14.5,
-              fontWeight: '800',
-              color: '#047857',
+              fontWeight: '700',
+              color: '#0d7a46',
             }}
           >
             Go to home

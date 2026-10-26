@@ -266,7 +266,7 @@ function EmptyOrders({ navigation }) {
 
 export default function OrdersScreen({ navigation }) {
   const { userProfile } = useContext(AuthContext);
-  const { loadCart } = useCart();
+  const { loadCart, addItems } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -343,18 +343,56 @@ export default function OrdersScreen({ navigation }) {
   const handleReorder = async (order) => {
     if (!order?.items?.length) return;
     try {
-      const items = order.items.map((item) => ({
-        productId: item.productId,
-        variantId: item.variantId,
-        qty: item.qty,
-      }));
+      const entries = [];
+      for (const orderItem of order.items) {
+        try {
+          let prod = orderItem.product;
+          if (!prod && orderItem.productId) {
+            const { data } = await apiClient.get(`/products/${orderItem.productId}`);
+            prod = data;
+          }
+          const variant =
+            prod?.variants?.find((v) => v.id === orderItem.variantId) ||
+            prod?.variants?.[0] ||
+            { id: orderItem.variantId || 'default', label: orderItem.variantLabel || '1 Unit', stock: 99 };
+          if (prod) {
+            entries.push({ product: prod, variant, qty: orderItem.qty || 1 });
+          }
+        } catch {
+          // If fetching product details failed, fallback to direct entry if available
+          if (orderItem.productId) {
+            entries.push({
+              product: { id: orderItem.productId, name: orderItem.name, price: orderItem.price, availability: 'AVAILABLE' },
+              variant: { id: orderItem.variantId || 'default', label: orderItem.variantLabel || '1 Unit', stock: 99 },
+              qty: orderItem.qty || 1,
+            });
+          }
+        }
+      }
 
-      await apiClient.put('/cart', { items });
-      await loadCart(true, { force: true });
-      Toast.show({ type: 'success', text1: 'Items added to cart.' });
-      navigation.navigate('Cart');
-    } catch {
-      Toast.show({ type: 'error', text1: 'Could not reorder.' });
+      if (entries.length > 0 && typeof addItems === 'function') {
+        await addItems(entries);
+        Toast.show({
+          type: 'success',
+          text1: 'Items added to cart',
+          text2: `Reordered items from order #${order.orderNo || ''}`,
+        });
+        navigation.navigate('Cart');
+      } else {
+        // Fallback to direct cart sync
+        const items = order.items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId || 'default',
+          qty: item.qty || 1,
+        }));
+        await apiClient.put('/cart', { items });
+        await loadCart(true, { force: true });
+        Toast.show({ type: 'success', text1: 'Items added to cart.' });
+        navigation.navigate('Cart');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Could not reorder items';
+      Toast.show({ type: 'error', text1: msg });
     }
   };
 
@@ -558,7 +596,8 @@ export default function OrdersScreen({ navigation }) {
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
                       {item.items?.slice(0, 3).map((prod, pIdx) => {
                         const imageSource =
-                          getProductImageSource(prod) || { uri: optimizeCloudinaryUrl(prod.image, 200) };
+                          getProductImageSource(prod, 200) ||
+                          (prod?.image ? { uri: optimizeCloudinaryUrl(prod.image, 200) } : null);
                         return (
                           <View
                             key={pIdx}
@@ -574,12 +613,16 @@ export default function OrdersScreen({ navigation }) {
                               justifyContent: 'center',
                             }}
                           >
-                            <Image
-                              source={imageSource}
-                              style={{ width: '100%', height: '100%' }}
-                              contentFit="contain"
-                              cachePolicy="memory-disk"
-                            />
+                            {imageSource?.uri || typeof imageSource === 'number' ? (
+                              <Image
+                                source={imageSource}
+                                style={{ width: '100%', height: '100%' }}
+                                contentFit="contain"
+                                cachePolicy="memory-disk"
+                              />
+                            ) : (
+                              <Package size={22} color="#94a3b8" strokeWidth={1.8} />
+                            )}
                           </View>
                         );
                       })}
@@ -655,7 +698,11 @@ export default function OrdersScreen({ navigation }) {
                     </Pressable>
                   )}
 
-                  {/* Actions matching Image 2: [Track order / View details / Refund status] + [Reorder] */}
+                  {/* Actions:
+                      1. CANCELLED: [Refund status] + [View details]
+                      2. ONGOING: [Track order] + [View details] (NO Reorder button!)
+                      3. DELIVERED: [View details] + [Reorder]
+                  */}
                   {item.status === 'CANCELLED' ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 }}>
                       <Pressable
@@ -685,6 +732,56 @@ export default function OrdersScreen({ navigation }) {
                           navigation.navigate('OrderDetail', {
                             orderId: item.id,
                             orderNo: item.orderNo,
+                            order: item,
+                          })
+                        }
+                        style={{
+                          flex: 1,
+                          height: 44,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: '#e2e8f0',
+                          backgroundColor: '#ffffff',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#0f172a' }}>
+                          View details
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : isOngoing ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 }}>
+                      <Pressable
+                        onPress={() =>
+                          navigation.navigate('OrderTracking', {
+                            orderId: item.id,
+                            orderNo: item.orderNo,
+                            order: item,
+                            fromOrders: true,
+                          })
+                        }
+                        style={{
+                          flex: 1,
+                          height: 44,
+                          borderRadius: 12,
+                          backgroundColor: '#087f46',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#ffffff' }}>
+                          Track order
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() =>
+                          navigation.navigate('OrderDetail', {
+                            orderId: item.id,
+                            orderNo: item.orderNo,
+                            order: item,
                           })
                         }
                         style={{
@@ -707,10 +804,10 @@ export default function OrdersScreen({ navigation }) {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 }}>
                       <Pressable
                         onPress={() =>
-                          navigation.navigate(isOngoing ? 'OrderTracking' : 'OrderDetail', {
+                          navigation.navigate('OrderDetail', {
                             orderId: item.id,
                             orderNo: item.orderNo,
-                            fromOrders: true,
+                            order: item,
                           })
                         }
                         style={{
@@ -725,7 +822,7 @@ export default function OrdersScreen({ navigation }) {
                         }}
                       >
                         <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#0f172a' }}>
-                          {isOngoing ? 'Track order' : 'View details'}
+                          View details
                         </Text>
                       </Pressable>
 

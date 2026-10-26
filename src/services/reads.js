@@ -85,6 +85,7 @@ export function onSnapshot(ref, next, error = () => {}) {
         error(err);
       }
     } finally {
+      running = false;
       const baseInterval = Number(ref?.pollInterval) > 0 ? Number(ref.pollInterval) : 20000;
       if (!stopped) timer = setTimeout(poll, failures > 0 ? Math.min(10000 * (2 ** Math.min(failures, 4)), 60000) : baseInterval);
     }

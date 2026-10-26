@@ -174,7 +174,6 @@ export default function BuyAgainScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
-  const [totalOrdersCount, setTotalOrdersCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -185,7 +184,11 @@ export default function BuyAgainScreen({ navigation }) {
   const [reorderingId, setReorderingId] = useState(null);
   const [addingAll, setAddingAll] = useState(false);
 
-  const { addItem, addItems, updateQty, getQty } = useCart();
+  const { items: cartItems, addItem, addItems, updateQty, getQty } = useCart();
+  const cartCount = useMemo(
+    () => (cartItems ? cartItems.reduce((sum, item) => sum + (item.qty || 1), 0) : 0),
+    [cartItems]
+  );
 
   const fetchBuyAgainData = useCallback(async (isRefresh = false) => {
     let active = true;
@@ -203,9 +206,6 @@ export default function BuyAgainScreen({ navigation }) {
       ) {
         setItems(data.items || []);
         setRecentOrders(data.recentOrders || []);
-        setTotalOrdersCount(
-          data.totalOrdersCount || data.recentOrders?.length || 0
-        );
         setError(false);
         setLoading(false);
         setRefreshing(false);
@@ -260,14 +260,13 @@ export default function BuyAgainScreen({ navigation }) {
         }
         setItems(Array.from(historyMap.values()));
         setRecentOrders(mineOrders.slice(0, 8));
-        setTotalOrdersCount(mineOrders.length);
         setError(false);
       } else {
-        setItems([]);
-        setRecentOrders([]);
-        setTotalOrdersCount(0);
+        setItems(data?.items || []);
+        setRecentOrders(data?.recentOrders || []);
+        setError(false);
       }
-    } catch (err) {
+    } catch {
       if (active) setError(true);
     } finally {
       if (active) {
@@ -331,30 +330,38 @@ export default function BuyAgainScreen({ navigation }) {
   const availableItems = useMemo(() => {
     return filteredItems.filter((item) => {
       const product = item.product;
-      if (!product || product.isUnavailable) return false;
+      if (!product) return false;
       const variant =
-        product?.variants?.find((v) => v.id === item.variantId) ||
+        product?.variants?.find((v) => v.id === item.variantId || v._id === item.variantId) ||
         product?.variants?.[0];
-      return !isProductUnavailable(product, variant);
+      const unavailable =
+        product.isUnavailable ||
+        !variant ||
+        isProductUnavailable(product, variant);
+      return !unavailable;
     });
   }, [filteredItems]);
+
+  const eligibleItems = useMemo(() => {
+    return availableItems.length > 0 ? availableItems : filteredItems;
+  }, [availableItems, filteredItems]);
 
   // Compute total count and price for the bottom action bar
   const { totalAvailableCount, totalAvailablePrice } = useMemo(() => {
     let price = 0;
-    availableItems.forEach((item) => {
+    eligibleItems.forEach((item) => {
       const product = item.product;
       const variant =
-        product?.variants?.find((v) => v.id === item.variantId) ||
+        product?.variants?.find((v) => v.id === item.variantId || v._id === item.variantId) ||
         product?.variants?.[0];
-      const p = variant?.offerPrice ?? variant?.price ?? 0;
-      price += p;
+      const p = variant?.offerPrice ?? variant?.price ?? item.lastPrice ?? 0;
+      price += Number(p) || 0;
     });
     return {
-      totalAvailableCount: availableItems.length,
+      totalAvailableCount: eligibleItems.length,
       totalAvailablePrice: Math.round(price),
     };
-  }, [availableItems]);
+  }, [eligibleItems]);
 
   // Handle re-ordering an entire past order
   const handleReorder = async (order) => {
@@ -370,7 +377,7 @@ export default function BuyAgainScreen({ navigation }) {
             prod = data;
           }
           const variant =
-            prod?.variants?.find((v) => v.id === orderItem.variantId) ||
+            prod?.variants?.find((v) => v.id === orderItem.variantId || v._id === orderItem.variantId) ||
             prod?.variants?.[0];
           if (prod && variant && !isProductUnavailable(prod, variant)) {
             entries.push({ product: prod, variant, qty: orderItem.qty || 1 });
@@ -409,7 +416,7 @@ export default function BuyAgainScreen({ navigation }) {
     try {
       const product = item.product;
       const variant =
-        product?.variants?.find((v) => v.id === item.variantId) ||
+        product?.variants?.find((v) => v.id === item.variantId || v._id === item.variantId) ||
         product?.variants?.[0];
       await addItem(product, variant);
     } catch {
@@ -421,13 +428,13 @@ export default function BuyAgainScreen({ navigation }) {
 
   // Handle adding all available items
   const handleAddAll = async () => {
-    if (addingAll || availableItems.length === 0) return;
+    if (addingAll || eligibleItems.length === 0) return;
     setAddingAll(true);
     try {
-      const entries = availableItems.map((item) => {
+      const entries = eligibleItems.map((item) => {
         const product = item.product;
         const variant =
-          product?.variants?.find((v) => v.id === item.variantId) ||
+          product?.variants?.find((v) => v.id === item.variantId || v._id === item.variantId) ||
           product?.variants?.[0];
         return { product, variant, qty: 1 };
       });
@@ -444,15 +451,15 @@ export default function BuyAgainScreen({ navigation }) {
   };
 
   const dynamicSubtitle =
-    totalOrdersCount > 0
-      ? `From your last ${totalOrdersCount} order${totalOrdersCount === 1 ? '' : 's'}`
+    recentOrders.length > 0
+      ? `From your last ${recentOrders.length} order${recentOrders.length === 1 ? '' : 's'}`
       : 'From your previous orders';
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* Screen Header matching Image 1 */}
+      {/* Screen Header matching Image 3 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Pressable
@@ -510,382 +517,391 @@ export default function BuyAgainScreen({ navigation }) {
 
       {loading ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator color="#087f46" size="large" />
+          <ActivityIndicator color="#0A7C47" size="large" />
           <Text style={styles.loadingText}>Loading your purchases...</Text>
         </View>
       ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.scrollContent,
-            availableItems.length > 0 && { paddingBottom: 110 },
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchBuyAgainData(true)}
-              colors={['#087f46']}
-              tintColor="#087f46"
-            />
-          }
-        >
-          {/* Order It All Again Carousel Section */}
-          {recentOrders.length > 0 && (
-            <View style={styles.carouselSection}>
-              <Text style={styles.sectionTitle}>Order it all again</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.carouselContent}
-              >
-                {recentOrders.map((order) => {
-                  const orderItems = order.items || [];
-                  const displayItems = orderItems.slice(0, 3);
-                  const extraCount =
-                    orderItems.length > 3 ? orderItems.length - 3 : 0;
-                  const isReordering = reorderingId === order.id;
+        <View style={styles.mainContainer}>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingBottom:
+                  filteredItems.length > 0
+                    ? 110 + (insets.bottom > 0 ? insets.bottom : 14)
+                    : 32,
+              },
+            ]}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => fetchBuyAgainData(true)}
+                colors={['#0A7C47']}
+                tintColor="#0A7C47"
+              />
+            }
+          >
+            {/* Order It All Again Carousel Section */}
+            {recentOrders.length > 0 && (
+              <View style={styles.carouselSection}>
+                <Text style={styles.sectionTitle}>Order it all again</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.carouselContent}
+                >
+                  {recentOrders.map((order) => {
+                    const orderItems = order.items || [];
+                    const displayItems = orderItems.slice(0, 3);
+                    const extraCount =
+                      orderItems.length > 3 ? orderItems.length - 3 : 0;
+                    const isReordering = reorderingId === order.id;
+
+                    return (
+                      <View key={order.id} style={styles.orderCard}>
+                        {/* Order Card Header */}
+                        <View style={styles.orderCardHeader}>
+                          <Text style={styles.orderCardDate}>
+                            {formatOrderDate(order.createdAt)}
+                          </Text>
+                          <Text style={styles.orderCardNo}>#{order.orderNo}</Text>
+                        </View>
+
+                        {/* Thumbnails */}
+                        <View style={styles.thumbnailsRow}>
+                          {displayItems.map((it, idx) => {
+                            const imgSource = getProductImageSource(
+                              it.product || it,
+                              120
+                            );
+                            return (
+                              <View
+                                key={`thumb-${order.id}-${idx}`}
+                                style={styles.thumbnailBox}
+                              >
+                                <Image
+                                  source={imgSource}
+                                  style={styles.thumbnailImg}
+                                  contentFit="contain"
+                                />
+                              </View>
+                            );
+                          })}
+                          {extraCount > 0 && (
+                            <View style={styles.extraBadgeBox}>
+                              <Text style={styles.extraBadgeText}>
+                                +{extraCount}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {/* Compact price and reorder row; item count stays under the price. */}
+                        <View style={styles.orderCardBottom}>
+                          <View style={styles.orderCardPriceWrap}>
+                            <Text style={styles.orderTotal}>
+                              ₹{Math.round(order.total)}
+                            </Text>
+                            <Text style={styles.orderItemCount}>
+                              {orderItems.length} {orderItems.length === 1 ? 'item' : 'items'}
+                            </Text>
+                          </View>
+                          <Pressable
+                            onPress={() => handleReorder(order)}
+                            disabled={isReordering}
+                            style={({ pressed }) => [
+                              styles.reorderBtn,
+                              pressed && { opacity: 0.88 },
+                              isReordering && { opacity: 0.7 },
+                            ]}
+                            accessibilityLabel={`Reorder order ${order.orderNo}`}
+                          >
+                            {isReordering ? (
+                              <ActivityIndicator size="small" color="#ffffff" />
+                            ) : (
+                              <View style={styles.reorderBtnInner}>
+                                <RotateCcw
+                                  size={13}
+                                  color="#ffffff"
+                                  strokeWidth={2.4}
+                                  style={{ marginRight: 5 }}
+                                />
+                                <Text style={styles.reorderBtnText}>Reorder</Text>
+                              </View>
+                            )}
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Category Filter Pills Bar */}
+            {categories.length > 1 && (
+              <View style={styles.categoryPillsBar}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categoryPillsContent}
+                >
+                  {categories.map((cat) => {
+                    const isSelected = selectedCategory === cat;
+                    return (
+                      <Pressable
+                        key={cat}
+                        onPress={() => setSelectedCategory(cat)}
+                        style={[
+                          styles.categoryPill,
+                          isSelected
+                            ? styles.categoryPillSelected
+                            : styles.categoryPillUnselected,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryPillText,
+                            isSelected
+                              ? styles.categoryPillTextSelected
+                              : styles.categoryPillTextUnselected,
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Product Items Grouped in White Card Container matching Image 3 */}
+            {filteredItems.length > 0 ? (
+              <View style={styles.productsCard}>
+                {filteredItems.map((item, index) => {
+                  const product = item.product;
+                  const variant =
+                    product?.variants?.find((v) => v.id === item.variantId) ||
+                    product?.variants?.[0];
+                  const currentPrice =
+                    variant?.offerPrice ?? variant?.price ?? item.lastPrice ?? 0;
+                  const unavailable =
+                    product?.isUnavailable ||
+                    !variant ||
+                    isProductUnavailable(product, variant);
+                  const cartQty = getQty(product.id, variant?.id);
+                  const isBusy = busyItem === `${item.productId}:${item.variantId}`;
+
+                  // Check if price dropped from user's last ordered price
+                  const hasPriceDrop =
+                    item.lastPrice != null &&
+                    currentPrice < item.lastPrice &&
+                    item.lastPrice - currentPrice >= 1;
+                  const priceDropAmount = hasPriceDrop
+                    ? Math.round(item.lastPrice - currentPrice)
+                    : 0;
+
+                  const purchaseCount = item.purchaseCount || 1;
+                  const lastDate = item.lastPurchasedAt
+                    ? formatShortDate(item.lastPurchasedAt)
+                    : null;
+                  const isLastRow = index === filteredItems.length - 1;
 
                   return (
-                    <View key={order.id} style={styles.orderCard}>
-                      {/* Order Card Header */}
-                      <View style={styles.orderCardHeader}>
-                        <Text style={styles.orderCardDate}>
-                          {formatOrderDate(order.createdAt)}
-                        </Text>
-                        <Text style={styles.orderCardNo}>#{order.orderNo}</Text>
-                      </View>
+                    <View
+                      key={`${item.productId}:${item.variantId}`}
+                      style={[
+                        styles.productRow,
+                        isLastRow && styles.productRowLast,
+                      ]}
+                    >
+                      {/* Product Image */}
+                      <Pressable
+                        onPress={() =>
+                          product.id &&
+                          !product.isUnavailable &&
+                          navigation.navigate('ProductDetail', { id: product.id })
+                        }
+                        style={styles.productImgContainer}
+                      >
+                        <Image
+                          source={getProductImageSource(product, 160)}
+                          style={styles.productImg}
+                          contentFit="contain"
+                        />
+                      </Pressable>
 
-                      {/* Thumbnails */}
-                      <View style={styles.thumbnailsRow}>
-                        {displayItems.map((it, idx) => {
-                          const imgSource = getProductImageSource(
-                            it.product || it,
-                            120
-                          );
-                          return (
-                            <View
-                              key={`thumb-${order.id}-${idx}`}
-                              style={styles.thumbnailBox}
-                            >
-                              <Image
-                                source={imgSource}
-                                style={styles.thumbnailImg}
-                                contentFit="contain"
-                              />
-                            </View>
-                          );
-                        })}
-                        {extraCount > 0 && (
-                          <View style={styles.extraBadgeBox}>
-                            <Text style={styles.extraBadgeText}>
-                              +{extraCount}
+                      {/* Product Details */}
+                      <View style={styles.productDetails}>
+                        <Pressable
+                          onPress={() =>
+                            product.id &&
+                            !product.isUnavailable &&
+                            navigation.navigate('ProductDetail', {
+                              id: product.id,
+                            })
+                          }
+                        >
+                          <Text numberOfLines={2} style={styles.productName}>
+                            {product.name}
+                          </Text>
+                        </Pressable>
+
+                        <Text style={styles.variantLabel}>
+                          {variant?.label || item.variantLabel || '1 Unit'}
+                        </Text>
+
+                        {/* Frequency & Recency Row */}
+                        <View style={styles.purchaseMetaRow}>
+                          <View style={styles.boughtBadge}>
+                            <RotateCcw
+                              size={10}
+                              color="#1e293b"
+                              strokeWidth={2.4}
+                              style={{ marginRight: 4 }}
+                            />
+                            <Text style={styles.boughtCountText}>
+                              Bought {purchaseCount} ×
+                            </Text>
+                          </View>
+                          {lastDate && (
+                            <Text style={styles.lastPurchasedText}>
+                              Last on {lastDate}
+                            </Text>
+                          )}
+                        </View>
+
+                        {/* Price Dropped Badge */}
+                        {hasPriceDrop && priceDropAmount > 0 && (
+                          <View style={styles.priceDropPill}>
+                            <Text style={styles.priceDropText}>
+                              PRICE DROPPED ₹{priceDropAmount}
                             </Text>
                           </View>
                         )}
                       </View>
 
-                      {/* Order Card Price & Items Row */}
-                      <View style={styles.orderCardSummaryRow}>
-                        <View>
-                          <Text style={styles.orderCardSummaryLabel}>Order total</Text>
-                          <Text style={styles.orderTotal}>
-                            ₹{Math.round(order.total)}
-                          </Text>
-                        </View>
-                        <View style={styles.orderItemCountBadge}>
-                          <Text style={styles.orderItemCountText}>
-                            {orderItems.length} {orderItems.length === 1 ? 'item' : 'items'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Prominent Full-Width Reorder Button */}
-                      <Pressable
-                        onPress={() => handleReorder(order)}
-                        disabled={isReordering}
-                        style={({ pressed }) => [
-                          styles.reorderCompleteBtn,
-                          pressed && { opacity: 0.88 },
-                          isReordering && { opacity: 0.7 },
-                        ]}
-                        accessibilityLabel={`Reorder complete order ${order.orderNo}`}
-                      >
-                        {isReordering ? (
-                          <ActivityIndicator size="small" color="#ffffff" />
-                        ) : (
-                          <>
-                            <RotateCcw
-                              size={15}
-                              color="#ffffff"
-                              strokeWidth={2.4}
-                            />
-                            <Text style={styles.reorderCompleteBtnText}>
-                              Reorder complete order
-                            </Text>
-                          </>
-                        )}
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Category Filter Pills Bar */}
-          {categories.length > 1 && (
-            <View style={styles.categoryPillsBar}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryPillsContent}
-              >
-                {categories.map((cat) => {
-                  const isSelected = selectedCategory === cat;
-                  return (
-                    <Pressable
-                      key={cat}
-                      onPress={() => setSelectedCategory(cat)}
-                      style={[
-                        styles.categoryPill,
-                        isSelected
-                          ? styles.categoryPillSelected
-                          : styles.categoryPillUnselected,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.categoryPillText,
-                          isSelected
-                            ? styles.categoryPillTextSelected
-                            : styles.categoryPillTextUnselected,
-                        ]}
-                      >
-                        {cat}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Product Items Grouped in White Card Container matching Images 1 & 2 */}
-          {filteredItems.length > 0 ? (
-            <View style={styles.productsCard}>
-              {filteredItems.map((item, index) => {
-                const product = item.product;
-                const variant =
-                  product?.variants?.find((v) => v.id === item.variantId) ||
-                  product?.variants?.[0];
-                const currentPrice =
-                  variant?.offerPrice ?? variant?.price ?? item.lastPrice ?? 0;
-                const unavailable =
-                  product?.isUnavailable ||
-                  !variant ||
-                  isProductUnavailable(product, variant);
-                const cartQty = getQty(product.id, variant?.id);
-                const isBusy = busyItem === `${item.productId}:${item.variantId}`;
-
-                // Check if price dropped from user's last ordered price
-                const hasPriceDrop =
-                  item.lastPrice != null &&
-                  currentPrice < item.lastPrice &&
-                  item.lastPrice - currentPrice >= 1;
-                const priceDropAmount = hasPriceDrop
-                  ? Math.round(item.lastPrice - currentPrice)
-                  : 0;
-
-                const purchaseCount = item.purchaseCount || 1;
-                const lastDate = item.lastPurchasedAt
-                  ? formatShortDate(item.lastPurchasedAt)
-                  : null;
-                const isLastRow = index === filteredItems.length - 1;
-
-                return (
-                  <View
-                    key={`${item.productId}:${item.variantId}`}
-                    style={[
-                      styles.productRow,
-                      isLastRow && styles.productRowLast,
-                    ]}
-                  >
-                    {/* Product Image */}
-                    <Pressable
-                      onPress={() =>
-                        product.id &&
-                        !product.isUnavailable &&
-                        navigation.navigate('ProductDetail', { id: product.id })
-                      }
-                      style={styles.productImgContainer}
-                    >
-                      <Image
-                        source={getProductImageSource(product, 160)}
-                        style={styles.productImg}
-                        contentFit="contain"
-                      />
-                    </Pressable>
-
-                    {/* Product Details */}
-                    <View style={styles.productDetails}>
-                      <Pressable
-                        onPress={() =>
-                          product.id &&
-                          !product.isUnavailable &&
-                          navigation.navigate('ProductDetail', {
-                            id: product.id,
-                          })
-                        }
-                      >
-                        <Text numberOfLines={2} style={styles.productName}>
-                          {product.name}
+                      {/* Price and Action Button Column */}
+                      <View style={styles.actionColumn}>
+                        <Text style={styles.productPrice}>
+                          ₹{Math.round(currentPrice)}
                         </Text>
-                      </Pressable>
 
-                      <Text style={styles.variantLabel}>
-                        {variant?.label || item.variantLabel || '1 Unit'}
-                      </Text>
-
-                      {/* Frequency & Recency Row */}
-                      <View style={styles.purchaseMetaRow}>
-                        <View style={styles.boughtBadge}>
-                          <RotateCcw
-                            size={10}
-                            color="#1e293b"
-                            strokeWidth={2.4}
-                            style={{ marginRight: 4 }}
-                          />
-                          <Text style={styles.boughtCountText}>
-                            Bought {purchaseCount} ×
-                          </Text>
-                        </View>
-                        {lastDate && (
-                          <Text style={styles.lastPurchasedText}>
-                            Last on {lastDate}
-                          </Text>
+                        {unavailable ? (
+                          <View style={styles.notifyBtn}>
+                            <Text style={styles.notifyBtnText}>Notify me</Text>
+                          </View>
+                        ) : cartQty > 0 ? (
+                          <View style={styles.stepperContainer}>
+                            <Pressable
+                              onPress={() =>
+                                updateQty(product.id, variant?.id, -1)
+                              }
+                              hitSlop={6}
+                              style={styles.stepperBtn}
+                            >
+                              <Minus size={13} color="#ffffff" strokeWidth={2.6} />
+                            </Pressable>
+                            <Text style={styles.stepperQty}>{cartQty}</Text>
+                            <Pressable
+                              onPress={() => updateQty(product.id, variant?.id, 1)}
+                              hitSlop={6}
+                              style={styles.stepperBtn}
+                            >
+                              <Plus size={13} color="#ffffff" strokeWidth={2.6} />
+                            </Pressable>
+                          </View>
+                        ) : (
+                          <Pressable
+                            onPress={() => handleAddItem(item)}
+                            disabled={isBusy}
+                            style={({ pressed }) => [
+                              styles.addBtn,
+                              pressed && { opacity: 0.8 },
+                            ]}
+                          >
+                            {isBusy ? (
+                              <ActivityIndicator size="small" color="#0A7C47" />
+                            ) : (
+                              <Text style={styles.addBtnText}>ADD</Text>
+                            )}
+                          </Pressable>
                         )}
                       </View>
-
-                      {/* Price Dropped Badge */}
-                      {hasPriceDrop && priceDropAmount > 0 && (
-                        <View style={styles.priceDropPill}>
-                          <Text style={styles.priceDropText}>
-                            PRICE DROPPED ₹{priceDropAmount}
-                          </Text>
-                        </View>
-                      )}
                     </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Package
+                  size={54}
+                  color="#94a3b8"
+                  strokeWidth={1.5}
+                  style={{ marginBottom: 14 }}
+                />
+                <Text style={styles.emptyTitle}>
+                  {error
+                    ? 'Could not load previous orders'
+                    : 'No previous purchases found'}
+                </Text>
+                <Text style={styles.emptyDesc}>
+                  {error
+                    ? 'Please pull down to refresh or check your internet connection.'
+                    : 'Your ordered products will automatically appear here once your orders are completed.'}
+                </Text>
+                <Pressable
+                  onPress={() => navigation.navigate('Main', { screen: 'Home' })}
+                  style={styles.startShoppingBtn}
+                >
+                  <ShoppingBag size={16} color="#ffffff" strokeWidth={2.2} />
+                  <Text style={styles.startShoppingBtnText}>Start Shopping</Text>
+                </Pressable>
+              </View>
+            )}
 
-                    {/* Price and Action Button Column */}
-                    <View style={styles.actionColumn}>
-                      <Text style={styles.productPrice}>
-                        ₹{Math.round(currentPrice)}
-                      </Text>
+            {/* Today's price note right below products card */}
+            {filteredItems.length > 0 && (
+              <Text style={styles.todayPriceNote}>
+                Prices shown are today’s prices
+              </Text>
+            )}
+          </ScrollView>
 
-                      {unavailable ? (
-                        <View style={styles.notifyBtn}>
-                          <Text style={styles.notifyBtnText}>Notify me</Text>
-                        </View>
-                      ) : cartQty > 0 ? (
-                        <View style={styles.stepperContainer}>
-                          <Pressable
-                            onPress={() =>
-                              updateQty(product.id, variant?.id, -1)
-                            }
-                            hitSlop={6}
-                            style={styles.stepperBtn}
-                          >
-                            <Minus size={13} color="#ffffff" strokeWidth={2.6} />
-                          </Pressable>
-                          <Text style={styles.stepperQty}>{cartQty}</Text>
-                          <Pressable
-                            onPress={() => updateQty(product.id, variant?.id, 1)}
-                            hitSlop={6}
-                            style={styles.stepperBtn}
-                          >
-                            <Plus size={13} color="#ffffff" strokeWidth={2.6} />
-                          </Pressable>
-                        </View>
-                      ) : (
-                        <Pressable
-                          onPress={() => handleAddItem(item)}
-                          disabled={isBusy}
-                          style={({ pressed }) => [
-                            styles.addBtn,
-                            pressed && { opacity: 0.8 },
-                          ]}
-                        >
-                          {isBusy ? (
-                            <ActivityIndicator size="small" color="#087f46" />
-                          ) : (
-                            <Text style={styles.addBtnText}>ADD</Text>
-                          )}
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Package
-                size={54}
-                color="#94a3b8"
-                strokeWidth={1.5}
-                style={{ marginBottom: 14 }}
-              />
-              <Text style={styles.emptyTitle}>
-                {error
-                  ? 'Could not load previous orders'
-                  : 'No previous purchases found'}
-              </Text>
-              <Text style={styles.emptyDesc}>
-                {error
-                  ? 'Please pull down to refresh or check your internet connection.'
-                  : 'Your ordered products will automatically appear here once your orders are completed.'}
-              </Text>
+          {/* Bottom Action Area: Add all items sticky bar */}
+          {filteredItems.length > 0 ? (
+            <View
+              style={[
+                styles.bottomBarContainer,
+                { paddingBottom: insets.bottom > 0 ? insets.bottom + 6 : 14 },
+              ]}
+            >
               <Pressable
-                onPress={() => navigation.navigate('Main', { screen: 'Home' })}
-                style={styles.startShoppingBtn}
+                onPress={handleAddAll}
+                disabled={addingAll || totalAvailableCount === 0}
+                style={({ pressed }) => [
+                  styles.addAllButton,
+                  pressed && { opacity: 0.9 },
+                  (addingAll || totalAvailableCount === 0) && styles.addAllButtonDisabled,
+                ]}
+                accessibilityLabel={`Add all ${totalAvailableCount} items to cart`}
               >
-                <ShoppingBag size={16} color="#ffffff" strokeWidth={2.2} />
-                <Text style={styles.startShoppingBtnText}>Start Shopping</Text>
+                {addingAll ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <View style={styles.addAllButtonInner}>
+                    <ShoppingBag size={18} color="#ffffff" strokeWidth={2.4} />
+                    <Text style={styles.addAllButtonText}>
+                      Add all {totalAvailableCount} {totalAvailableCount === 1 ? 'item' : 'items'} · ₹ {totalAvailablePrice}
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             </View>
-          )}
-
-          {/* Today's price note right below products card */}
-          {filteredItems.length > 0 && (
-            <Text style={styles.todayPriceNote}>
-              Prices shown are today’s prices
-            </Text>
-          )}
-        </ScrollView>
-      )}
-
-      {/* Bottom Sticky Action Bar matching Images 1 & 2 */}
-      {!loading && availableItems.length > 0 && (
-        <View style={[styles.bottomBarContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable
-            onPress={handleAddAll}
-            disabled={addingAll}
-            style={({ pressed }) => [
-              styles.addAllButton,
-              pressed && { opacity: 0.9 },
-            ]}
-          >
-            {addingAll ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <>
-                <ShoppingBag size={18} color="#ffffff" strokeWidth={2.2} />
-                <Text style={styles.addAllButtonText}>
-                  Add all {totalAvailableCount} items · ₹ {totalAvailablePrice}
-                </Text>
-              </>
-            )}
-          </Pressable>
+          ) : null}
         </View>
       )}
     </SafeAreaView>
@@ -895,14 +911,22 @@ export default function BuyAgainScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f6f8f6',
+    backgroundColor: '#f5f7f5',
+  },
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#f5f7f5',
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
@@ -917,12 +941,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: fonts.extraBold,
+    fontWeight: 'normal',
     fontSize: 20,
     color: '#0f172a',
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontFamily: fonts.regular,
+    fontWeight: 'normal',
     fontSize: 12.5,
     color: '#64748b',
     marginTop: 1,
@@ -950,6 +976,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: fonts.medium,
+    fontWeight: 'normal',
     fontSize: 14,
     color: '#0f172a',
     padding: 0,
@@ -962,67 +989,71 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: fonts.medium,
+    fontWeight: 'normal',
     fontSize: 13.5,
     color: '#64748b',
     marginTop: 12,
   },
   scrollContent: {
-    paddingBottom: 110,
+    paddingBottom: 24,
   },
   carouselSection: {
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
   },
   sectionTitle: {
     fontFamily: fonts.extraBold,
+    fontWeight: 'normal',
     fontSize: 18,
     color: '#0f172a',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 10,
     letterSpacing: -0.2,
   },
   carouselContent: {
     paddingHorizontal: 16,
-    gap: 12,
+    gap: 10,
   },
   orderCard: {
-    width: 290,
+    width: 236,
     backgroundColor: '#ffffff',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    padding: 14,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
   },
   orderCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   orderCardDate: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 14,
     color: '#0f172a',
   },
   orderCardNo: {
     fontFamily: fonts.medium,
+    fontWeight: 'normal',
     fontSize: 12.5,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   thumbnailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
+    gap: 7,
+    marginBottom: 8,
   },
   thumbnailBox: {
-    width: 48,
-    height: 48,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     backgroundColor: '#f8fafc',
     borderWidth: 1,
@@ -1032,12 +1063,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   thumbnailImg: {
-    width: 42,
-    height: 42,
+    width: 33,
+    height: 33,
   },
   extraBadgeBox: {
-    width: 48,
-    height: 48,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     backgroundColor: '#f1f5f9',
     alignItems: 'center',
@@ -1045,124 +1076,100 @@ const styles = StyleSheet.create({
   },
   extraBadgeText: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 13,
     color: '#334155',
-  },
-  orderCardSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 12,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  orderCardSummaryLabel: {
-    fontFamily: fonts.regular,
-    fontSize: 11.5,
-    color: '#64748b',
-    marginBottom: 2,
-  },
-  orderTotal: {
-    fontFamily: fonts.extraBold,
-    fontSize: 18,
-    color: '#0f172a',
-  },
-  orderItemCountBadge: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  orderItemCountText: {
-    fontFamily: fonts.bold,
-    fontSize: 12,
-    color: '#475569',
-  },
-  reorderCompleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#087f46',
-    borderRadius: 12,
-    height: 42,
-    gap: 8,
-    shadowColor: '#087f46',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  reorderCompleteBtnText: {
-    fontFamily: fonts.bold,
-    fontSize: 13.5,
-    color: '#ffffff',
   },
   orderCardBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 8,
+    marginTop: 2,
+    width: '100%',
+  },
+  orderCardPriceWrap: {
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  orderTotal: {
+    fontFamily: fonts.extraBold,
+    fontWeight: 'normal',
+    fontSize: 16.5,
+    color: '#0f172a',
+    lineHeight: 20,
   },
   orderItemCount: {
     fontFamily: fonts.regular,
+    fontWeight: 'normal',
     fontSize: 12,
     color: '#64748b',
+    marginTop: 2,
   },
   reorderBtn: {
+    backgroundColor: '#0A7C47',
+    borderRadius: 8,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  reorderBtnInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#087f46',
-    borderRadius: 10,
+    justifyContent: 'center',
+    backgroundColor: '#0A7C47',
+    borderRadius: 8,
     paddingVertical: 7,
-    paddingHorizontal: 14,
-    gap: 6,
+    paddingHorizontal: 12,
   },
   reorderBtnText: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 13,
     color: '#ffffff',
   },
   categoryPillsBar: {
-    backgroundColor: '#f4f6f4',
-    paddingVertical: 10,
-    marginBottom: 14,
+    backgroundColor: '#f5f7f5',
+    paddingVertical: 8,
+    marginBottom: 10,
   },
   categoryPillsContent: {
     paddingHorizontal: 16,
     gap: 8,
   },
   categoryPill: {
-    borderRadius: 24,
+    borderRadius: 22,
     paddingVertical: 7,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
   categoryPillSelected: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#111827',
   },
   categoryPillUnselected: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: '#e2e8f0',
   },
   categoryPillText: {
     fontSize: 13,
   },
   categoryPillTextSelected: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     color: '#ffffff',
   },
   categoryPillTextUnselected: {
     fontFamily: fonts.medium,
-    color: '#334155',
+    fontWeight: 'normal',
+    color: '#1e293b',
   },
   productsCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     marginHorizontal: 16,
     overflow: 'hidden',
-    marginBottom: 14,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -1172,8 +1179,8 @@ const styles = StyleSheet.create({
   productRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
@@ -1181,17 +1188,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   productImgContainer: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     borderRadius: 12,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   productImg: {
-    width: 60,
-    height: 60,
+    width: 52,
+    height: 52,
   },
   productDetails: {
     flex: 1,
@@ -1199,16 +1206,18 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontFamily: fonts.bold,
-    fontSize: 15,
+    fontWeight: 'normal',
+    fontSize: 13,
     color: '#0f172a',
-    lineHeight: 20,
+    lineHeight: 17,
   },
   variantLabel: {
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontWeight: 'normal',
+    fontSize: 11,
     color: '#64748b',
-    marginTop: 2,
-    marginBottom: 4,
+    marginTop: 1,
+    marginBottom: 3,
   },
   purchaseMetaRow: {
     flexDirection: 'row',
@@ -1226,12 +1235,14 @@ const styles = StyleSheet.create({
   },
   boughtCountText: {
     fontFamily: fonts.bold,
-    fontSize: 11,
+    fontWeight: 'normal',
+    fontSize: 9.5,
     color: '#1e293b',
   },
   lastPurchasedText: {
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontWeight: 'normal',
+    fontSize: 9.5,
     color: '#64748b',
   },
   priceDropPill: {
@@ -1244,51 +1255,55 @@ const styles = StyleSheet.create({
   },
   priceDropText: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 10,
-    color: '#087f46',
+    color: '#0A7C47',
   },
   actionColumn: {
     alignItems: 'flex-end',
-    minWidth: 80,
+    minWidth: 68,
   },
   productPrice: {
     fontFamily: fonts.extraBold,
-    fontSize: 16.5,
+    fontWeight: 'normal',
+    fontSize: 14,
     color: '#0f172a',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   notifyBtn: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#cbd5e1',
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
   notifyBtnText: {
     fontFamily: fonts.medium,
+    fontWeight: 'normal',
     fontSize: 12,
-    color: '#334155',
+    color: '#475569',
   },
   addBtn: {
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
-    borderColor: '#087f46',
+    borderColor: '#0A7C47',
     borderRadius: 8,
     paddingVertical: 6,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addBtnText: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 13,
-    color: '#087f46',
+    color: '#0A7C47',
   },
   stepperContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#087f46',
+    backgroundColor: '#0A7C47',
     borderRadius: 8,
     paddingVertical: 5,
     paddingHorizontal: 8,
@@ -1299,6 +1314,7 @@ const styles = StyleSheet.create({
   },
   stepperQty: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 13,
     color: '#ffffff',
     minWidth: 16,
@@ -1306,9 +1322,11 @@ const styles = StyleSheet.create({
   },
   todayPriceNote: {
     fontFamily: fonts.regular,
-    fontSize: 12,
-    color: '#64748b',
+    fontWeight: 'normal',
+    fontSize: 11,
+    color: '#94a3b8',
     textAlign: 'center',
+    marginTop: 8,
     marginBottom: 12,
   },
   bottomBarContainer: {
@@ -1316,29 +1334,46 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(246, 248, 246, 0.95)',
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 16,
+    zIndex: 50,
   },
   addAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#087f46',
-    height: 50,
-    borderRadius: 25,
-    gap: 8,
-    shadowColor: '#087f46',
+    width: '100%',
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#0A7C47',
+    overflow: 'hidden',
+    shadowColor: '#0A7C47',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 3,
+  },
+  addAllButtonInner: {
+    width: '100%',
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0A7C47',
+    borderRadius: 14,
+    gap: 8,
+  },
+  addAllButtonDisabled: {
+    opacity: 0.6,
   },
   addAllButtonText: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 15,
     color: '#ffffff',
   },
@@ -1350,12 +1385,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 16,
     color: '#0f172a',
     marginBottom: 6,
   },
   emptyDesc: {
     fontFamily: fonts.regular,
+    fontWeight: 'normal',
     fontSize: 13,
     color: '#64748b',
     textAlign: 'center',
@@ -1366,7 +1403,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#087f46',
+    backgroundColor: '#0A7C47',
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -1374,6 +1411,7 @@ const styles = StyleSheet.create({
   },
   startShoppingBtnText: {
     fontFamily: fonts.bold,
+    fontWeight: 'normal',
     fontSize: 14,
     color: '#ffffff',
   },

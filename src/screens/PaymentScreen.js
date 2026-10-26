@@ -73,6 +73,13 @@ export default function PaymentScreen({ route, navigation }) {
   const [screenState, setScreenState] = useState('METHOD_SELECT');
   const [selectedMethod, setSelectedMethod] = useState('UPI_APP'); // 'UPI_APP' | 'UPI_ID'
   const [upiIdInput, setUpiIdInput] = useState('');
+  const trimmedUpi = (upiIdInput || '').trim();
+  const isUpiIdValid = Boolean(
+    trimmedUpi.length >= 4 &&
+    trimmedUpi.includes('@') &&
+    trimmedUpi.indexOf('@') > 0 &&
+    trimmedUpi.indexOf('@') < trimmedUpi.length - 1
+  );
   const [launchedApp, setLaunchedApp] = useState('UPI');
   const [launchedScheme, setLaunchedScheme] = useState(null);
 
@@ -133,19 +140,27 @@ export default function PaymentScreen({ route, navigation }) {
   useEffect(() => {
     if (!createdOrder?.id) return;
 
+    // 1. Fast polling snapshot via reads.js (1200ms for near-instant real-time responsiveness)
     const unsub = onSnapshot(
-      doc(db, 'orders', createdOrder.id),
+      doc(db, 'orders', createdOrder.id, { pollInterval: 1200 }),
       (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
 
-        // 1. Admin clicked "Payment received" -> Show Image 3: Payment successful
-        if (data.paymentStatus === 'PAID') {
+        const isApproved =
+          data.paymentStatus === 'PAID' ||
+          data.status === 'ORDER_ACCEPTED' ||
+          data.status === 'PACKING' ||
+          data.status === 'OUT_FOR_DELIVERY' ||
+          data.status === 'DELIVERED';
+
+        if (isApproved) {
           setScreenState('SUCCESS');
           loadCart(true, { force: true }).catch(() => {});
-        }
-        // 2. Admin clicked "Payment not received" -> Show Image 4: Payment failed
-        else if (data.paymentStatus === 'FAILED' || (data.status === 'CANCELLED' && data.paymentStatus !== 'PAID')) {
+        } else if (
+          data.paymentStatus === 'FAILED' ||
+          (data.status === 'CANCELLED' && data.paymentStatus !== 'PAID')
+        ) {
           setFailureReason(data.paymentRejectionReason || 'Declined by store');
           setScreenState('FAILED');
         }
@@ -155,8 +170,42 @@ export default function PaymentScreen({ route, navigation }) {
       }
     );
 
-    return () => unsub();
-  }, [createdOrder?.id, loadCart]);
+    // 2. Active direct API check fallback every 1.2s while waiting for approval
+    let active = true;
+    const interval = setInterval(async () => {
+      if (!active || screenState !== 'WAITING_APPROVAL') return;
+      try {
+        const res = await apiClient.get(`/orders/${createdOrder.id}`);
+        if (!active || !res?.data) return;
+        const d = res.data;
+        const isApproved =
+          d.paymentStatus === 'PAID' ||
+          d.status === 'ORDER_ACCEPTED' ||
+          d.status === 'PACKING' ||
+          d.status === 'OUT_FOR_DELIVERY' ||
+          d.status === 'DELIVERED';
+
+        if (isApproved) {
+          setScreenState('SUCCESS');
+          loadCart(true, { force: true }).catch(() => {});
+        } else if (
+          d.paymentStatus === 'FAILED' ||
+          (d.status === 'CANCELLED' && d.paymentStatus !== 'PAID')
+        ) {
+          setFailureReason(d.paymentRejectionReason || 'Declined by store');
+          setScreenState('FAILED');
+        }
+      } catch (e) {
+        // quiet ignore polling network hiccups
+      }
+    }, 1200);
+
+    return () => {
+      unsub();
+      active = false;
+      clearInterval(interval);
+    };
+  }, [createdOrder?.id, screenState, loadCart]);
 
   // Track AppState quietly on return without firing premature automated requests or confusing popups
   useEffect(() => {
@@ -169,6 +218,14 @@ export default function PaymentScreen({ route, navigation }) {
   // Creates the order in Firestore and claims payment
   async function submitOrderAndClaimPayment() {
     if (loading) return;
+    if (selectedMethod === 'UPI_ID' && !isUpiIdValid) {
+      Toast.show({
+        type: 'error',
+        text1: 'Valid UPI ID required',
+        text2: 'Please enter your UPI ID (e.g. mobileNumber@upi) before submitting.',
+      });
+      return;
+    }
     if (!payload && !amount) {
       setConfirmModalVisible(false);
       navigation.navigate('Main', { screen: 'Cart' });
@@ -191,7 +248,17 @@ export default function PaymentScreen({ route, navigation }) {
 
       // 2. Otherwise submit order with active idempotency key
       const keyToSend = activeIdempotencyKey || Crypto.randomUUID();
-      const { data } = await apiClient.post('/orders', payload, {
+      const orderPayload = {
+        ...payload,
+        paymentDetails: {
+          method: selectedMethod,
+          ...(selectedMethod === 'UPI_ID' && trimmedUpi ? { customerUpiId: trimmedUpi } : {}),
+        },
+        notes: selectedMethod === 'UPI_ID' && trimmedUpi
+          ? `${payload?.notes ? payload.notes + ' | ' : ''}Customer UPI: ${trimmedUpi}`
+          : payload?.notes,
+      };
+      const { data } = await apiClient.post('/orders', orderPayload, {
         headers: { 'X-Idempotency-Key': keyToSend },
       });
       const placedOrderId = data.id || data.orderId;
@@ -1579,7 +1646,7 @@ export default function PaymentScreen({ route, navigation }) {
                         style={{
                           backgroundColor: '#ffffff',
                           borderWidth: 1.5,
-                          borderColor: '#cbd5e1',
+                          borderColor: trimmedUpi.length === 0 ? '#cbd5e1' : isUpiIdValid ? '#059669' : '#ef4444',
                           borderRadius: 12,
                           paddingHorizontal: 14,
                           height: 46,
@@ -1589,6 +1656,16 @@ export default function PaymentScreen({ route, navigation }) {
                           color: '#0f172a',
                         }}
                       />
+                      {trimmedUpi.length > 0 && !isUpiIdValid && (
+                        <Text style={{ fontSize: 11.5, fontFamily: fonts.medium, color: '#ef4444', marginTop: 4 }}>
+                          Please enter a valid UPI ID (e.g. mobile@upi, name@oksbi)
+                        </Text>
+                      )}
+                      {isUpiIdValid && (
+                        <Text style={{ fontSize: 11.5, fontFamily: fonts.medium, color: '#059669', marginTop: 4 }}>
+                          ✓ Valid UPI ID entered
+                        </Text>
+                      )}
                     </View>
 
                     {/* QR Code fallback */}
@@ -1604,23 +1681,22 @@ export default function PaymentScreen({ route, navigation }) {
                       </Text>
                     </View>
 
-                    {/* I have completed payment button */}
-                    <Pressable
-                      onPress={submitOrderAndClaimPayment}
-                      disabled={loading}
+                    {/* Guidance Card instead of duplicate conflicting button */}
+                    <View
                       style={{
-                        backgroundColor: '#047857',
+                        backgroundColor: '#f8fafc',
                         borderRadius: 12,
-                        height: 44,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: '#e2e8f0',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        marginTop: 6,
+                        marginTop: 4,
                       }}
                     >
-                      <Text style={{ fontSize: 14, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff' }}>
-                        {loading ? 'Submitting...' : 'I have completed the payment'}
+                      <Text style={{ fontSize: 12, fontFamily: fonts.medium, fontWeight: 'normal', color: '#475569', textAlign: 'center', lineHeight: 18 }}>
+                        Scan QR with any UPI app, enter the UPI ID you paid from above, and tap below to complete your payment.
                       </Text>
-                    </Pressable>
+                    </View>
                   </Animated.View>
                 )}
               </>
@@ -1826,25 +1902,29 @@ export default function PaymentScreen({ route, navigation }) {
         ) : (
           <Pressable
             onPress={handlePayNow}
-            disabled={loading}
+            disabled={loading || (selectedMethod === 'UPI_ID' && !isUpiIdValid)}
             style={{
               height: 54,
               borderRadius: 16,
-              backgroundColor: '#047857',
+              backgroundColor: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? '#94a3b8' : '#047857',
               paddingHorizontal: 18,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              shadowColor: '#047857',
+              shadowColor: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? '#000' : '#047857',
               shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.25,
+              shadowOpacity: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? 0.08 : 0.25,
               shadowRadius: 8,
-              elevation: 4,
+              elevation: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? 1 : 4,
             }}
           >
             <View>
               <Text style={{ fontSize: 11, fontFamily: fonts.bold, fontWeight: 'normal', color: 'rgba(255, 255, 255, 0.85)' }}>
-                {selectedMethod === 'UPI_APP' ? `Pay with ${defaultPayment.app || 'UPI app'}` : 'Pay by UPI ID'}
+                {selectedMethod === 'UPI_APP'
+                  ? `Pay with ${defaultPayment.app || 'UPI app'}`
+                  : !isUpiIdValid
+                  ? 'Enter UPI ID to proceed'
+                  : 'Pay by UPI ID'}
               </Text>
               <Text style={{ fontSize: 17, fontFamily: fonts.black, fontWeight: 'normal', color: '#ffffff' }}>
                 ₹{formattedAmount}
@@ -1852,10 +1932,21 @@ export default function PaymentScreen({ route, navigation }) {
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ fontSize: 15.5, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff', marginRight: 4 }}>
-                {loading ? 'Processing...' : 'Pay now'}
-              </Text>
-              <ArrowRight size={18} color="#ffffff" strokeWidth={2.8} />
+              {loading ? (
+                <>
+                  <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                  <Text style={{ fontSize: 15, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff' }}>
+                    Processing payment...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={{ fontSize: 15.5, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff', marginRight: 4 }}>
+                    {selectedMethod === 'UPI_ID' ? 'Verify & Pay' : 'Pay now'}
+                  </Text>
+                  <ArrowRight size={18} color="#ffffff" strokeWidth={2.8} />
+                </>
+              )}
             </View>
           </Pressable>
         )}

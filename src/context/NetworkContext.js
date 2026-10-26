@@ -24,7 +24,7 @@ export function NetworkProvider({ children }) {
 
       // Quick ping test to verify actual internet access
       try {
-        await apiClient.get('/health', { timeout: 3500, __skipErrorToast: true });
+        await apiClient.get('/health', { timeout: 6000, __skipErrorToast: true, __skipFailover: true });
         setIsOffline(false);
         return true;
       } catch (err) {
@@ -44,9 +44,18 @@ export function NetworkProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // 0. Listen to API transport errors
-    setNetworkErrorListener(() => {
-      setIsOffline(true);
+    // 0. Listen to API transport errors — verify connection before declaring offline
+    setNetworkErrorListener(async () => {
+      try {
+        const state = await NetInfo.fetch();
+        if (!state.isConnected) {
+          setIsOffline(true);
+        } else {
+          checkConnection();
+        }
+      } catch {
+        setIsOffline(true);
+      }
     });
 
     // 1. NetInfo subscription

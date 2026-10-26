@@ -14,7 +14,6 @@ import { doc, onSnapshot } from '../services/reads';
 import {
   ChevronLeft,
   ChevronRight,
-  Download,
   MapPin,
   CreditCard,
   RotateCcw,
@@ -47,32 +46,49 @@ export default function OrderDetailScreen({ route, navigation }) {
 
   // Real-time Firestore snapshot for the order
   useEffect(() => {
+    let isMounted = true;
     if (!orderId) {
       apiClient
         .get('/orders/mine')
         .then(({ data }) => {
           const found = data.items?.find((o) => o.id === orderId || o.orderNo === initialOrderNo);
-          if (found) setOrder(found);
+          if (found && isMounted) setOrder(found);
         })
         .catch(() => {})
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
       return;
     }
+
+    // Direct API fallback for instantaneous reliable loading
+    apiClient
+      .get(`/orders/${orderId}`)
+      .then(({ data }) => {
+        if (data && isMounted) {
+          setOrder((prev) => (prev ? { ...prev, ...data } : data));
+          setLoading(false);
+        }
+      })
+      .catch(() => {});
 
     const unsub = onSnapshot(
       doc(db, 'orders', orderId),
       (snap) => {
-        if (snap.exists()) {
+        if (snap.exists() && isMounted) {
           setOrder({ id: snap.id, ...snap.data() });
         }
-        setLoading(false);
+        if (isMounted) setLoading(false);
       },
       () => {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     );
 
-    return () => unsub();
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, [orderId, initialOrderNo]);
 
   const displayOrderNo = order?.orderNo || initialOrderNo || '—';
@@ -169,20 +185,6 @@ export default function OrderDetailScreen({ route, navigation }) {
             </Text>
           </View>
         </View>
-
-        <Pressable
-          onPress={() => Toast.show({ type: 'info', text1: 'Downloading receipt invoice...' })}
-          hitSlop={10}
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Download size={20} color="#0f172a" strokeWidth={2.2} />
-        </Pressable>
       </View>
 
       {loading && !order ? (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
-import { Star, AlertCircle, CheckCircle, X } from './icons';
+import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
+import { AlertCircle, X } from './icons';
 import { collection, query, where, onSnapshot } from '../services/reads';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../config/firebase';
@@ -126,10 +126,18 @@ export default function DeliveryConfirmationModal() {
           </View>
         ) : (
           <View style={styles.ratingCardContainer}>
-            <OrderRatings
-              order={pendingOrder}
-              onDismiss={() => setPendingOrder(null)}
-            />
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.ratingScrollContent}
+              keyboardShouldPersistTaps="handled"
+              bounces={false}
+            >
+              <OrderRatings
+                order={pendingOrder}
+                onDismiss={() => setPendingOrder(null)}
+                inModal
+              />
+            </ScrollView>
           </View>
         )}
       </View>
@@ -140,10 +148,11 @@ export default function DeliveryConfirmationModal() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   card: {
     width: '100%',
@@ -227,9 +236,20 @@ const styles = StyleSheet.create({
   ratingCardContainer: {
     width: '100%',
     maxWidth: 420,
-    maxHeight: '92%',
+    maxHeight: '90%',
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f6f8f6',
+    borderWidth: 1,
+    borderColor: '#edf2ed',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ratingScrollContent: {
+    padding: 16,
+    paddingBottom: 28,
   },
 });

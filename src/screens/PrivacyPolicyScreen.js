@@ -277,7 +277,7 @@ export default function PrivacyPolicyScreen({ navigation }) {
 
         {/* Grievance Officer Card matching Image 3 */}
         <View style={styles.card}>
-          <Text style={styles.grievanceHeader}>Grievance Officer (Data Protection)</Text>
+          <Text style={styles.grievanceHeader}>Grievance Officer</Text>
           <Text style={styles.grievanceIntro}>
             For questions about your data or to use any of your rights, contact:
           </Text>
@@ -310,33 +310,101 @@ export default function PrivacyPolicyScreen({ navigation }) {
             </Text>
           </View>
 
+          {/* Chat with support button inside Grievance card */}
           <Pressable
             onPress={() => navigation.navigate('HelpSupport')}
-            style={({ pressed }) => [
-              styles.chatSupportBtn,
-              pressed && { opacity: 0.85 },
-            ]}
+            hitSlop={8}
+            style={{ width: '100%', marginTop: 16 }}
           >
-            <MessageSquare size={17} color="#047857" strokeWidth={2.4} style={{ marginRight: 8 }} />
-            <Text style={styles.chatSupportBtnText}>Chat with support</Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#e6f4ea',
+                borderRadius: 14,
+                height: 48,
+                width: '100%',
+                paddingHorizontal: 16,
+              }}
+            >
+              <MessageSquare size={18} color="#047857" strokeWidth={2.4} style={{ marginRight: 8 }} />
+              <Text
+                style={{
+                  fontFamily: fonts.bold,
+                  fontSize: 15,
+                  fontWeight: '700',
+                  color: '#047857',
+                }}
+              >
+                Chat with support
+              </Text>
+            </View>
           </Pressable>
         </View>
 
-        {/* Navigation to Terms of Service matching Image 3 */}
+        {/* Navigation to Terms of Service matching Image 3 (Pill with border) */}
         <Pressable
           onPress={() => navigation.navigate('Terms')}
-          style={({ pressed }) => [
-            styles.bottomNavPill,
-            pressed && { opacity: 0.8 },
-          ]}
+          hitSlop={8}
+          style={{ width: '100%', marginTop: 14, marginBottom: 12 }}
         >
-          <Text style={styles.bottomNavPillText}>Read our Terms of Service</Text>
-          <ChevronRight size={16} color="#0f172a" strokeWidth={2.4} style={{ marginLeft: 6 }} />
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#ffffff',
+              borderWidth: 1.5,
+              borderColor: '#cbd5e1',
+              borderRadius: 30,
+              height: 48,
+              width: '100%',
+              paddingHorizontal: 20,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.04,
+              shadowRadius: 3,
+              elevation: 1,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: fonts.bold,
+                fontSize: 14.5,
+                fontWeight: '700',
+                color: '#0f172a',
+                marginRight: 6,
+              }}
+            >
+              Read our Terms of Service
+            </Text>
+            <ChevronRight size={16} color="#0f172a" strokeWidth={2.5} />
+          </View>
         </Pressable>
 
         {/* Back to top Link matching Image 3 */}
-        <Pressable onPress={scrollToTop} hitSlop={12} style={styles.backToTopContainer}>
-          <Text style={styles.backToTopLink}>Back to top</Text>
+        <Pressable
+          onPress={scrollToTop}
+          hitSlop={12}
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 8,
+            marginBottom: 4,
+            width: '100%',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: fonts.bold,
+              fontSize: 14.5,
+              fontWeight: '700',
+              color: '#047857',
+            }}
+          >
+            Back to top
+          </Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -369,7 +437,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 16,
   },
   noticeCard: {
     backgroundColor: '#ffffff',

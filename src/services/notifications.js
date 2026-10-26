@@ -118,6 +118,7 @@ export async function postSystemNotification({ title, body, data = {} }) {
         body,
         data,
         sound: 'default',
+        color: '#0A7C47',
         priority: notif.AndroidNotificationPriority?.MAX ?? 2,
         channelId: 'order_updates',
       },
