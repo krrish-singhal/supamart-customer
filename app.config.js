@@ -7,12 +7,16 @@ export default {
   "orientation": "portrait",
   "icon": "./assets/icon.png",
   "scheme": "mstraders",
-  "userInterfaceStyle": "automatic",
+  "userInterfaceStyle": "light",
   "newArchEnabled": true,
+  "notification": {
+    "icon": "./assets/notification-icon.png",
+    "color": "#0A7C47"
+  },
   "splash": {
-    "image": "./assets/splash.png",
+    "image": "./assets/branding/transparent-splash.png",
     "resizeMode": "contain",
-    "backgroundColor": "#ffffff"
+    "backgroundColor": "#0A7C47"
   },
   "ios": {
     "supportsTablet": true,
@@ -27,9 +31,10 @@ export default {
   "android": {
     "package": "in.mstraders.grocery",
     "versionCode": 4,
+    "usesCleartextTraffic": true,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A7C47"
     },
     "edgeToEdgeEnabled": true,
     "permissions": [
@@ -37,7 +42,8 @@ export default {
       "android.permission.ACCESS_FINE_LOCATION",
       "android.permission.ACCESS_BACKGROUND_LOCATION",
       "android.permission.FOREGROUND_SERVICE",
-      "android.permission.FOREGROUND_SERVICE_LOCATION"
+      "android.permission.FOREGROUND_SERVICE_LOCATION",
+      "android.permission.POST_NOTIFICATIONS"
     ],
     "blockedPermissions": [
       "android.permission.READ_MEDIA_IMAGES",
@@ -47,12 +53,13 @@ export default {
       "android.permission.WRITE_EXTERNAL_STORAGE",
       "android.permission.RECORD_AUDIO",
       "android.permission.CAMERA"
-    ],
-    "config": {
-      "googleMaps": {
-        "apiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-      }
-    }
+    ]
+  },
+  "web": {
+    "favicon": "./assets/branding/favicon-48.png",
+    "name": "MS Traders",
+    "themeColor": "#0A7C47",
+    "backgroundColor": "#0A7C47"
   },
   "extra": {
     "eas": {
@@ -63,9 +70,9 @@ export default {
     [
       "expo-splash-screen",
       {
-        "image": "./assets/splash.png",
+        "image": "./assets/branding/transparent-splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0A7C47"
       }
     ],
     [

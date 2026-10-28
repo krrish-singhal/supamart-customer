@@ -21,7 +21,7 @@ import {
   SlidersHorizontal,
   Plus,
   Minus,
-} from 'lucide-react-native';
+} from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../services/api';
@@ -33,6 +33,7 @@ import { getCategoryVisual } from '../utils/categoryImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { getProductImageSource } from '../utils/productImages';
 import { isProductUnavailable } from '../utils/productAvailability';
+import { compareProductsDeterministic } from '../utils/productFilters';
 
 const RECENT_SEARCHES_KEY = '@supamart_recent_searches';
 const DEFAULT_RECENT = ['dal', 'atta', 'milk', 'oil'];
@@ -112,6 +113,8 @@ export default function SearchScreen({ navigation, route }) {
   });
 
   const debounceRef = useRef(null);
+  const requestRef = useRef(0);
+  useEffect(() => () => { clearTimeout(debounceRef.current); requestRef.current += 1; }, []);
 
   // Load recent searches from AsyncStorage
   useEffect(() => {
@@ -159,6 +162,8 @@ export default function SearchScreen({ navigation, route }) {
 
   const doSearch = useCallback(
     async (q, fullGrid = false) => {
+      const requestId = ++requestRef.current;
+      clearTimeout(debounceRef.current);
       const term = q.trim();
       if (!term) {
         setResults([]);
@@ -169,14 +174,14 @@ export default function SearchScreen({ navigation, route }) {
       setLoading(true);
       setSearched(true);
       setIsFullView(fullGrid);
-      saveRecentSearch(term);
+      if (fullGrid) saveRecentSearch(term);
       try {
-        const { data } = await apiClient.get('/products/search', { params: { q: term, limit: 30 } });
-        setResults(data.items || []);
+        const { data } = await apiClient.get('/products/search', { params: { q: term, limit: 200 } });
+        if (requestId === requestRef.current) setResults(data.items || []);
       } catch {
-        setResults([]);
+        if (requestId === requestRef.current) setResults([]);
       } finally {
-        setLoading(false);
+        if (requestId === requestRef.current) setLoading(false);
       }
     },
     [saveRecentSearch]
@@ -190,6 +195,8 @@ export default function SearchScreen({ navigation, route }) {
   }, [initialQuery, doSearch]);
 
   const handleChange = (text) => {
+    requestRef.current += 1;
+    setLoading(Boolean(text.trim()));
     setQuery(text);
     if (!text.trim()) {
       setResults([]);
@@ -199,7 +206,7 @@ export default function SearchScreen({ navigation, route }) {
       return;
     }
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(text, false), 350);
+    debounceRef.current = setTimeout(() => doSearch(text, false), 180);
   };
 
   const handleSelectChip = (term, fullGrid = false) => {
@@ -208,6 +215,9 @@ export default function SearchScreen({ navigation, route }) {
   };
 
   const clear = () => {
+    requestRef.current += 1;
+    clearTimeout(debounceRef.current);
+    setLoading(false);
     setQuery('');
     setResults([]);
     setSearched(false);
@@ -262,14 +272,16 @@ export default function SearchScreen({ navigation, route }) {
         list.sort((a, b) => {
           const pa = a.variants?.[0]?.offerPrice ?? a.variants?.[0]?.price ?? a.price ?? 0;
           const pb = b.variants?.[0]?.offerPrice ?? b.variants?.[0]?.price ?? b.price ?? 0;
-          return pa - pb;
+          const diff = pa - pb;
+          return diff !== 0 ? diff : compareProductsDeterministic(a, b);
         });
         break;
       case 'price_desc':
         list.sort((a, b) => {
           const pa = a.variants?.[0]?.offerPrice ?? a.variants?.[0]?.price ?? a.price ?? 0;
           const pb = b.variants?.[0]?.offerPrice ?? b.variants?.[0]?.price ?? b.price ?? 0;
-          return pb - pa;
+          const diff = pb - pa;
+          return diff !== 0 ? diff : compareProductsDeterministic(a, b);
         });
         break;
       case 'discount':
@@ -278,11 +290,12 @@ export default function SearchScreen({ navigation, route }) {
           const discA = mrpA > 0 ? Math.round(((mrpA - (a.variants?.[0]?.offerPrice ?? mrpA)) / mrpA) * 100) : 0;
           const mrpB = b.variants?.[0]?.price ?? b.price ?? 0;
           const discB = mrpB > 0 ? Math.round(((mrpB - (b.variants?.[0]?.offerPrice ?? mrpB)) / mrpB) * 100) : 0;
-          return discB - discA;
+          const diff = discB - discA;
+          return diff !== 0 ? diff : compareProductsDeterministic(a, b);
         });
         break;
       case 'newest':
-        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        list.sort(compareProductsDeterministic);
         break;
       case 'relevance':
       default:
@@ -744,7 +757,8 @@ export default function SearchScreen({ navigation, route }) {
         /* COMPACT PREVIEW MODE LIST matching Image 2 */
         <FlatList
           key="search-compact-list"
-          data={results}
+          data={results.slice(0, 4)}
+          keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.id}
           extraData={cartItems}
           showsVerticalScrollIndicator={false}

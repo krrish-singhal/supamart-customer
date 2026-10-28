@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 @layer utilities {
-  .font-normal { font-family: 'Inter-Regular'; font-weight: normal; }
-  .font-medium { font-family: 'Inter-Medium'; font-weight: normal; }
-  .font-semibold { font-family: 'Inter-SemiBold'; font-weight: normal; }
-  .font-bold { font-family: 'Inter-Bold'; font-weight: normal; }
-  .font-extrabold { font-family: 'Inter-ExtraBold'; font-weight: normal; }
-  .font-black { font-family: 'Inter-Black'; font-weight: normal; }
+  .font-normal { font-family: 'PlusJakartaSans-Regular'; font-weight: normal; }
+  .font-medium { font-family: 'PlusJakartaSans-SemiBold'; font-weight: normal; }
+  .font-semibold { font-family: 'PlusJakartaSans-SemiBold'; font-weight: normal; }
+  .font-bold { font-family: 'PlusJakartaSans-SemiBold'; font-weight: normal; }
+  .font-extrabold { font-family: 'PlusJakartaSans-ExtraBold'; font-weight: normal; }
+  .font-black { font-family: 'PlusJakartaSans-ExtraBold'; font-weight: normal; }
 }
 
 @layer base {

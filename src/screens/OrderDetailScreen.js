@@ -1,3 +1,4 @@
+import OrderRatings from '../components/OrderRatings';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -9,15 +10,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from '../services/reads';
 import {
   ChevronLeft,
   ChevronRight,
-  Download,
   MapPin,
   CreditCard,
   RotateCcw,
-} from 'lucide-react-native';
+} from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import { db } from '../config/firebase';
@@ -46,55 +46,63 @@ export default function OrderDetailScreen({ route, navigation }) {
 
   // Real-time Firestore snapshot for the order
   useEffect(() => {
+    let isMounted = true;
     if (!orderId) {
       apiClient
         .get('/orders/mine')
         .then(({ data }) => {
           const found = data.items?.find((o) => o.id === orderId || o.orderNo === initialOrderNo);
-          if (found) setOrder(found);
+          if (found && isMounted) setOrder(found);
         })
         .catch(() => {})
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
       return;
     }
 
+    // Direct API fallback for instantaneous reliable loading
+    apiClient
+      .get(`/orders/${orderId}`)
+      .then(({ data }) => {
+        if (data && isMounted) {
+          setOrder((prev) => (prev ? { ...prev, ...data } : data));
+          setLoading(false);
+        }
+      })
+      .catch(() => {});
+
     const unsub = onSnapshot(
-      doc(db, 'orders', orderId),
+      doc(db, 'orders', orderId, { pollInterval: 15000 }),
       (snap) => {
-        if (snap.exists()) {
+        if (snap.exists() && isMounted) {
           setOrder({ id: snap.id, ...snap.data() });
         }
-        setLoading(false);
+        if (isMounted) setLoading(false);
       },
       () => {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     );
 
-    return () => unsub();
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, [orderId, initialOrderNo]);
 
-  const displayOrderNo = order?.orderNo || initialOrderNo || '10482';
-  const orderTotal = order?.totalAmount ?? order?.finalAmount ?? order?.total ?? 246;
+  const displayOrderNo = order?.orderNo || initialOrderNo || '—';
+  const orderTotal = order?.totalAmount ?? order?.finalAmount ?? order?.total ?? 0;
 
-  const defaultItems = [
-    { name: 'Toor Dal (Unpolished)', unit: '1 kg', qty: 1, price: 158 },
-    { name: 'Full Cream Milk', unit: '500 ml', qty: 2, price: 66 },
-    { name: 'Tomato (Local)', unit: '500 g', qty: 1, price: 22 },
-  ];
-
-  const items = order?.items && order.items.length > 0 ? order.items : defaultItems;
-  const itemCount = items.reduce((acc, it) => acc + (it.qty || 1), 0) || 4;
+  const items = order?.items || [];
+  const itemCount = items.reduce((acc, it) => acc + (it.qty || 1), 0);
 
   const isCancelled = order?.status === 'CANCELLED';
   const isDelivered = order?.status === 'DELIVERED';
   const canCancel = !isCancelled && !isDelivered;
 
-  const address = order?.address
-    ? typeof order.address === 'string'
-      ? order.address
-      : [order.address.houseNo, order.address.street, order.address.landmark].filter(Boolean).join(', ')
-    : '[Your delivery address]';
+  const savedAddress = order?.addressSnapshot || order?.address;
+  const address = typeof savedAddress === 'string' ? savedAddress : [savedAddress?.houseNo, savedAddress?.street, savedAddress?.landmark, savedAddress?.pincode].filter(Boolean).join(', ') || 'Address unavailable';
 
   async function handleCancelOrder() {
     setCancelling(true);
@@ -173,24 +181,10 @@ export default function OrderDetailScreen({ route, navigation }) {
                 marginTop: 1,
               }}
             >
-              Today, 1:05 PM
+              {order?.createdAt ? new Date(order.createdAt).toLocaleString() : ''}
             </Text>
           </View>
         </View>
-
-        <Pressable
-          onPress={() => Toast.show({ type: 'info', text1: 'Downloading receipt invoice...' })}
-          hitSlop={10}
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Download size={20} color="#0f172a" strokeWidth={2.2} />
-        </Pressable>
       </View>
 
       {loading && !order ? (
@@ -199,11 +193,13 @@ export default function OrderDetailScreen({ route, navigation }) {
           <Skeleton width="100%" height={180} borderRadius={22} />
           <Skeleton width="100%" height={140} borderRadius={22} />
         </View>
-      ) : (
+      ) : !order ? <View style={{ padding: 24 }}><Text>Order unavailable. Please reopen it from your order history.</Text></View> : (
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 14 }}
         >
+          {isDelivered && <OrderRatings key={order.id} order={order} />}
+          {order.notes ? <View style={{ padding: 16, backgroundColor: '#f0fdf4', borderRadius: 16 }}><Text style={{ fontFamily: 'Inter-Bold' }}>Delivery instructions</Text><Text style={{ marginTop: 6 }}>{order.notes}</Text></View> : null}
           {/* AMBER LIVE TRACKING BANNER matching Image 4 */}
           {!isCancelled && !isDelivered && (
             <Animated.View entering={FadeInDown.duration(280)}>
@@ -247,6 +243,8 @@ export default function OrderDetailScreen({ route, navigation }) {
                     >
                       {order?.status === 'OUT_FOR_DELIVERY'
                         ? 'On the way · arriving in 9 mins'
+                        : (order?.deliveryPartner?.name || order?.deliveryBoyName)
+                        ? `Assigned to ${order?.deliveryPartner?.name || order?.deliveryBoyName}`
                         : order?.status === 'PACKED'
                         ? 'Order packed · assigning delivery partner'
                         : 'Order confirmed · preparing your items'}

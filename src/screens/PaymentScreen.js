@@ -1,3 +1,6 @@
+import useStoreStatus from '../hooks/useStoreStatus';
+import { formatDeliveryAddress } from '../utils/addressForm';
+import { orderEstimate } from '../utils/orderEstimate';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -18,26 +21,23 @@ import {
   X,
   CreditCard,
   Building2,
-  Banknote,
   Lock,
   Check,
   RefreshCw,
   Clock,
   ArrowRight,
-  ExternalLink,
-  Smartphone,
   ShieldCheck,
   QrCode,
   ChevronDown,
   ChevronUp,
   AlertCircle,
   AlertTriangle,
-} from 'lucide-react-native';
+} from '../components/icons';
 import QRCode from 'react-native-qrcode-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from '../services/reads';
 import { db } from '../config/firebase';
 import apiClient from '../services/api';
 import { UPI_ID, UPI_PAYEE_NAME } from '../config/global';
@@ -56,7 +56,8 @@ export default function PaymentScreen({ route, navigation }) {
   const { payload, idempotencyKey, amount, itemCount: paramItemCount } = route.params || {};
   const [activeIdempotencyKey, setActiveIdempotencyKey] = useState(() => idempotencyKey || Crypto.randomUUID());
   const insets = useSafeAreaInsets();
-  const { loadCart } = useCart();
+  const { loadCart, clearCart } = useCart();
+  const { isOpen: storeOpen } = useStoreStatus();
 
   // Mode: If opened from Profile/Account or Cart 'Change' link without active order payload
   const isDefaultSetupMode = !amount && !payload;
@@ -72,6 +73,13 @@ export default function PaymentScreen({ route, navigation }) {
   const [screenState, setScreenState] = useState('METHOD_SELECT');
   const [selectedMethod, setSelectedMethod] = useState('UPI_APP'); // 'UPI_APP' | 'UPI_ID'
   const [upiIdInput, setUpiIdInput] = useState('');
+  const trimmedUpi = (upiIdInput || '').trim();
+  const isUpiIdValid = Boolean(
+    trimmedUpi.length >= 4 &&
+    trimmedUpi.includes('@') &&
+    trimmedUpi.indexOf('@') > 0 &&
+    trimmedUpi.indexOf('@') < trimmedUpi.length - 1
+  );
   const [launchedApp, setLaunchedApp] = useState('UPI');
   const [launchedScheme, setLaunchedScheme] = useState(null);
 
@@ -132,19 +140,27 @@ export default function PaymentScreen({ route, navigation }) {
   useEffect(() => {
     if (!createdOrder?.id) return;
 
+    // 1. Fast polling snapshot via reads.js (1200ms for near-instant real-time responsiveness)
     const unsub = onSnapshot(
-      doc(db, 'orders', createdOrder.id),
+      doc(db, 'orders', createdOrder.id, { pollInterval: 1200 }),
       (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
 
-        // 1. Admin clicked "Payment received" -> Show Image 3: Payment successful
-        if (data.paymentStatus === 'PAID') {
+        const isApproved =
+          data.paymentStatus === 'PAID' ||
+          data.status === 'ORDER_ACCEPTED' ||
+          data.status === 'PACKING' ||
+          data.status === 'OUT_FOR_DELIVERY' ||
+          data.status === 'DELIVERED';
+
+        if (isApproved) {
           setScreenState('SUCCESS');
           loadCart(true, { force: true }).catch(() => {});
-        }
-        // 2. Admin clicked "Payment not received" -> Show Image 4: Payment failed
-        else if (data.paymentStatus === 'FAILED' || (data.status === 'CANCELLED' && data.paymentStatus !== 'PAID')) {
+        } else if (
+          data.paymentStatus === 'FAILED' ||
+          (data.status === 'CANCELLED' && data.paymentStatus !== 'PAID')
+        ) {
           setFailureReason(data.paymentRejectionReason || 'Declined by store');
           setScreenState('FAILED');
         }
@@ -154,8 +170,44 @@ export default function PaymentScreen({ route, navigation }) {
       }
     );
 
-    return () => unsub();
-  }, [createdOrder?.id, loadCart]);
+    // 2. Active direct API check fallback every 1.2s while waiting for approval
+    let active = true;
+    const interval = setInterval(async () => {
+      if (!active || screenState !== 'WAITING_APPROVAL') return;
+      const orderIdToPoll = createdOrder?.id || createdOrder?.order?.id;
+      if (!orderIdToPoll || orderIdToPoll === 'undefined') return;
+      try {
+        const res = await apiClient.get(`/orders/${orderIdToPoll}`, { __skipErrorToast: true });
+        if (!active || !res?.data) return;
+        const d = res.data;
+        const isApproved =
+          d.paymentStatus === 'PAID' ||
+          d.status === 'ORDER_ACCEPTED' ||
+          d.status === 'PACKING' ||
+          d.status === 'OUT_FOR_DELIVERY' ||
+          d.status === 'DELIVERED';
+
+        if (isApproved) {
+          setScreenState('SUCCESS');
+          loadCart(true, { force: true }).catch(() => {});
+        } else if (
+          d.paymentStatus === 'FAILED' ||
+          (d.status === 'CANCELLED' && d.paymentStatus !== 'PAID')
+        ) {
+          setFailureReason(d.paymentRejectionReason || 'Declined by store');
+          setScreenState('FAILED');
+        }
+      } catch (e) {
+        // quiet ignore polling network hiccups
+      }
+    }, 1200);
+
+    return () => {
+      unsub();
+      active = false;
+      clearInterval(interval);
+    };
+  }, [createdOrder?.id, screenState, loadCart]);
 
   // Track AppState quietly on return without firing premature automated requests or confusing popups
   useEffect(() => {
@@ -168,6 +220,14 @@ export default function PaymentScreen({ route, navigation }) {
   // Creates the order in Firestore and claims payment
   async function submitOrderAndClaimPayment() {
     if (loading) return;
+    if (selectedMethod === 'UPI_ID' && !isUpiIdValid) {
+      Toast.show({
+        type: 'error',
+        text1: 'Valid UPI ID required',
+        text2: 'Please enter your UPI ID (e.g. mobileNumber@upi) before submitting.',
+      });
+      return;
+    }
     if (!payload && !amount) {
       setConfirmModalVisible(false);
       navigation.navigate('Main', { screen: 'Cart' });
@@ -190,14 +250,33 @@ export default function PaymentScreen({ route, navigation }) {
 
       // 2. Otherwise submit order with active idempotency key
       const keyToSend = activeIdempotencyKey || Crypto.randomUUID();
-      const { data } = await apiClient.post('/orders', payload, {
+      const orderPayload = {
+        ...payload,
+        paymentDetails: {
+          method: selectedMethod,
+          ...(selectedMethod === 'UPI_ID' && trimmedUpi ? { customerUpiId: trimmedUpi } : {}),
+        },
+        notes: selectedMethod === 'UPI_ID' && trimmedUpi
+          ? `${payload?.notes ? payload.notes + ' | ' : ''}Customer UPI: ${trimmedUpi}`
+          : payload?.notes,
+      };
+      const { data } = await apiClient.post('/orders', orderPayload, {
         headers: { 'X-Idempotency-Key': keyToSend },
       });
-      const placedOrderId = data.id || data.orderId;
-      setCreatedOrder({ ...data, id: placedOrderId });
+      const orderObj = data?.order || data;
+      const placedOrderId = orderObj?.id || orderObj?.orderId || data?.id || data?.orderId;
+      const fullOrder = { ...orderObj, id: placedOrderId };
+      setCreatedOrder(fullOrder);
 
       if (placedOrderId) {
-        await apiClient.patch(`/orders/${placedOrderId}/payment-claimed`);
+        try {
+          await apiClient.patch(`/orders/${placedOrderId}/payment-claimed`, {}, { __skipErrorToast: true });
+        } catch (_claimErr) {
+          console.warn('Payment-claimed patch warning:', _claimErr?.message);
+        }
+      }
+      if (typeof clearCart === 'function') {
+        clearCart().catch(() => {});
       }
       await loadCart(true, { force: true });
 
@@ -256,6 +335,11 @@ export default function PaymentScreen({ route, navigation }) {
   async function openUpiPayment(targetScheme, appLabel) {
     if (isDefaultSetupMode) {
       handleAppPress(targetScheme, appLabel);
+      return;
+    }
+
+    if (!storeOpen && !createdOrder?.id) {
+      Toast.show({ type: 'info', text1: 'The shop is closed', text2: 'Order daily from 10 AM to 11 PM.' });
       return;
     }
 
@@ -422,14 +506,13 @@ export default function PaymentScreen({ route, navigation }) {
             onPress={() =>
               navigation.replace('OrderConfirmation', {
                 orderId: createdOrder?.id,
-                orderNo: createdOrder?.orderNo || '10482',
+                orderNo: createdOrder?.orderNo || '—',
                 total: amount,
                 items: createdOrder?.items || payload.cartItems,
                 savings: createdOrder?.discount || 0,
-                address: payload.address?.street
-                  ? `${payload.address.houseNo || 'Home'}, ${payload.address.street}`
-                  : 'Home · [Your delivery address]',
+                address: formatDeliveryAddress(payload.address),
                 paymentMethod: 'UPI app',
+                deliveryTime: orderEstimate(createdOrder) || 'View live order estimate',
               })
             }
             style={{
@@ -1574,7 +1657,7 @@ export default function PaymentScreen({ route, navigation }) {
                         style={{
                           backgroundColor: '#ffffff',
                           borderWidth: 1.5,
-                          borderColor: '#cbd5e1',
+                          borderColor: trimmedUpi.length === 0 ? '#cbd5e1' : isUpiIdValid ? '#059669' : '#ef4444',
                           borderRadius: 12,
                           paddingHorizontal: 14,
                           height: 46,
@@ -1584,6 +1667,16 @@ export default function PaymentScreen({ route, navigation }) {
                           color: '#0f172a',
                         }}
                       />
+                      {trimmedUpi.length > 0 && !isUpiIdValid && (
+                        <Text style={{ fontSize: 11.5, fontFamily: fonts.medium, color: '#ef4444', marginTop: 4 }}>
+                          Please enter a valid UPI ID (e.g. mobile@upi, name@oksbi)
+                        </Text>
+                      )}
+                      {isUpiIdValid && (
+                        <Text style={{ fontSize: 11.5, fontFamily: fonts.medium, color: '#059669', marginTop: 4 }}>
+                          ✓ Valid UPI ID entered
+                        </Text>
+                      )}
                     </View>
 
                     {/* QR Code fallback */}
@@ -1599,23 +1692,22 @@ export default function PaymentScreen({ route, navigation }) {
                       </Text>
                     </View>
 
-                    {/* I have completed payment button */}
-                    <Pressable
-                      onPress={submitOrderAndClaimPayment}
-                      disabled={loading}
+                    {/* Guidance Card instead of duplicate conflicting button */}
+                    <View
                       style={{
-                        backgroundColor: '#047857',
+                        backgroundColor: '#f8fafc',
                         borderRadius: 12,
-                        height: 44,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: '#e2e8f0',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        marginTop: 6,
+                        marginTop: 4,
                       }}
                     >
-                      <Text style={{ fontSize: 14, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff' }}>
-                        {loading ? 'Submitting...' : 'I have completed the payment'}
+                      <Text style={{ fontSize: 12, fontFamily: fonts.medium, fontWeight: 'normal', color: '#475569', textAlign: 'center', lineHeight: 18 }}>
+                        Scan QR with any UPI app, enter the UPI ID you paid from above, and tap below to complete your payment.
                       </Text>
-                    </Pressable>
+                    </View>
                   </Animated.View>
                 )}
               </>
@@ -1769,89 +1861,7 @@ export default function PaymentScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* SECTION 3: PAY LATER (Coming Soon) matching Image 2 */}
-        <View>
-          <Text
-            style={{
-              fontSize: 12,
-              fontFamily: fonts.bold,
-              fontWeight: 'normal',
-              color: '#64748b',
-              letterSpacing: 0.6,
-              marginBottom: 10,
-              marginLeft: 4,
-            }}
-          >
-            PAY LATER
-          </Text>
 
-          <View
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: '#e2e8f0',
-              overflow: 'hidden',
-            }}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                padding: 16,
-                opacity: 0.7,
-              }}
-            >
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: '#f8fafc',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 14,
-                }}
-              >
-                <Banknote size={22} color="#64748b" strokeWidth={2} />
-              </View>
-
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={{ fontSize: 15, fontFamily: fonts.bold, fontWeight: 'normal', color: '#0f172a' }}>
-                  Cash on delivery
-                </Text>
-                <Text style={{ fontSize: 12, fontFamily: fonts.medium, fontWeight: 'normal', color: '#64748b', marginTop: 2 }}>
-                  Pay in cash or UPI at your door
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View
-                  style={{
-                    backgroundColor: '#f1f5f9',
-                    borderRadius: 8,
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                  }}
-                >
-                  <Text style={{ fontSize: 11, fontFamily: fonts.bold, fontWeight: 'normal', color: '#64748b' }}>
-                    Coming soon
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    borderWidth: 2,
-                    borderColor: '#cbd5e1',
-                    backgroundColor: '#ffffff',
-                  }}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
 
         {/* Security footnote matching Image 2 */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>
@@ -1903,25 +1913,29 @@ export default function PaymentScreen({ route, navigation }) {
         ) : (
           <Pressable
             onPress={handlePayNow}
-            disabled={loading}
+            disabled={loading || (selectedMethod === 'UPI_ID' && !isUpiIdValid)}
             style={{
               height: 54,
               borderRadius: 16,
-              backgroundColor: '#047857',
+              backgroundColor: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? '#94a3b8' : '#047857',
               paddingHorizontal: 18,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              shadowColor: '#047857',
+              shadowColor: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? '#000' : '#047857',
               shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.25,
+              shadowOpacity: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? 0.08 : 0.25,
               shadowRadius: 8,
-              elevation: 4,
+              elevation: (selectedMethod === 'UPI_ID' && !isUpiIdValid) ? 1 : 4,
             }}
           >
             <View>
               <Text style={{ fontSize: 11, fontFamily: fonts.bold, fontWeight: 'normal', color: 'rgba(255, 255, 255, 0.85)' }}>
-                {selectedMethod === 'UPI_APP' ? `Pay with ${defaultPayment.app || 'UPI app'}` : 'Pay by UPI ID'}
+                {selectedMethod === 'UPI_APP'
+                  ? `Pay with ${defaultPayment.app || 'UPI app'}`
+                  : !isUpiIdValid
+                  ? 'Enter UPI ID to proceed'
+                  : 'Pay by UPI ID'}
               </Text>
               <Text style={{ fontSize: 17, fontFamily: fonts.black, fontWeight: 'normal', color: '#ffffff' }}>
                 ₹{formattedAmount}
@@ -1929,10 +1943,21 @@ export default function PaymentScreen({ route, navigation }) {
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ fontSize: 15.5, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff', marginRight: 4 }}>
-                {loading ? 'Processing...' : 'Pay now'}
-              </Text>
-              <ArrowRight size={18} color="#ffffff" strokeWidth={2.8} />
+              {loading ? (
+                <>
+                  <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                  <Text style={{ fontSize: 15, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff' }}>
+                    Processing payment...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={{ fontSize: 15.5, fontFamily: fonts.bold, fontWeight: 'normal', color: '#ffffff', marginRight: 4 }}>
+                    {selectedMethod === 'UPI_ID' ? 'Verify & Pay' : 'Pay now'}
+                  </Text>
+                  <ArrowRight size={18} color="#ffffff" strokeWidth={2.8} />
+                </>
+              )}
             </View>
           </Pressable>
         )}

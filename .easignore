@@ -33,3 +33,17 @@ reports/
 coverage/
 .DS_Store
 output.css
+
+# Local design documentation, test inputs, raw assets and tools
+/test/
+/reports/
+/scripts/
+/vendor/
+/support.js
+/Splash.dc.html
+/MS-Traders-logo-kit/
+/MS-Traders-logo-guide.pdf
+/MS-TRADERS-BRANDING.md
+/README*.md
+/.claude/
+/.vscode/

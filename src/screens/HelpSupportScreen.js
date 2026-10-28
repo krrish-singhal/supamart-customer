@@ -6,6 +6,7 @@ import {
   Pressable,
   StatusBar,
   Linking,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -22,8 +23,7 @@ import {
   Check,
   X,
   Package,
-} from 'lucide-react-native';
-import { Modal } from 'react-native';
+} from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import apiClient from '../services/api';
@@ -42,7 +42,7 @@ const FAQ_ITEMS = [
   {
     id: 2,
     question: 'When will I get my refund?',
-    answer: 'Refunds start as soon as they are approved and reach your account within [X] working days, depending on your bank.',
+    answer: 'Refunds start as soon as they are approved and reach your account according to the payment provider’s processing time; contact support for an update.',
     topic: 'Payments & refunds',
   },
   {
@@ -105,7 +105,7 @@ export default function HelpSupportScreen({ route, navigation }) {
   };
 
   const handleWhatsApp = () => {
-    const text = encodeURIComponent('Hello MS Traders Support, I need help with my order.');
+    const text = encodeURIComponent(recentOrder ? `Hello MS Traders Support, I need help with order #${recentOrder.orderNo}.` : 'Hello MS Traders Support, I need help with my account.');
     Linking.openURL(`https://wa.me/919037655180?text=${text}`).catch(() => {
       Toast.show({ type: 'info', text1: `WhatsApp: ${SUPPORT_PHONE_DISPLAY}` });
     });
@@ -115,15 +115,11 @@ export default function HelpSupportScreen({ route, navigation }) {
     setExpandedFaqId(expandedFaqId === id ? null : id);
   };
 
-  const orderNo = recentOrder?.orderNo || paramOrderNo || '10482';
-  const orderTotal = recentOrder?.total || recentOrder?.totalAmount || 246;
-  const items = recentOrder?.items || [
-    { name: 'Toor Dal (Unpolished)', unit: '1 kg', qty: 1, price: 158 },
-    { name: 'Full Cream Milk', unit: '500 ml', qty: 2, price: 66 },
-    { name: 'Tomato (Local)', unit: '500 g', qty: 1, price: 22 },
-  ];
+  const orderNo = recentOrder?.orderNo;
+  const orderTotal = recentOrder?.total ?? recentOrder?.totalAmount ?? 0;
+  const items = recentOrder?.items || [];
   const itemCount = items.reduce((acc, it) => acc + (it.qty || 1), 0);
-  const firstItem = items[0] || { name: 'Toor Dal (Unpolished)' };
+  const firstItem = items[0] || {};
   const firstItemImg = getProductImageSource(firstItem);
 
   return (
@@ -170,7 +166,7 @@ export default function HelpSupportScreen({ route, navigation }) {
         }}
       >
         {/* RECENT ORDER SECTION matching Image 3 */}
-        <Animated.View entering={FadeInDown.duration(280)}>
+        {recentOrder ? <Animated.View entering={FadeInDown.duration(280)}>
           <View
             style={{
               flexDirection: 'row',
@@ -250,7 +246,7 @@ export default function HelpSupportScreen({ route, navigation }) {
                   Order #{orderNo}
                 </Text>
                 <Text style={{ fontSize: 13, fontWeight: '500', color: '#64748b', marginTop: 2 }}>
-                  {itemCount} items · ₹{orderTotal} · Today
+                  {itemCount} items · ₹{orderTotal} · {recentOrder?.createdAt ? new Date(recentOrder.createdAt).toLocaleDateString() : recentOrder?.status}
                 </Text>
               </View>
             </View>
@@ -308,7 +304,7 @@ export default function HelpSupportScreen({ route, navigation }) {
               </Pressable>
             </View>
           </View>
-        </Animated.View>
+        </Animated.View> : <View style={{ padding: 18, backgroundColor: '#f0fdf4', borderRadius: 16 }}><Text style={{ color: '#047857', fontWeight: '700' }}>No orders yet</Text><Text style={{ color: '#64748b', marginTop: 6 }}>Your orders will appear here after your first purchase. You can still contact us for help.</Text></View>}
 
         {/* BROWSE TOPICS SECTION matching Image 3 (2x2 grid) */}
         <Animated.View entering={FadeInDown.duration(320)}>

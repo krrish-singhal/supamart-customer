@@ -175,24 +175,82 @@ export function applyProductFilters(products, filters) {
   return result;
 }
 
+export function getProductTimestamp(val) {
+  if (!val) return 0;
+  if (typeof val === 'number') return val;
+  if (typeof val?.toMillis === 'function') return val.toMillis();
+  if (typeof val?.toDate === 'function') return val.toDate().getTime();
+  if (typeof val?.seconds === 'number') return val.seconds * 1000 + (val.nanoseconds || 0) / 1e6;
+  if (typeof val?._seconds === 'number') return val._seconds * 1000 + (val._nanoseconds || 0) / 1e6;
+  const parsed = new Date(val).getTime();
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+export function compareProductsDeterministic(a, b) {
+  if (a === b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+
+  // 1. Explicit display order (if configured)
+  const orderA = a.order != null ? Number(a.order) : null;
+  const orderB = b.order != null ? Number(b.order) : null;
+  if (orderA !== null && orderB !== null && orderA !== orderB) {
+    return orderA - orderB;
+  }
+  if (orderA !== null) return -1;
+  if (orderB !== null) return 1;
+
+  // 2. Primary: Creation timestamp (newest first)
+  const timeA = getProductTimestamp(a.createdAt);
+  const timeB = getProductTimestamp(b.createdAt);
+  if (timeB !== timeA) {
+    return timeB - timeA;
+  }
+
+  // 3. Fallback: Stable tie-breaker by document ID descending
+  // (matches Firestore's internal __name__ desc tie-breaker when ordering by createdAt desc)
+  const idComp = String(b.id || '').localeCompare(String(a.id || ''));
+  if (idComp !== 0) return idComp;
+
+  // 4. Stable tie-breaker by name
+  return String(a.name || '').localeCompare(String(b.name || ''));
+}
+
 export function sortProducts(products, sortKey) {
   if (!Array.isArray(products)) return [];
   const arr = [...products];
   switch (sortKey) {
     case 'price_asc':
-      return arr.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+      return arr.sort((a, b) => {
+        const diff = getEffectivePrice(a) - getEffectivePrice(b);
+        return diff !== 0 ? diff : compareProductsDeterministic(a, b);
+      });
     case 'price_desc':
-      return arr.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+      return arr.sort((a, b) => {
+        const diff = getEffectivePrice(b) - getEffectivePrice(a);
+        return diff !== 0 ? diff : compareProductsDeterministic(a, b);
+      });
     case 'discount':
     case 'discount_desc':
-      return arr.sort((a, b) => getDiscountPercent(b) - getDiscountPercent(a));
+      return arr.sort((a, b) => {
+        const diff = getDiscountPercent(b) - getDiscountPercent(a);
+        return diff !== 0 ? diff : compareProductsDeterministic(a, b);
+      });
     case 'discount_asc':
-      return arr.sort((a, b) => getDiscountPercent(a) - getDiscountPercent(b));
+      return arr.sort((a, b) => {
+        const diff = getDiscountPercent(a) - getDiscountPercent(b);
+        return diff !== 0 ? diff : compareProductsDeterministic(a, b);
+      });
     case 'newest':
-      return arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return arr.sort(compareProductsDeterministic);
     case 'popularity':
+      return arr.sort((a, b) => {
+        const diff = (b.soldCount || 0) - (a.soldCount || 0);
+        return diff !== 0 ? diff : compareProductsDeterministic(a, b);
+      });
     case 'relevance':
     default:
-      return arr.sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0));
+      return arr.sort(compareProductsDeterministic);
   }
 }
+

@@ -7,44 +7,62 @@ import {
   Pressable,
   StatusBar,
   Switch,
+  Modal,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import {
   ChevronLeft,
+  ChevronRight,
   ShoppingBag,
   MapPin,
   Bookmark,
-  CreditCard,
   RotateCcw,
+  CreditCard,
   HelpCircle,
+  Info,
+  FileText,
+  ShieldCheck,
   Bell,
-  ChevronRight,
   Star,
-} from 'lucide-react-native';
+  X,
+  Phone,
+  Clock,
+  Mail,
+} from '../components/icons';
 import Toast from 'react-native-toast-message';
 import { AuthContext } from '../context/AuthContext';
 import apiClient from '../services/api';
 import { Dialog } from '../components/ui';
 import MSClubModal from '../components/MSClubModal';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
+import { fonts } from '../theme/typography';
 
 export default function AccountScreen({ navigation }) {
   const { userProfile, signOut, logout } = useContext(AuthContext);
   const userId = userProfile?.uid || userProfile?.id;
   const preferenceKey = `@supamart_offer_notifications_${userId || 'guest'}`;
-  const [offerNotifications, setOfferNotifications] = useState(userProfile?.offerNotificationsEnabled !== false);
+
+  const [offerNotifications, setOfferNotifications] = useState(
+    userProfile?.offerNotificationsEnabled !== false
+  );
   const [logoutDialog, setLogoutDialog] = useState(false);
   const [showClubModal, setShowClubModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   useEffect(() => {
     let active = true;
-    AsyncStorage.getItem(preferenceKey).then((saved) => {
-      if (active && saved != null) setOfferNotifications(saved === 'true');
-      else if (active) setOfferNotifications(userProfile?.offerNotificationsEnabled !== false);
-    }).catch(() => {});
-    return () => { active = false; };
+    AsyncStorage.getItem(preferenceKey)
+      .then((saved) => {
+        if (active && saved != null) setOfferNotifications(saved === 'true');
+        else if (active) setOfferNotifications(userProfile?.offerNotificationsEnabled !== false);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [preferenceKey, userProfile?.offerNotificationsEnabled]);
 
   const saveOfferNotifications = async (enabled) => {
@@ -64,12 +82,8 @@ export default function AccountScreen({ navigation }) {
   };
 
   const displayName = userProfile?.name || 'Customer';
-  const displayPhone = userProfile?.mobile
-    ? `+91 ${userProfile.mobile}`
-    : userProfile?.phone
-    ? `+91 ${userProfile.phone}`
-    : userProfile?.email || '';
-
+  const rawMobile = userProfile?.mobile || userProfile?.phone || '';
+  const displayPhone = rawMobile ? `+91${rawMobile.replace(/^\+91/, '')}` : '+91 [mobile number]';
   const initial = displayName.trim().charAt(0).toUpperCase() || 'A';
 
   const handleLogout = async () => {
@@ -86,23 +100,64 @@ export default function AccountScreen({ navigation }) {
     }
   };
 
+  // 3 Quick Action Cards
   const shortcuts = [
     { label: 'Orders', Icon: ShoppingBag, route: 'Orders' },
     { label: 'Addresses', Icon: MapPin, route: 'MyAddresses' },
-    { label: 'Saved', Icon: Bookmark, route: 'Favorites' },
+    { label: 'My lists', Icon: Bookmark, route: 'ShoppingLists' },
   ];
 
-  const menu = [
-    { label: 'Payment methods', Icon: CreditCard, route: 'Payment' },
-    { label: 'Refunds', Icon: RotateCcw, route: 'RefundStatus' },
-    { label: 'Help & support', Icon: HelpCircle, route: 'HelpSupport' },
+  // Grouped Menu List
+  const menuItems = [
+    {
+      id: 'buy_again',
+      label: 'Buy again',
+      Icon: RotateCcw,
+      onPress: () => navigation.navigate('BuyAgain'),
+    },
+    {
+      id: 'payment_methods',
+      label: 'Payment methods',
+      Icon: CreditCard,
+      onPress: () => navigation.navigate('Payment'),
+    },
+    {
+      id: 'refunds',
+      label: 'Refunds',
+      Icon: RotateCcw,
+      onPress: () => navigation.navigate('RefundStatus'),
+    },
+    {
+      id: 'help_support',
+      label: 'Help & support',
+      Icon: HelpCircle,
+      onPress: () => navigation.navigate('HelpSupport'),
+    },
+    {
+      id: 'about',
+      label: 'About MS Traders',
+      Icon: Info,
+      onPress: () => setShowAboutModal(true),
+    },
+    {
+      id: 'terms',
+      label: 'Terms of Service',
+      Icon: FileText,
+      onPress: () => navigation.navigate('Terms'),
+    },
+    {
+      id: 'privacy',
+      label: 'Privacy Policy',
+      Icon: ShieldCheck,
+      onPress: () => navigation.navigate('PrivacyPolicy'),
+    },
   ];
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* Header matching Image 1 */}
+      {/* Top Header */}
       <View style={styles.header}>
         <Pressable
           onPress={() => {
@@ -116,109 +171,130 @@ export default function AccountScreen({ navigation }) {
           accessibilityLabel="Go back"
           style={styles.backButton}
         >
-          <ChevronLeft size={22} color="#0f172a" strokeWidth={2.4} />
+          <ChevronLeft size={24} color="#0f172a" strokeWidth={2.4} />
         </Pressable>
         <Text style={styles.title}>Account</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {/* Profile Card Header matching Image 1 */}
-        <View style={styles.profile}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        {/* Profile Card Header */}
+        <View style={styles.profileCard}>
           <View style={styles.avatar}>
             {userProfile?.profileImage ? (
               <Image
                 source={{ uri: optimizeCloudinaryUrl(userProfile.profileImage, 120) }}
-                style={{ width: '100%', height: '100%' }}
+                style={styles.avatarImage}
                 contentFit="cover"
               />
             ) : (
-              <Text style={styles.initial}>{initial}</Text>
+              <Text style={styles.initialText}>{initial}</Text>
             )}
           </View>
-          <View style={styles.profileTextContainer}>
-            <Text numberOfLines={1} style={styles.name}>
+
+          <View style={styles.profileInfo}>
+            <Text numberOfLines={1} style={styles.customerName}>
               {displayName}
             </Text>
-            <Text style={styles.phone}>{displayPhone || '+91 [mobile number]'}</Text>
+            <Text style={styles.customerPhone}>{displayPhone}</Text>
           </View>
+
           <Pressable
             onPress={() => navigation.navigate('EditProfile')}
-            style={styles.edit}
-            hitSlop={6}
+            style={styles.editBtn}
+            hitSlop={8}
+            accessibilityLabel="Edit profile"
           >
-            <Text style={styles.editLabel}>Edit</Text>
+            <Text style={styles.editBtnText}>Edit</Text>
           </Pressable>
         </View>
 
         <View style={styles.body}>
-          {/* Join MS Club Banner matching Image 1 */}
-          <Pressable onPress={() => setShowClubModal(true)} style={styles.club}>
-            <View style={styles.star}>
-              <Star size={20} color="#facc15" fill="#facc15" strokeWidth={1.5} />
+          {/* Join MS Club Banner */}
+          <Pressable
+            onPress={() => setShowClubModal(true)}
+            style={styles.clubBanner}
+          >
+            <View style={styles.starBox}>
+              <Star size={22} color="#fbbf24" strokeWidth={2.2} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.clubTextCol}>
               <Text style={styles.clubTitle}>Join MS Club</Text>
               <Text style={styles.clubSubtitle}>Free delivery and extra savings</Text>
             </View>
-            <ChevronRight size={20} color="#ffffff" strokeWidth={2.4} />
+            <ChevronRight size={22} color="#ffffff" strokeWidth={2.4} />
           </Pressable>
 
-          {/* 3 Shortcut Cards matching Image 1 */}
-          <View style={styles.shortcuts}>
-            {shortcuts.map(({ label, Icon, route }) => (
+          {/* 3 Shortcut Cards: Orders, Addresses, My lists */}
+          <View style={styles.shortcutsRow}>
+            {shortcuts.map(({ label, Icon, route }, idx) => (
               <Pressable
-                key={route}
+                key={label}
                 onPress={() => navigation.navigate(route)}
-                style={styles.shortcut}
+                style={[
+                  styles.shortcutCard,
+                  idx < shortcuts.length - 1 && styles.shortcutCardMargin,
+                ]}
               >
-                <Icon size={22} color="#087f46" strokeWidth={2} />
+                <Icon size={22} color="#047857" strokeWidth={2.2} />
                 <Text style={styles.shortcutLabel}>{label}</Text>
               </Pressable>
             ))}
           </View>
 
-          {/* Settings Menu Card matching Image 1 */}
-          <View style={styles.menu}>
-            {menu.map(({ label, Icon, route, action }) => (
+          {/* Grouped Settings Menu Card */}
+          <View style={styles.menuCard}>
+            {menuItems.map(({ id, label, Icon, onPress }) => (
               <Pressable
-                key={label}
-                onPress={() => {
-                  if (action) action();
-                  else if (route) navigation.navigate(route);
-                }}
+                key={id}
+                onPress={onPress}
                 style={styles.menuRow}
               >
-                <View style={styles.menuIcon}>
-                  <Icon size={18} color="#087f46" strokeWidth={2} />
+                <View style={styles.menuIconBox}>
+                  <Icon size={18} color="#047857" strokeWidth={2.2} />
                 </View>
                 <Text style={styles.menuLabel}>{label}</Text>
                 <ChevronRight size={18} color="#94a3b8" strokeWidth={2.2} />
               </Pressable>
             ))}
 
-            {/* Offer notifications Row matching Image 1 */}
-            <View style={[styles.menuRow, { borderBottomWidth: 0 }]}>
-              <View style={styles.menuIcon}>
-                <Bell size={18} color="#087f46" strokeWidth={2} />
+            {/* Offer notifications Row with Switch */}
+            <View style={[styles.menuRow, styles.menuRowLast]}>
+              <View style={styles.menuIconBox}>
+                <Bell size={18} color="#047857" strokeWidth={2.2} />
               </View>
               <Text style={styles.menuLabel}>Offer notifications</Text>
               <Switch
                 accessibilityLabel="Offer notifications"
                 value={offerNotifications}
                 onValueChange={saveOfferNotifications}
-                trackColor={{ false: '#cbd5e1', true: '#087f46' }}
+                trackColor={{ false: '#cbd5e1', true: '#047857' }}
                 thumbColor="#ffffff"
               />
             </View>
           </View>
 
-          {/* Log out Button matching Image 1 */}
-          <Pressable onPress={() => setLogoutDialog(true)} style={styles.logout}>
-            <Text style={styles.logoutLabel}>Log out</Text>
+          {/* Log out Button */}
+          <Pressable
+            onPress={() => setLogoutDialog(true)}
+            style={styles.logoutButton}
+          >
+            <Text style={styles.logoutButtonText}>Log out</Text>
           </Pressable>
 
-          {/* Version Footer matching Image 1 */}
-          <Text style={styles.version}>MS Traders · version 1.0</Text>
+          {/* Delete account text link */}
+          <Pressable
+            onPress={() => navigation.navigate('DeleteAccount')}
+            hitSlop={8}
+            style={styles.deleteAccountLink}
+          >
+            <Text style={styles.deleteAccountText}>Delete account</Text>
+          </Pressable>
+
+          {/* Version Footer */}
+          <Text style={styles.versionText}>MS Traders · version 1.0</Text>
         </View>
       </ScrollView>
 
@@ -236,6 +312,130 @@ export default function AccountScreen({ navigation }) {
 
       {/* MS Club Modal */}
       <MSClubModal visible={showClubModal} onClose={() => setShowClubModal(false)} />
+
+      {/* About MS Traders Modal */}
+      <Modal
+        visible={showAboutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAboutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.aboutModalCard}>
+            <View style={styles.aboutModalHeader}>
+              <Text style={styles.aboutModalTitle}>About MS Traders</Text>
+              <Pressable
+                onPress={() => setShowAboutModal(false)}
+                hitSlop={10}
+                style={styles.aboutModalClose}
+                accessibilityLabel="Close"
+              >
+                <X size={18} color="#475569" strokeWidth={2.4} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ flexShrink: 1, marginBottom: 14 }}
+              contentContainerStyle={{ paddingBottom: 6 }}
+            >
+              <Text style={styles.aboutDescription}>
+                MS Traders is your trusted neighborhood grocery destination, delivering farm-fresh produce, pantry essentials, and daily necessities to your doorstep in 10–15 minutes.
+              </Text>
+
+              <View style={styles.aboutInfoBox}>
+                <View style={styles.aboutInfoRow}>
+                  <View style={styles.aboutIconBadge}>
+                    <Clock size={16} color="#047857" strokeWidth={2.4} />
+                  </View>
+                  <Text style={styles.aboutInfoText}>Open 10:00 AM – 11:00 PM every day</Text>
+                </View>
+
+                <View style={styles.aboutInfoRow}>
+                  <View style={styles.aboutIconBadge}>
+                    <MapPin size={16} color="#047857" strokeWidth={2.4} />
+                  </View>
+                  <Text style={styles.aboutInfoText}>Delivery available within 5 km of our store</Text>
+                </View>
+
+                <Pressable
+                  onPress={() => Linking.openURL('mailto:hassanramla31@gmail.com').catch(() => {})}
+                  style={styles.aboutInfoRow}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+                    <View style={styles.aboutIconBadge}>
+                      <Mail size={16} color="#047857" strokeWidth={2.4} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.aboutInfoLabel}>Customer Support</Text>
+                      <Text style={styles.aboutInfoTextBold}>hassanramla31@gmail.com</Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => Linking.openURL('tel:+919037655180').catch(() => {})}
+                  style={[styles.aboutInfoRow, { marginBottom: 0 }]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+                    <View style={styles.aboutIconBadge}>
+                      <Phone size={16} color="#047857" strokeWidth={2.4} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.aboutInfoLabel}>Helpline</Text>
+                      <Text style={styles.aboutInfoTextBold}>+91 90376 55180</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Organized Terms of Service & Privacy Policy List Card */}
+              <View style={styles.aboutLegalCard}>
+                <Pressable
+                  onPress={() => {
+                    setShowAboutModal(false);
+                    navigation.navigate('Terms');
+                  }}
+                  style={styles.aboutLegalRow}
+                >
+                  <View style={styles.aboutLegalRowContent}>
+                    <View style={styles.aboutLegalIconBadge}>
+                      <FileText size={16} color="#047857" strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.aboutLegalTitle}>Terms of Service</Text>
+                    <ChevronRight size={16} color="#94a3b8" strokeWidth={2.4} />
+                  </View>
+                </Pressable>
+
+                <View style={styles.aboutLegalDivider} />
+
+                <Pressable
+                  onPress={() => {
+                    setShowAboutModal(false);
+                    navigation.navigate('PrivacyPolicy');
+                  }}
+                  style={styles.aboutLegalRow}
+                >
+                  <View style={styles.aboutLegalRowContent}>
+                    <View style={styles.aboutLegalIconBadge}>
+                      <ShieldCheck size={16} color="#047857" strokeWidth={2.2} />
+                    </View>
+                    <Text style={styles.aboutLegalTitle}>Privacy Policy</Text>
+                    <ChevronRight size={16} color="#94a3b8" strokeWidth={2.4} />
+                  </View>
+                </Pressable>
+              </View>
+            </ScrollView>
+
+            <Pressable
+              onPress={() => setShowAboutModal(false)}
+              style={styles.aboutDoneBtn}
+            >
+              <Text style={styles.aboutDoneBtnText}>Done</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -243,13 +443,13 @@ export default function AccountScreen({ navigation }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f3f6f3',
+    backgroundColor: '#f4f6f4',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: '#ffffff',
   },
   backButton: {
@@ -257,20 +457,18 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   title: {
-    fontFamily: 'Inter-ExtraBold',
-    fontSize: 18,
-    fontWeight: 'normal',
+    fontFamily: fonts.bold,
+    fontSize: 20,
     color: '#0f172a',
-    letterSpacing: -0.3,
   },
   content: {
     flexGrow: 1,
     width: '100%',
     maxWidth: 560,
     alignSelf: 'center',
-    paddingBottom: 36,
+    paddingBottom: 20,
   },
-  profile: {
+  profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 18,
@@ -279,120 +477,134 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#087f46',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#047857',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  initial: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 22,
-    fontWeight: 'normal',
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  initialText: {
+    fontFamily: fonts.bold,
+    fontSize: 24,
     color: '#ffffff',
   },
-  profileTextContainer: {
+  profileInfo: {
     flex: 1,
     marginLeft: 14,
     justifyContent: 'center',
   },
-  name: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 16.5,
-    fontWeight: 'normal',
+  customerName: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
     color: '#0f172a',
-    letterSpacing: -0.2,
   },
-  phone: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12.5,
-    fontWeight: 'normal',
+  customerPhone: {
+    fontFamily: fonts.regular,
+    fontSize: 13.5,
     color: '#64748b',
     marginTop: 3,
   },
-  edit: {
+  editBtn: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  editLabel: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 12.5,
-    fontWeight: 'normal',
+  editBtnText: {
+    fontFamily: fonts.bold,
+    fontSize: 13.5,
     color: '#0f172a',
   },
   body: {
-    padding: 16,
-    gap: 14,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 0,
   },
-  club: {
+  clubBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#087f46',
-    borderRadius: 16,
+    backgroundColor: '#047857',
+    borderRadius: 20,
     padding: 16,
+    marginBottom: 14,
+    shadowColor: '#047857',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  star: {
-    width: 42,
-    height: 42,
+  starBox: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 14,
+  },
+  clubTextCol: {
+    flex: 1,
+    marginRight: 8,
   },
   clubTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 15.5,
-    fontWeight: 'normal',
+    fontFamily: fonts.bold,
+    fontSize: 16,
     color: '#ffffff',
   },
   clubSubtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    fontWeight: 'normal',
+    fontFamily: fonts.regular,
+    fontSize: 12.5,
     color: '#dcfce7',
     marginTop: 2,
   },
-  shortcuts: {
+  shortcutsRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  shortcut: {
+  shortcutCard: {
     flex: 1,
-    height: 84,
+    height: 86,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 16,
+    borderColor: '#edf2ed',
+    borderRadius: 18,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 3,
     elevation: 1,
   },
-  shortcutLabel: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 13,
-    fontWeight: 'normal',
-    color: '#0f172a',
+  shortcutCardMargin: {
+    marginRight: 10,
   },
-  menu: {
+  shortcutLabel: {
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    color: '#0f172a',
+    marginTop: 6,
+  },
+  menuCard: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 16,
+    borderColor: '#edf2ed',
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#ffffff',
+    marginBottom: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -403,48 +615,208 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    height: 54,
+    height: 56,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
+    backgroundColor: '#ffffff',
   },
-  menuIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    backgroundColor: '#ecfdf5',
+  menuRowLast: {
+    borderBottomWidth: 0,
+  },
+  menuIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#eaf6ee',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   menuLabel: {
     flex: 1,
-    fontFamily: 'Inter-Bold',
-    fontSize: 13.5,
-    fontWeight: 'normal',
+    fontFamily: fonts.bold,
+    fontSize: 14,
     color: '#0f172a',
   },
-  logout: {
-    height: 48,
-    borderWidth: 1.2,
-    borderColor: '#fca5a5',
-    borderRadius: 14,
+  logoutButton: {
+    height: 50,
+    borderWidth: 1.5,
+    borderColor: '#fecaca',
+    borderRadius: 16,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    marginBottom: 14,
   },
-  logoutLabel: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 14,
-    fontWeight: 'normal',
+  logoutButtonText: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
     color: '#dc2626',
   },
-  version: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 11.5,
-    fontWeight: 'normal',
+  deleteAccountLink: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  deleteAccountText: {
+    fontFamily: fonts.bold,
+    fontSize: 14.5,
+    color: '#dc2626',
+  },
+  versionText: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
     color: '#94a3b8',
     textAlign: 'center',
-    marginTop: 4,
+    marginBottom: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  aboutModalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  aboutModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  aboutModalTitle: {
+    fontFamily: fonts.extraBold,
+    fontWeight: 'normal',
+    fontSize: 20,
+    color: '#0f172a',
+    letterSpacing: -0.3,
+  },
+  aboutModalClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aboutDescription: {
+    fontFamily: fonts.regular,
+    fontSize: 13.5,
+    lineHeight: 21,
+    color: '#475569',
+    marginBottom: 14,
+  },
+  aboutInfoBox: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 14,
+    marginBottom: 14,
+  },
+  aboutInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  aboutIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  aboutInfoLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    color: '#64748b',
+    marginBottom: 1,
+  },
+  aboutInfoText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: '#334155',
+    flex: 1,
+    lineHeight: 18,
+  },
+  aboutInfoTextBold: {
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    color: '#0f172a',
+  },
+  aboutLegalCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  aboutLegalRow: {
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  aboutLegalRowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  aboutLegalIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  aboutLegalTitle: {
+    flex: 1,
+    fontFamily: fonts.bold,
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  aboutLegalDivider: {
+    height: 1,
+    backgroundColor: '#edf2f7',
+    marginLeft: 58,
+  },
+  aboutDoneBtn: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#047857',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#047857',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  aboutDoneBtnText: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: '#ffffff',
   },
 });

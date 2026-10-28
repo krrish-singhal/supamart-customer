@@ -14,10 +14,11 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, User, Mail, Lock, Eye, EyeOff, Check } from 'lucide-react-native';
+import { ChevronLeft, User, Mail, Lock, Eye, EyeOff, Check } from '../components/icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import BrandBadge from '../components/BrandBadge';
 import { AuthContext } from '../context/AuthContext';
+import { fonts } from '../theme/typography';
 
 const GROCERY_ROW = [
   { id: 'apples', source: require('../../assets/categories/home/fresh-fruits.webp') },
@@ -117,7 +118,7 @@ export default function RegisterScreen({ route, navigation }) {
           contentContainerStyle={{
             flexGrow: 1,
             backgroundColor: '#ffffff',
-            paddingBottom: keyboardVisible ? 260 : Math.max(insets.bottom, 16) + 16,
+            paddingBottom: keyboardVisible ? 24 : 0,
             width: '100%',
             maxWidth: 480,
             alignSelf: 'center',
@@ -127,7 +128,7 @@ export default function RegisterScreen({ route, navigation }) {
           showsVerticalScrollIndicator={false}
         >
           {/* TOP SECTION: BACK BUTTON, LOGO & 4 GROCERY ITEMS matching Screen 02 */}
-          <View style={{ backgroundColor: '#e2ece4', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+          <View style={{ backgroundColor: '#F3F5F2', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
             {/* Header: Back Arrow on left, Brand badge on right */}
             <View
               style={{
@@ -149,7 +150,7 @@ export default function RegisterScreen({ route, navigation }) {
                   justifyContent: 'center',
                 }}
               >
-                <ChevronLeft size={24} color="#0f172a" strokeWidth={2.6} />
+                <ChevronLeft size={24} color="#121712" strokeWidth={2.6} />
               </Pressable>
 
               <BrandBadge size={32} showName />
@@ -202,16 +203,15 @@ export default function RegisterScreen({ route, navigation }) {
               borderTopRightRadius: 28,
               paddingHorizontal: 24,
               paddingTop: 28,
-              paddingBottom: Math.max(insets.bottom, 16) + 16,
+              paddingBottom: 16,
             }}
           >
             {/* Title: "Create your account" */}
             <Text
               style={{
-                fontFamily: 'Inter-ExtraBold',
+                fontFamily: fonts.extraBold,
                 fontSize: 27,
-                fontWeight: '800',
-                color: '#0f172a',
+                color: '#121712',
                 letterSpacing: -0.6,
               }}
             >
@@ -221,9 +221,8 @@ export default function RegisterScreen({ route, navigation }) {
             {/* Subtitle: "Shop groceries at trader prices in minutes." */}
             <Text
               style={{
-                fontFamily: 'Inter-Regular',
+                fontFamily: fonts.regular,
                 fontSize: 14,
-                fontWeight: '400',
                 color: '#64748b',
                 marginTop: 6,
                 marginBottom: 20,
@@ -237,10 +236,9 @@ export default function RegisterScreen({ route, navigation }) {
             <View style={{ marginBottom: 14 }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13.5,
-                  fontWeight: '700',
-                  color: '#0f172a',
+                  color: '#121712',
                   marginBottom: 6,
                 }}
               >
@@ -252,7 +250,7 @@ export default function RegisterScreen({ route, navigation }) {
                   alignItems: 'center',
                   backgroundColor: '#ffffff',
                   borderWidth: 1.2,
-                  borderColor: focusedInput === 'name' ? '#047857' : '#e2e8f0',
+                  borderColor: focusedInput === 'name' ? '#0A7C47' : '#e2e8f0',
                   borderRadius: 14,
                   height: 48,
                   paddingHorizontal: 14,
@@ -260,16 +258,15 @@ export default function RegisterScreen({ route, navigation }) {
               >
                 <User
                   size={18}
-                  color={focusedInput === 'name' ? '#047857' : '#94a3b8'}
+                  color={focusedInput === 'name' ? '#0A7C47' : '#94a3b8'}
                   style={{ marginRight: 10 }}
                 />
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: 'Inter-Regular',
+                    fontFamily: fonts.regular,
                     fontSize: 14,
-                    fontWeight: '400',
-                    color: '#0f172a',
+                    color: '#121712',
                     paddingVertical: 0,
                   }}
                   placeholder="Enter your name"
@@ -286,10 +283,9 @@ export default function RegisterScreen({ route, navigation }) {
             <View style={{ marginBottom: 14 }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13.5,
-                  fontWeight: '700',
-                  color: '#0f172a',
+                  color: '#121712',
                   marginBottom: 6,
                 }}
               >
@@ -301,7 +297,7 @@ export default function RegisterScreen({ route, navigation }) {
                   alignItems: 'center',
                   backgroundColor: '#ffffff',
                   borderWidth: 1.2,
-                  borderColor: focusedInput === 'email' ? '#047857' : '#e2e8f0',
+                  borderColor: focusedInput === 'email' ? '#0A7C47' : '#e2e8f0',
                   borderRadius: 14,
                   height: 48,
                   paddingHorizontal: 14,
@@ -309,16 +305,15 @@ export default function RegisterScreen({ route, navigation }) {
               >
                 <Mail
                   size={18}
-                  color={focusedInput === 'email' ? '#047857' : '#94a3b8'}
+                  color={focusedInput === 'email' ? '#0A7C47' : '#94a3b8'}
                   style={{ marginRight: 10 }}
                 />
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: 'Inter-Regular',
+                    fontFamily: fonts.regular,
                     fontSize: 14,
-                    fontWeight: '400',
-                    color: '#0f172a',
+                    color: '#121712',
                     paddingVertical: 0,
                   }}
                   placeholder="you@example.com"
@@ -337,10 +332,9 @@ export default function RegisterScreen({ route, navigation }) {
             <View style={{ marginBottom: 14 }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13.5,
-                  fontWeight: '700',
-                  color: '#0f172a',
+                  color: '#121712',
                   marginBottom: 6,
                 }}
               >
@@ -352,7 +346,7 @@ export default function RegisterScreen({ route, navigation }) {
                   alignItems: 'center',
                   backgroundColor: '#ffffff',
                   borderWidth: 1.2,
-                  borderColor: focusedInput === 'mobile' ? '#047857' : '#e2e8f0',
+                  borderColor: focusedInput === 'mobile' ? '#0A7C47' : '#e2e8f0',
                   borderRadius: 14,
                   height: 48,
                   paddingHorizontal: 14,
@@ -360,10 +354,9 @@ export default function RegisterScreen({ route, navigation }) {
               >
                 <Text
                   style={{
-                    fontFamily: 'Inter-Bold',
+                    fontFamily: fonts.bold,
                     fontSize: 15,
-                    fontWeight: '700',
-                    color: '#0f172a',
+                    color: '#121712',
                     marginRight: 10,
                   }}
                 >
@@ -373,10 +366,9 @@ export default function RegisterScreen({ route, navigation }) {
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: 'Inter-Regular',
+                    fontFamily: fonts.regular,
                     fontSize: 14,
-                    fontWeight: '400',
-                    color: '#0f172a',
+                    color: '#121712',
                     paddingVertical: 0,
                   }}
                   placeholder="10-digit number"
@@ -395,10 +387,9 @@ export default function RegisterScreen({ route, navigation }) {
             <View style={{ marginBottom: 14 }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13.5,
-                  fontWeight: '700',
-                  color: '#0f172a',
+                  color: '#121712',
                   marginBottom: 6,
                 }}
               >
@@ -410,7 +401,7 @@ export default function RegisterScreen({ route, navigation }) {
                   alignItems: 'center',
                   backgroundColor: '#ffffff',
                   borderWidth: 1.2,
-                  borderColor: focusedInput === 'password' ? '#047857' : '#e2e8f0',
+                  borderColor: focusedInput === 'password' ? '#0A7C47' : '#e2e8f0',
                   borderRadius: 14,
                   height: 48,
                   paddingHorizontal: 14,
@@ -418,16 +409,15 @@ export default function RegisterScreen({ route, navigation }) {
               >
                 <Lock
                   size={18}
-                  color={focusedInput === 'password' ? '#047857' : '#94a3b8'}
+                  color={focusedInput === 'password' ? '#0A7C47' : '#94a3b8'}
                   style={{ marginRight: 10 }}
                 />
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: 'Inter-Regular',
+                    fontFamily: fonts.regular,
                     fontSize: 14,
-                    fontWeight: '400',
-                    color: '#0f172a',
+                    color: '#121712',
                     paddingVertical: 0,
                   }}
                   placeholder="At least 8 characters"
@@ -454,9 +444,8 @@ export default function RegisterScreen({ route, navigation }) {
               {password.length > 0 && password.length < 8 && (
                 <Text
                   style={{
-                    fontFamily: 'Inter-Medium',
+                    fontFamily: fonts.medium,
                     fontSize: 11.5,
-                    fontWeight: '500',
                     color: '#ef4444',
                     marginTop: 4,
                   }}
@@ -470,10 +459,9 @@ export default function RegisterScreen({ route, navigation }) {
             <View style={{ marginBottom: 18 }}>
               <Text
                 style={{
-                  fontFamily: 'Inter-Bold',
+                  fontFamily: fonts.bold,
                   fontSize: 13.5,
-                  fontWeight: '700',
-                  color: '#0f172a',
+                  color: '#121712',
                   marginBottom: 6,
                 }}
               >
@@ -487,7 +475,7 @@ export default function RegisterScreen({ route, navigation }) {
                   borderWidth: 1.2,
                   borderColor:
                     focusedInput === 'confirmPassword'
-                      ? '#047857'
+                      ? '#0A7C47'
                       : confirmPassword.length > 0 && !passwordsMatch
                       ? '#ef4444'
                       : '#e2e8f0',
@@ -502,7 +490,7 @@ export default function RegisterScreen({ route, navigation }) {
                     confirmPassword.length > 0 && !passwordsMatch
                       ? '#ef4444'
                       : focusedInput === 'confirmPassword'
-                      ? '#047857'
+                      ? '#0A7C47'
                       : '#94a3b8'
                   }
                   style={{ marginRight: 10 }}
@@ -510,10 +498,9 @@ export default function RegisterScreen({ route, navigation }) {
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: 'Inter-Regular',
+                    fontFamily: fonts.regular,
                     fontSize: 14,
-                    fontWeight: '400',
-                    color: '#0f172a',
+                    color: '#121712',
                     paddingVertical: 0,
                   }}
                   placeholder="Re-enter password"
@@ -541,9 +528,8 @@ export default function RegisterScreen({ route, navigation }) {
               {confirmPassword.length > 0 && !passwordsMatch && (
                 <Text
                   style={{
-                    fontFamily: 'Inter-Medium',
+                    fontFamily: fonts.medium,
                     fontSize: 11.5,
-                    fontWeight: '500',
                     color: '#ef4444',
                     marginTop: 4,
                   }}
@@ -567,7 +553,7 @@ export default function RegisterScreen({ route, navigation }) {
                   width: 20,
                   height: 20,
                   borderRadius: 5,
-                  backgroundColor: agreedToTerms ? '#047857' : '#ffffff',
+                  backgroundColor: agreedToTerms ? '#0A7C47' : '#ffffff',
                   borderWidth: agreedToTerms ? 0 : 1.5,
                   borderColor: '#cbd5e1',
                   alignItems: 'center',
@@ -581,36 +567,40 @@ export default function RegisterScreen({ route, navigation }) {
               <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 18 }}>
                 <Text
                   style={{
-                    fontFamily: 'Inter-Regular',
-                    fontWeight: '400',
+                    fontFamily: fonts.regular,
                     color: '#334155',
                   }}
                 >
                   I agree to the{' '}
                 </Text>
                 <Text
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    navigation.navigate('Terms');
+                  }}
                   style={{
-                    fontFamily: 'Inter-Bold',
-                    fontWeight: '700',
-                    color: '#047857',
+                    fontFamily: fonts.bold,
+                    color: '#0A7C47',
                   }}
                 >
                   Terms of Service
                 </Text>
                 <Text
                   style={{
-                    fontFamily: 'Inter-Regular',
-                    fontWeight: '400',
+                    fontFamily: fonts.regular,
                     color: '#334155',
                   }}
                 >
                   {' '}and{' '}
                 </Text>
                 <Text
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    navigation.navigate('PrivacyPolicy');
+                  }}
                   style={{
-                    fontFamily: 'Inter-Bold',
-                    fontWeight: '700',
-                    color: '#047857',
+                    fontFamily: fonts.bold,
+                    color: '#0A7C47',
                   }}
                 >
                   Privacy Policy
@@ -623,12 +613,12 @@ export default function RegisterScreen({ route, navigation }) {
               onPress={handleRegister}
               disabled={!canSubmit}
               style={{
-                backgroundColor: canSubmit ? '#047857' : '#d8e4db',
+                backgroundColor: canSubmit ? '#0A7C47' : '#d8e4db',
                 borderRadius: 14,
                 height: 52,
                 alignItems: 'center',
                 justifyContent: 'center',
-                shadowColor: canSubmit ? '#047857' : 'transparent',
+                shadowColor: canSubmit ? '#0A7C47' : 'transparent',
                 shadowOffset: { width: 0, height: 3 },
                 shadowOpacity: 0.15,
                 shadowRadius: 6,
@@ -640,9 +630,8 @@ export default function RegisterScreen({ route, navigation }) {
               ) : (
                 <Text
                   style={{
-                    fontFamily: 'Inter-Bold',
+                    fontFamily: fonts.bold,
                     fontSize: 16,
-                    fontWeight: '700',
                     color: canSubmit ? '#ffffff' : '#5c6d62',
                     letterSpacing: -0.2,
                   }}
@@ -658,15 +647,14 @@ export default function RegisterScreen({ route, navigation }) {
                 flexDirection: 'row',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginTop: 26,
-                paddingBottom: 12,
+                marginTop: 18,
+                paddingBottom: 6,
               }}
             >
               <Text
                 style={{
-                  fontFamily: 'Inter-Regular',
+                  fontFamily: fonts.regular,
                   fontSize: 13.5,
-                  fontWeight: '400',
                   color: '#334155',
                 }}
               >
@@ -675,10 +663,9 @@ export default function RegisterScreen({ route, navigation }) {
               <Pressable onPress={() => navigation.navigate('Login')} hitSlop={8}>
                 <Text
                   style={{
-                    fontFamily: 'Inter-Bold',
+                    fontFamily: fonts.bold,
                     fontSize: 13.5,
-                    fontWeight: '700',
-                    color: '#047857',
+                    color: '#0A7C47',
                   }}
                 >
                   Log In

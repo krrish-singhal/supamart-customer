@@ -1,13 +1,16 @@
 import React from 'react';
+import { useConfig } from '../../context/ConfigContext';
 import { View, Text } from 'react-native';
-import { Truck, PartyPopper } from 'lucide-react-native';
+import { Truck, PartyPopper } from '../icons';
 import { FREE_DELIVERY_THRESHOLD } from '../../utils/pricing';
 
 // Blinkit/Instamart-style nudge shown on Cart + Checkout: either "you've unlocked free
 // delivery" once the cart clears FREE_DELIVERY_THRESHOLD, or how much more to add.
 export default function FreeDeliveryBanner({ subtotal, style }) {
-  const remaining = FREE_DELIVERY_THRESHOLD - subtotal;
-  const unlocked = remaining <= 0;
+  const { config } = useConfig();
+  const threshold = config?.freeDeliveryThreshold ?? FREE_DELIVERY_THRESHOLD;
+  const remaining = Math.max(0, threshold - subtotal);
+  const unlocked = subtotal > 0 && remaining <= 0;
 
   return (
     <View
@@ -41,7 +44,7 @@ export default function FreeDeliveryBanner({ subtotal, style }) {
       >
         {unlocked
           ? "You've unlocked FREE delivery on this order!"
-          : `Add ₹${remaining.toFixed(0)} more to get FREE delivery`}
+          : `Add ₹${Math.ceil(remaining)} more to get FREE delivery`}
       </Text>
     </View>
   );

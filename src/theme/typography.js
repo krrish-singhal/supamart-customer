@@ -1,20 +1,20 @@
 /**
- * SupaMart Design System - Typography Tokens
- * Powered by Inter (loaded with true weight-specific font files)
+ * MS Traders Design System - Typography Tokens
+ * Powered by Plus Jakarta Sans (loaded with true weight-specific font files)
  *
  * NOTE FOR REACT NATIVE / ANDROID:
  * Always keep `fontWeight: 'normal'` when using weight-specific font families
- * like `Inter-Bold` or `Inter-ExtraBold`. Setting `fontWeight: 'bold'` or `'700'`
- * alongside `Inter-Bold` causes Android's Typeface manager to fail and fall back to Roboto!
+ * like `PlusJakartaSans-SemiBold` or `PlusJakartaSans-ExtraBold`. Setting `fontWeight: 'bold'` or `'700'`
+ * alongside `PlusJakartaSans-SemiBold` causes Android's Typeface manager to fail and fall back to Roboto!
  */
 
 export const fonts = {
-  regular: 'Inter-Regular',
-  medium: 'Inter-Medium',
-  semiBold: 'Inter-SemiBold',
-  bold: 'Inter-Bold',
-  extraBold: 'Inter-ExtraBold',
-  black: 'Inter-Black',
+  regular: 'PlusJakartaSans-Regular',
+  medium: 'PlusJakartaSans-SemiBold',
+  semiBold: 'PlusJakartaSans-SemiBold',
+  bold: 'PlusJakartaSans-SemiBold',
+  extraBold: 'PlusJakartaSans-ExtraBold',
+  black: 'PlusJakartaSans-ExtraBold',
 };
 
 export const typography = {
@@ -25,7 +25,7 @@ export const typography = {
     fontSize: 28,
     lineHeight: 34,
     letterSpacing: -0.6,
-    color: '#0f172a',
+    color: '#121712',
   },
   h2: {
     fontFamily: fonts.extraBold,
@@ -33,7 +33,7 @@ export const typography = {
     fontSize: 24,
     lineHeight: 30,
     letterSpacing: -0.5,
-    color: '#0f172a',
+    color: '#121712',
   },
   h3: {
     fontFamily: fonts.extraBold,
@@ -41,7 +41,7 @@ export const typography = {
     fontSize: 20,
     lineHeight: 26,
     letterSpacing: -0.4,
-    color: '#0f172a',
+    color: '#121712',
   },
   sectionTitle: {
     fontFamily: fonts.extraBold,
@@ -49,7 +49,7 @@ export const typography = {
     fontSize: 18,
     lineHeight: 24,
     letterSpacing: -0.3,
-    color: '#0f172a',
+    color: '#121712',
   },
   subSectionTitle: {
     fontFamily: fonts.extraBold,
@@ -57,7 +57,7 @@ export const typography = {
     fontSize: 16,
     lineHeight: 22,
     letterSpacing: -0.2,
-    color: '#0f172a',
+    color: '#121712',
   },
 
   // Product & Card Typography
@@ -66,7 +66,7 @@ export const typography = {
     fontWeight: 'normal',
     fontSize: 14,
     lineHeight: 18,
-    color: '#0f172a',
+    color: '#121712',
   },
   productUnit: {
     fontFamily: fonts.regular,
@@ -80,7 +80,7 @@ export const typography = {
     fontWeight: 'normal',
     fontSize: 16,
     lineHeight: 20,
-    color: '#0f172a',
+    color: '#121712',
   },
   productMrp: {
     fontFamily: fonts.regular,
@@ -104,14 +104,14 @@ export const typography = {
     fontWeight: 'normal',
     fontSize: 13.5,
     lineHeight: 18,
-    color: '#0f172a',
+    color: '#121712',
   },
   categoryGridLabel: {
     fontFamily: fonts.bold,
     fontWeight: 'normal',
     fontSize: 12,
     lineHeight: 16,
-    color: '#0f172a',
+    color: '#121712',
     textAlign: 'center',
   },
   sidebarActive: {
@@ -119,7 +119,7 @@ export const typography = {
     fontWeight: 'normal',
     fontSize: 11,
     lineHeight: 15,
-    color: '#0f172a',
+    color: '#121712',
   },
   sidebarInactive: {
     fontFamily: fonts.medium,
@@ -167,7 +167,7 @@ export const typography = {
     fontFamily: fonts.bold,
     fontWeight: 'normal',
     fontSize: 13,
-    color: '#047857',
+    color: '#0A7C47',
   },
 
   // Body & Descriptions

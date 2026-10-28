@@ -11,14 +11,14 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import { ChevronRight, ShoppingBag } from 'lucide-react-native';
+import { ChevronRight, ShoppingBag } from '../icons';
 import { getProductImageSource } from '../../utils/productImages';
 
 export const CART_BAR_SPACER = 84;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export default function CartBar({ items, onPress, variant = 'default' }) {
+export default function CartBar({ items, onPress, variant = 'default', bottom, style }) {
   const insets = useSafeAreaInsets();
   const bounceScale = useSharedValue(1);
 
@@ -50,10 +50,11 @@ export default function CartBar({ items, onPress, variant = 'default' }) {
       pointerEvents="box-none"
       style={{
         position: 'absolute',
-        bottom: Math.max(insets.bottom, 14) + 10,
+        bottom: bottom !== undefined ? bottom : (insets.bottom > 0 ? insets.bottom : 12),
         left: 12,
         right: 12,
         zIndex: 99,
+        ...style,
       }}
     >
       <AnimatedPressable
@@ -63,7 +64,10 @@ export default function CartBar({ items, onPress, variant = 'default' }) {
           {
             backgroundColor: '#047857',
             borderRadius: 16,
-            height: 56,
+            minHeight: 56,
+            paddingVertical: 8,
+            flexWrap: 'wrap',
+            gap: 8,
             paddingLeft: 18,
             paddingRight: 10,
             flexDirection: 'row',

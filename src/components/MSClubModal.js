@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { X, Truck, Tag, Clock, ArrowRight } from 'lucide-react-native';
+import { X, Truck, Tag, Clock, ArrowRight } from './icons';
 import Animated, { SlideInDown, SlideOutDown, FadeIn } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 

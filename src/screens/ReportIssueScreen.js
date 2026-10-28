@@ -17,7 +17,7 @@ import {
   Camera,
   X,
   ShoppingBag,
-} from 'lucide-react-native';
+} from '../components/icons';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
@@ -122,9 +122,20 @@ export default function ReportIssueScreen({ route, navigation }) {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const isFormValid = selectedItemIds.length > 0 && selectedIssue.trim().length > 0;
+  const isOther = selectedIssue === 'Other';
+  const hasReasonIfOther = !isOther || otherReasonText.trim().length > 0;
+  const isFormValid = selectedItemIds.length > 0 && selectedIssue.trim().length > 0 && hasReasonIfOther;
 
   const handleSubmit = async () => {
+    if (selectedIssue === 'Other' && !otherReasonText.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Reason is required',
+        text2: 'Please describe the issue in detail before submitting.',
+      });
+      setOtherReasonModal(true);
+      return;
+    }
     if (!isFormValid || submitting) return;
     setSubmitting(true);
 
@@ -150,7 +161,7 @@ export default function ReportIssueScreen({ route, navigation }) {
         : description;
 
       await apiClient.post('/issues', {
-        orderId: order?.id || orderId || 'demo-order',
+        orderId: order?.id || order?.orderNo || orderId || routeOrderNo || 'demo-order',
         affectedItems,
         issueType: resolvedIssueType,
         photos,
@@ -608,7 +619,13 @@ export default function ReportIssueScreen({ route, navigation }) {
                   color: isFormValid ? '#ffffff' : '#546e5a',
                 }}
               >
-                {isFormValid ? 'Submit issue' : 'Select an item and issue'}
+                {selectedItemIds.length === 0
+                  ? 'Select affected item(s)'
+                  : !selectedIssue
+                  ? 'Select what went wrong'
+                  : selectedIssue === 'Other' && !otherReasonText.trim()
+                  ? 'Reason required for Other *'
+                  : 'Submit issue'}
               </Text>
           )}
         </Pressable>
@@ -619,7 +636,10 @@ export default function ReportIssueScreen({ route, navigation }) {
         visible={otherReasonModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setOtherReasonModal(false)}
+        onRequestClose={() => {
+          if (!otherReasonText.trim()) setSelectedIssue('');
+          setOtherReasonModal(false);
+        }}
       >
         <View
           style={{
@@ -646,10 +666,13 @@ export default function ReportIssueScreen({ route, navigation }) {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ fontSize: 17, fontWeight: '900', color: '#0f172a' }}>
-                Specify Issue Reason
+                Specify Issue Reason <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <Pressable
-                onPress={() => setOtherReasonModal(false)}
+                onPress={() => {
+                  if (!otherReasonText.trim()) setSelectedIssue('');
+                  setOtherReasonModal(false);
+                }}
                 hitSlop={8}
                 style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -658,7 +681,7 @@ export default function ReportIssueScreen({ route, navigation }) {
             </View>
 
             <Text style={{ fontSize: 13, color: '#64748b', marginBottom: 12, lineHeight: 18 }}>
-              Please describe what went wrong with your items so our admin team can assist promptly.
+              Please describe what went wrong with your items. <Text style={{ fontWeight: '700', color: '#ef4444' }}>A reason is mandatory</Text> so our admin team can assist promptly.
             </Text>
 
             <TextInput
@@ -666,12 +689,12 @@ export default function ReportIssueScreen({ route, navigation }) {
               numberOfLines={4}
               value={otherReasonText}
               onChangeText={setOtherReasonText}
-              placeholder="e.g. Package was tampered, items were unsealed..."
+              placeholder="e.g. Package was tampered, items were unsealed (Required)..."
               placeholderTextColor="#94a3b8"
               style={{
                 backgroundColor: '#f8fafc',
                 borderWidth: 1.5,
-                borderColor: '#e2e8f0',
+                borderColor: otherReasonText.trim() ? '#047857' : '#fca5a5',
                 borderRadius: 14,
                 padding: 12,
                 fontSize: 13.5,
@@ -684,7 +707,10 @@ export default function ReportIssueScreen({ route, navigation }) {
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable
-                onPress={() => setOtherReasonModal(false)}
+                onPress={() => {
+                  if (!otherReasonText.trim()) setSelectedIssue('');
+                  setOtherReasonModal(false);
+                }}
                 style={{
                   flex: 1,
                   height: 46,
@@ -697,9 +723,10 @@ export default function ReportIssueScreen({ route, navigation }) {
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748b' }}>Cancel</Text>
               </Pressable>
               <Pressable
+                disabled={!otherReasonText.trim()}
                 onPress={() => {
                   if (!otherReasonText.trim()) {
-                    Toast.show({ type: 'info', text1: 'Please enter a brief reason' });
+                    Toast.show({ type: 'error', text1: 'Reason is required', text2: 'Please describe the issue.' });
                     return;
                   }
                   setSelectedIssue('Other');
@@ -709,7 +736,7 @@ export default function ReportIssueScreen({ route, navigation }) {
                   flex: 1,
                   height: 46,
                   borderRadius: 12,
-                  backgroundColor: '#047857',
+                  backgroundColor: otherReasonText.trim() ? '#047857' : '#94a3b8',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}

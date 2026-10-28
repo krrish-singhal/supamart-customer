@@ -1,52 +1,44 @@
 import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { collection, query, orderBy, limit, onSnapshot } from '../services/reads';
 import Toast from 'react-native-toast-message';
-import { db, auth } from '../config/firebase';
+import { db } from '../config/firebase';
+import { AuthContext } from './AuthContext';
 import apiClient from '../services/api';
+import { setupSystemNotifications, postSystemNotification } from '../services/notifications';
 
 export const NotificationsContext = createContext();
 
-// Mirrors OrderTrackingScreen's onSnapshot pattern: users/{uid}/notifications is written
-// by the backend (notificationService.notifyUser, see backend/src/services/notificationService.js)
-// whenever an admin approves/rejects a payment or an order's status changes. A live
-// listener here means the bell badge and an in-app toast update instantly — anywhere in
-// the app, not just on the tracking screen — the moment that write happens, no
-// polling/refresh needed.
-//
-// This is keyed off Firebase Auth's own onAuthStateChanged, NOT AuthContext's
-// userProfile. users/{uid}/notifications is owner-restricted in firestore.rules
-// (allow read: if isOwner(uid)), which needs request.auth.uid to actually be set —
-// and that only happens once AuthContext's syncFirebaseAuth() finishes
-// signInWithCustomToken, which resolves *after* userProfile is already set. Firestore
-// onSnapshot listeners don't retry on permission-denied, so starting the listener off
-// userProfile would race: it'd fire once, fail before auth was ready, and never recover
-// even after sign-in completed a moment later. onAuthStateChanged only fires once
-// Firebase Auth itself is actually ready, so the listener is never started too early.
+// Inbox reads use the backend session and refresh while the app is visible.
 export function NotificationsProvider({ children }) {
-  const [uid, setUid] = useState(auth.currentUser?.uid || null);
+  const { token, userProfile } = useContext(AuthContext);
+  const uid = token ? userProfile?.id : null;
   const [notifications, setNotifications] = useState([]);
+  const [activeDelayAlert, setActiveDelayAlert] = useState(null);
   const mountedAtRef = useRef(Date.now());
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (fbUser) => {
-      setUid(fbUser?.uid || null);
-    });
-    return unsubAuth;
+    setupSystemNotifications();
   }, []);
 
+  const dismissDelayAlert = useCallback(() => {
+    setActiveDelayAlert(null);
+  }, []);
+
+  const isPartner = userProfile?.role === 'PARTNER';
+
   useEffect(() => {
-    if (!uid) {
+    if (!uid || isPartner) {
       setNotifications([]);
+      setActiveDelayAlert(null);
       return undefined;
     }
     mountedAtRef.current = Date.now();
     let isFirstSnapshot = true;
 
     const q = query(
-      collection(db, 'users', uid, 'notifications'),
+      collection(db, 'users', uid, 'notifications', { pollInterval: 90000 }),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(15)
     );
     const unsubscribe = onSnapshot(
       q,
@@ -54,14 +46,41 @@ export function NotificationsProvider({ children }) {
         setNotifications(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
         // Skip the initial load (Firestore reports every existing doc as "added" on
-        // first snapshot) — only toast for notifications that arrive live, after mount.
+        // first snapshot) — only toast and alert for notifications that arrive live, after mount.
         if (!isFirstSnapshot) {
           snap.docChanges().forEach((change) => {
             if (change.type !== 'added') return;
             const data = change.doc.data();
             if (data.createdAt < mountedAtRef.current) return;
+
+            const isDelay =
+              data.data?.type === 'DELIVERY_DELAY' ||
+              data.title?.toLowerCase().includes('delay') ||
+              data.body?.toLowerCase().includes('delay') ||
+              Boolean(data.data?.delayReason);
+
+            if (isDelay) {
+              setActiveDelayAlert({
+                id: change.doc.id,
+                title: data.title,
+                body: data.body,
+                data: data.data || {},
+              });
+            }
+
+            // Post into phone system notification drawer (like WhatsApp)
+            postSystemNotification({
+              title: data.title,
+              body: data.body,
+              data: data.data || {},
+            });
+
             Toast.show({
-              type: data.data?.type === 'PAYMENT_REJECTED' ? 'error' : 'success',
+              type: data.data?.type === 'PAYMENT_REJECTED'
+                ? 'error'
+                : isDelay
+                ? 'warning'
+                : 'success',
               text1: data.title,
               text2: data.body,
             });
@@ -69,23 +88,20 @@ export function NotificationsProvider({ children }) {
         }
         isFirstSnapshot = false;
       },
-      (err) => { console.error('NotificationsContext: listener failed', err); }
+      (err) => {
+        console.warn('NotificationsContext: listener paused', err?.message || err);
+      }
     );
     return () => unsubscribe();
-  }, [uid]);
+  }, [uid, isPartner]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Firestore rules deny ALL client writes to users/{uid}/notifications outright
-  // (`allow write: if false` — see backend/firebase/firestore.rules; only the backend's
-  // Admin SDK can write there). A direct writeBatch() from here would fail permission-
-  // denied on every single call — silently, if wrapped in a try/catch — which is exactly
-  // why the bell badge never used to clear. This goes through the backend instead; the
-  // resulting Firestore write still comes back through the onSnapshot listener above,
-  // same as any other real-time update.
   const markAllRead = useCallback(async () => {
     if (!uid) return;
     if (!notifications.some((n) => !n.read)) return;
+    // Optimistically mark all as read immediately in UI
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     try {
       await apiClient.patch('/notifications/mark-all-read');
     } catch (err) {
@@ -93,8 +109,20 @@ export function NotificationsProvider({ children }) {
     }
   }, [uid, notifications]);
 
+  const markAsRead = useCallback(async (notifId) => {
+    if (!uid || !notifId) return;
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notifId ? { ...n, read: true } : n))
+    );
+    try {
+      await apiClient.patch(`/notifications/${notifId}/read`);
+    } catch (err) {
+      console.error('markAsRead failed', err);
+    }
+  }, [uid]);
+
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, markAllRead }}>
+    <NotificationsContext.Provider value={{ notifications, unreadCount, markAllRead, markAsRead, activeDelayAlert, dismissDelayAlert }}>
       {children}
     </NotificationsContext.Provider>
   );

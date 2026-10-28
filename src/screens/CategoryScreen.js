@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { getGridMetrics } from '../utils/responsiveLayout';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, FlatList, Pressable, StatusBar, ScrollView, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -9,9 +10,9 @@ import {
   LayoutGrid,
   Star,
   Tag,
-} from 'lucide-react-native';
+} from '../components/icons';
 import { Image } from 'expo-image';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from '../services/reads';
 import { db } from '../config/firebase';
 import apiClient from '../services/api';
 import { Skeleton, ProductCard, CartBar, CART_BAR_SPACER } from '../components/ui';
@@ -23,6 +24,7 @@ import {
   sortProducts,
   countActiveFilters,
   EMPTY_FILTERS,
+  compareProductsDeterministic,
 } from '../utils/productFilters';
 import { getCategoryVisual } from '../utils/categoryImages';
 import { fonts } from '../theme/typography';
@@ -38,29 +40,75 @@ const SIDEBAR_WIDTH = 78;
 const GRID_PADDING = 10;
 const GRID_GAP = 10;
 
+let cachedAllCategories = [];
+const categoryProductsCache = new Map();
+
+export function setCachedCategories(categories) {
+  if (Array.isArray(categories) && categories.length > 0) {
+    cachedAllCategories = categories;
+  }
+}
+
+export function getCachedCategories() {
+  return cachedAllCategories;
+}
+
+export function setCachedCategoryProducts(categoryId, products) {
+  if (categoryId && Array.isArray(products)) {
+    categoryProductsCache.set(categoryId, products);
+  }
+}
+
+export function getCachedCategoryProducts(categoryId) {
+  return categoryProductsCache.get(categoryId);
+}
+
 export default function CategoryScreen({ route, navigation }) {
   const initialId = route.params?.id;
   const initialName = route.params?.name;
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, fontScale } = useWindowDimensions();
   const { items, addItem, updateQty, getQty } = useCart();
 
   const [paneWidth, setPaneWidth] = useState(null);
   // Measure the actual product pane, including split-screen and navigation constraints.
   const availableWidth = paneWidth ?? (windowWidth - SIDEBAR_WIDTH);
-  const cardWidth = Math.max(1, (availableWidth - GRID_PADDING * 2 - GRID_GAP) / 2);
+  const isTablet = windowWidth >= 600;
+  const { columns, cardWidth } = getGridMetrics(availableWidth, {
+    padding: GRID_PADDING,
+    gap: GRID_GAP,
+    minCardWidth: 110,
+    minColumns: 2,
+    maxColumns: isTablet ? 4 : 2,
+  });
 
   const [currentCatId, setCurrentCatId] = useState(initialId);
   const [currentCatName, setCurrentCatName] = useState(initialName);
 
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(() => {
+    if (initialId && categoryProductsCache.has(initialId)) {
+      return categoryProductsCache.get(initialId);
+    }
+    return [];
+  });
   const [subCategories, setSubCategories] = useState([]);
   const [activeSubCategory, setActiveSubCategory] = useState(null);
   const [brands, setBrands] = useState([]);
-  const [allCategories, setAllCategories] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [productsLoading, setProductsLoading] = useState(true);
+  const [allCategories, setAllCategories] = useState(() => {
+    if (route.params?.allCategories?.length) {
+      cachedAllCategories = route.params.allCategories;
+      return route.params.allCategories;
+    }
+    return cachedAllCategories;
+  });
+  const [initialLoading, setInitialLoading] = useState(() => {
+    return !initialId || !categoryProductsCache.has(initialId);
+  });
+  const [productsLoading, setProductsLoading] = useState(() => {
+    return !initialId || !categoryProductsCache.has(initialId);
+  });
   const [error, setError] = useState(false);
+  const sidebarScrollRef = useRef(null);
 
   const [filterVisible, setFilterVisible] = useState(false);
   const [sortDropdownVisible, setSortDropdownVisible] = useState(false);
@@ -79,22 +127,25 @@ export default function CategoryScreen({ route, navigation }) {
       .filter((c) => !c.parentId && c.id !== currentCatId)
       .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 
+    const currentCat = allCategories.find((c) => c.id === currentCatId);
+
     if (subs.length > 0) {
-      const parent = allCategories.find((c) => c.id === currentCatId);
       return [
-        ...(parent ? [{ ...parent, isSubCategory: false }] : []),
-        ...subs.map((s) => ({ ...s, isSubCategory: true, parentCatId: currentCatId,
-          parentName: allCategories.find((c) => c.id === currentCatId)?.name })),
+        ...(currentCat ? [{ ...currentCat, isSubCategory: false }] : []),
+        ...subs.map((s) => ({
+          ...s,
+          isSubCategory: true,
+          parentCatId: currentCatId,
+          parentName: currentCat?.name,
+        })),
         ...otherTopCats.map((t) => ({ ...t, isSubCategory: false })),
       ];
     }
 
-    const topCats = allCategories
-      .filter((c) => !c.parentId)
-      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-
-    if (topCats.length > 0) return topCats;
-    return [];
+    return [
+      ...(currentCat ? [{ ...currentCat, isSubCategory: false }] : []),
+      ...otherTopCats.map((t) => ({ ...t, isSubCategory: false })),
+    ];
   }, [allCategories, currentCatId]);
 
   // Sync route params changes
@@ -103,18 +154,24 @@ export default function CategoryScreen({ route, navigation }) {
       setCurrentCatId(route.params.id);
       setCurrentCatName(route.params?.name || '');
     }
-  }, [route.params?.id, route.params?.name]);
+    if (route.params?.allCategories?.length) {
+      cachedAllCategories = route.params.allCategories;
+      setAllCategories(route.params.allCategories);
+    }
+  }, [route.params?.id, route.params?.name, route.params?.allCategories]);
 
   // Initial load of all categories and brands
   useEffect(() => {
     let isCancelled = false;
     let receivedLiveCategories = false;
     const unsubscribe = onSnapshot(
-      query(collection(db, 'categories'), where('isActive', '==', true)),
+      query(collection(db, 'categories', { pollInterval: 180000 }), where('isActive', '==', true)),
       (snapshot) => {
         if (isCancelled) return;
         receivedLiveCategories = true;
-        setAllCategories(snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+        const liveCats = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+        cachedAllCategories = liveCats;
+        setAllCategories(liveCats);
       },
       () => {} // The public categories API below remains available as a fallback.
     );
@@ -126,7 +183,11 @@ export default function CategoryScreen({ route, navigation }) {
         ]);
         if (isCancelled) return;
         const cats = catRes.status === 'fulfilled' ? catRes.value.data.items || [] : [];
-        if (!receivedLiveCategories) setAllCategories(cats.filter((c) => c.isActive !== false));
+        if (!receivedLiveCategories) {
+          const activeCats = cats.filter((c) => c.isActive !== false);
+          cachedAllCategories = activeCats;
+          setAllCategories(activeCats);
+        }
         if (brandRes.status === 'fulfilled') setBrands(brandRes.value.data.items || []);
       } catch (_e) {
         // Fallback
@@ -138,6 +199,43 @@ export default function CategoryScreen({ route, navigation }) {
       unsubscribe();
     };
   }, []);
+
+  // Pre-warm product cache and prefetch images for top categories in background
+  useEffect(() => {
+    if (!allCategories || allCategories.length === 0) return;
+    const topCats = allCategories.filter((c) => !c.parentId);
+
+    let cancelled = false;
+    topCats.forEach((cat, index) => {
+      if (categoryProductsCache.has(cat.id)) return;
+      setTimeout(() => {
+        if (cancelled) return;
+        apiClient
+          .get('/products', {
+            params: { categoryId: cat.id, limit: 100 },
+            __skipErrorToast: true,
+          })
+          .then((res) => {
+            if (cancelled) return;
+            const items = res.data?.items || [];
+            if (items.length > 0) {
+              categoryProductsCache.set(cat.id, items);
+              const imgUrls = items
+                .map((p) => p.imageUrl || p.image || p.images?.[0])
+                .filter((url) => typeof url === 'string' && url.startsWith('http'));
+              if (imgUrls.length > 0) {
+                Image.prefetch(imgUrls);
+              }
+            }
+          })
+          .catch(() => {});
+      }, 300 + index * 150);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allCategories]);
 
   // Keep labels and filter options aligned with admin edits, including removals.
   useEffect(() => {
@@ -177,84 +275,71 @@ export default function CategoryScreen({ route, navigation }) {
     }
 
     const productsMap = new Map();
-    let apiLoadFinished = false;
-    let apiLoadSucceeded = false;
-    let initialSnapshotsReceived = 0;
+    if (categoryProductsCache.has(currentCatId)) {
+      const cached = categoryProductsCache.get(currentCatId);
+      cached.forEach((p) => productsMap.set(p.id, p));
+    }
 
-    const updateProductsFromMap = () => {
+    let apiLoadFinished = false;
+
+    const updateProductsFromMap = (force = false) => {
       if (isCancelled) return;
-      // The API returns every page of the category tree. Don't expose only the
-      // first Firestore category chunk while that complete result is loading.
-      if (!apiLoadFinished || (!apiLoadSucceeded && initialSnapshotsReceived < chunks.length)) return;
+      if (!force && !apiLoadFinished && productsMap.size === 0) return;
       const list = Array.from(productsMap.values());
-      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      setProducts(list);
-      setProductsLoading(false);
-      setInitialLoading(false);
+      list.sort(compareProductsDeterministic);
+      if (list.length > 0 || apiLoadFinished) {
+        categoryProductsCache.set(currentCatId, list);
+        setProducts((prev) => {
+          if (prev.length === list.length && prev.every((p, idx) => p.id === list[idx]?.id)) {
+            return prev;
+          }
+          return list;
+        });
+        setProductsLoading(false);
+        setInitialLoading(false);
+
+        const imgUrls = list
+          .map((p) => p.imageUrl || p.image || p.images?.[0])
+          .filter((u) => typeof u === 'string' && u.startsWith('http'));
+        if (imgUrls.length > 0) {
+          Image.prefetch(imgUrls);
+        }
+      }
     };
 
     // 1. Initial fast load from backend API if available
     const fetchCategoryProducts = async () => {
       try {
         let cursor = null;
+        const allFetched = [];
         do {
           const { data } = await apiClient.get('/products', {
-            params: { categoryId: currentCatId, limit: 50, ...(cursor ? { cursor } : {}) },
+            params: { categoryId: currentCatId, limit: 100, ...(cursor ? { cursor } : {}) },
             __skipErrorToast: true,
           });
           if (isCancelled) return;
-          (data?.items || []).forEach((product) => productsMap.set(product.id, product));
+          if (Array.isArray(data?.items)) {
+            allFetched.push(...data.items);
+          }
           cursor = data?.cursor || null;
         } while (cursor);
-        apiLoadSucceeded = true;
+
+        if (isCancelled) return;
+        allFetched.forEach((product) => productsMap.set(product.id, product));
         apiLoadFinished = true;
-        updateProductsFromMap();
-      } catch {
-        // Once all initial snapshots have arrived, use Firestore as the fallback.
+        updateProductsFromMap(true);
+      } catch (err) {
+        console.warn('Category products API load error:', err?.message || err);
         apiLoadFinished = true;
-        updateProductsFromMap();
+        updateProductsFromMap(true);
+        if (!isCancelled && productsMap.size === 0 && !categoryProductsCache.has(currentCatId)) {
+          setError(true);
+          setProductsLoading(false);
+          setInitialLoading(false);
+        }
       }
     };
     fetchCategoryProducts();
-
-    // 2. Real-time Firestore onSnapshot listeners for live pricing & stock changes
-    try {
-      chunks.forEach((batch) => {
-        const q = query(collection(db, 'products'), where('categoryId', 'in', batch));
-        const unsub = onSnapshot(
-          q,
-          (snapshot) => {
-            if (isCancelled) return;
-            initialSnapshotsReceived += 1;
-            snapshot.docChanges().forEach((change) => {
-              const docId = change.doc.id;
-              if (change.type === 'removed') {
-                productsMap.delete(docId);
-              } else {
-                productsMap.set(docId, { id: docId, ...change.doc.data() });
-              }
-            });
-            updateProductsFromMap();
-          },
-          (err) => {
-            console.error('Category products snapshot error:', err);
-            initialSnapshotsReceived += 1;
-            updateProductsFromMap();
-            if (!isCancelled && productsMap.size === 0) {
-              setError(true);
-              setProductsLoading(false);
-              setInitialLoading(false);
-            }
-          }
-        );
-        unsubs.push(unsub);
-      });
-    } catch (err) {
-      console.error(err);
-      if (!isCancelled && productsMap.size === 0) setError(true);
-      setProductsLoading(false);
-      setInitialLoading(false);
-    }
 
     return () => {
       isCancelled = true;
@@ -262,11 +347,16 @@ export default function CategoryScreen({ route, navigation }) {
     };
   }, [currentCatId, productCategoryIdsKey]);
 
-  // Reset user-selected filters only when they navigate to a different category,
-  // not when background category snapshots refresh.
+  // Reset scroll and filters on category switch
   useEffect(() => {
-    setProducts([]);
-    setProductsLoading(true);
+    sidebarScrollRef.current?.scrollTo?.({ y: 0, animated: false });
+    if (categoryProductsCache.has(currentCatId)) {
+      setProducts(categoryProductsCache.get(currentCatId));
+      setProductsLoading(false);
+    } else {
+      setProducts([]);
+      setProductsLoading(true);
+    }
     setActiveSubCategory(null);
     setFilters(EMPTY_FILTERS);
     setQuickFilter(null);
@@ -323,6 +413,7 @@ export default function CategoryScreen({ route, navigation }) {
   const renderProduct = useCallback(
     ({ item }) => (
       <ProductCard
+        key={item.id}
         item={item}
         layout="categoryGrid"
         cardWidth={cardWidth}
@@ -336,7 +427,8 @@ export default function CategoryScreen({ route, navigation }) {
     [cardWidth, getQty, addItem, updateQty, navigation]
   );
 
-  if (initialLoading && allCategories.length === 0) {
+  const showFullSkeleton = initialLoading && !categoryProductsCache.has(currentCatId) && products.length === 0;
+  if (showFullSkeleton) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }} edges={['top', 'bottom']}>
         {/* Header Skeleton */}
@@ -443,7 +535,7 @@ export default function CategoryScreen({ route, navigation }) {
               {currentCatName}
             </Text>
             <Text style={{ fontFamily: fonts.regular, fontSize: 12, fontWeight: 'normal', color: '#64748b', marginTop: 1 }}>
-              {visibleProducts.length} items
+              {productsLoading && visibleProducts.length === 0 ? 'Loading items...' : `${visibleProducts.length} items`}
             </Text>
           </View>
         </View>
@@ -467,16 +559,23 @@ export default function CategoryScreen({ route, navigation }) {
         <View
           style={{
             width: SIDEBAR_WIDTH,
+            height: '100%',
             backgroundColor: '#f8fafc',
             borderRightWidth: 1,
             borderColor: '#e2e8f0',
           }}
         >
           <ScrollView
+            ref={sidebarScrollRef}
+            style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+            overScrollMode="never"
+            bounces={true}
             contentContainerStyle={{
               paddingVertical: 6,
-              paddingBottom: CART_BAR_SPACER + 24,
+              paddingBottom: items.length > 0 ? CART_BAR_SPACER * Math.max(1, fontScale) + 24 : 16,
             }}
           >
             {sidebarItems.map((item) => {
@@ -501,6 +600,12 @@ export default function CategoryScreen({ route, navigation }) {
                         setCurrentCatId(item.id);
                         setCurrentCatName(item.name);
                         setActiveSubCategory(null);
+                        if (categoryProductsCache.has(item.id)) {
+                          setProducts(categoryProductsCache.get(item.id));
+                          setProductsLoading(false);
+                        } else {
+                          setProductsLoading(true);
+                        }
                       }
                     }
                   }}
@@ -548,6 +653,9 @@ export default function CategoryScreen({ route, navigation }) {
                         source={visual}
                         style={{ width: '100%', height: '100%', borderRadius: 12 }}
                         contentFit="cover"
+                        cachePolicy="memory-disk"
+                        priority="high"
+                        transition={0}
                       />
                     ) : (
                       <ShoppingBag size={20} color={isActive ? '#059669' : '#64748b'} />
@@ -727,26 +835,26 @@ export default function CategoryScreen({ route, navigation }) {
             <EmptyState icon="search" message="No products match your selection" />
           ) : (
             <FlatList
-              key={`cat-grid-${currentCatId}`}
+              key={`cat-grid-${currentCatId}-${columns}`}
               data={visibleProducts}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item, index) => (item?.id ? String(item.id) : `cat-prod-${index}`)}
               extraData={items}
-              numColumns={2}
-              columnWrapperStyle={{ gap: GRID_GAP, paddingHorizontal: GRID_PADDING, justifyContent: 'flex-start' }}
+              numColumns={columns}
+              columnWrapperStyle={columns > 1 ? { gap: GRID_GAP, justifyContent: 'flex-start' } : undefined}
               contentContainerStyle={{
+                paddingHorizontal: GRID_PADDING,
                 paddingTop: 8,
-                paddingBottom: CART_BAR_SPACER + 24,
+                paddingBottom: items.length > 0 ? CART_BAR_SPACER * Math.max(1, fontScale) + 24 : 16,
               }}
               style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
               renderItem={renderProduct}
-              initialNumToRender={6}
-              maxToRenderPerBatch={6}
-              windowSize={5}
-              updateCellsBatchingPeriod={50}
+              initialNumToRender={12}
+              maxToRenderPerBatch={12}
+              windowSize={11}
               scrollEventThrottle={16}
               overScrollMode="never"
-              removeClippedSubviews
+              removeClippedSubviews={false}
             />
           )}
         </View>

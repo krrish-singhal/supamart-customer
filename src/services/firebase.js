@@ -1,10 +1,8 @@
-import { initializeApp } from 'firebase/app';
-import { initializeFirestore, getFirestore, setLogLevel } from 'firebase/firestore';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Silence WebChannel reconnection stream transport warnings in React Native
-setLogLevel('error');
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -15,30 +13,29 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Real sign-in (email/password) is against our own backend (JWT), not Firebase Auth —
-// see context/AuthContext.js. `auth` here is used only to bridge that backend session
-// into a Firebase custom-token sign-in (AuthContext.syncFirebaseAuth), so the Firestore
-// client SDK has a non-null request.auth for owner-restricted rules (e.g.
-// users/{uid}/notifications) — without it, every direct onSnapshot read from this app
-// would need a fully public rule, which is fine for products/categories/orders-by-id
-// but not for a per-user notification inbox.
-export const app = initializeApp(firebaseConfig);
+// Sign-in supports backend JWT and Firebase Auth sessions. Mobile data reads
+// live in services/reads.js and use the backend's ownership checks.
+export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 let db;
 try {
   // Use long-polling in React Native to prevent WebChannel RPC Listen stream transport drops
   db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
+    ...(Platform.OS !== 'web' && {
+      experimentalForceLongPolling: true,
+      // Close hanging GETs before proxies with a 30-second idle timeout do.
+      experimentalLongPollingOptions: { timeoutSeconds: 25 },
+    }),
   });
-} catch {
+} catch (error) {
+  if (error.code !== 'failed-precondition') throw error;
   db = getFirestore(app);
 }
 export { db };
 
 // initializeAuth (with explicit AsyncStorage persistence) instead of plain getAuth() —
 // without it, Firebase Auth warns on every launch and falls back to in-memory
-// persistence, meaning the custom-token sign-in from syncFirebaseAuth wouldn't survive
-// even a screen reload without redoing the round trip. initializeAuth throws if this
+// persistence. initializeAuth throws if this
 // module re-evaluates with an app that already has an Auth instance (e.g. Fast Refresh
 // during development), so fall back to getAuth() in that case.
 let auth;

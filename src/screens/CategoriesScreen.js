@@ -9,11 +9,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Search, ShoppingBag, Utensils, Coffee, Sparkles, Layers } from 'lucide-react-native';
+import { Search, ShoppingBag, Utensils, Coffee, Sparkles, Layers } from '../components/icons';
 import apiClient from '../services/api';
 import { Skeleton } from '../components/ui';
 import { getCategoryVisual } from '../utils/categoryImages';
 import slugify from '../utils/slugify';
+import { setCachedCategories, getCachedCategoryProducts, setCachedCategoryProducts } from './CategoryScreen';
 
 export default function CategoriesScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -32,7 +33,9 @@ export default function CategoriesScreen({ navigation }) {
       try {
         const { data } = await apiClient.get('/categories', { __skipErrorToast: true });
         if (isCancelled) return;
-        setAllCategories(data.items || []);
+        const cats = data.items || [];
+        setAllCategories(cats);
+        setCachedCategories(cats);
       } catch {
         // Fallbacks
       } finally {
@@ -105,13 +108,29 @@ export default function CategoriesScreen({ navigation }) {
 
   const handleCategoryPress = useCallback(
     (cat) => {
+      if (!getCachedCategoryProducts(cat.id)) {
+        apiClient
+          .get('/products', { params: { categoryId: cat.id, limit: 30 }, __skipErrorToast: true })
+          .then((res) => {
+            const prods = res.data?.items || [];
+            if (prods.length > 0) {
+              setCachedCategoryProducts(cat.id, prods);
+              const imgUrls = prods
+                .map((p) => p.imageUrl || p.image || p.images?.[0])
+                .filter((url) => typeof url === 'string' && url.startsWith('http'));
+              if (imgUrls.length > 0) Image.prefetch(imgUrls);
+            }
+          })
+          .catch(() => {});
+      }
       navigation.navigate('Category', {
         id: cat.id,
         name: cat.name,
         image: cat.image,
+        allCategories,
       });
     },
-    [navigation]
+    [navigation, allCategories]
   );
 
   const renderCategoryGrid = (items) => (

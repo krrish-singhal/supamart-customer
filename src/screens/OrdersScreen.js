@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, FlatList, Pressable, StatusBar, ScrollView, RefreshControl, BackHandler } from 'react-native';
+import { View, Text, FlatList, Pressable, StatusBar, ScrollView, RefreshControl, BackHandler, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import {
@@ -8,17 +8,20 @@ import {
   Package,
   ShoppingBag,
   Trash2,
-} from 'lucide-react-native';
+  Star,
+} from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, onSnapshot } from '../services/reads';
 import { db } from '../config/firebase';
 import { AuthContext } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { Skeleton, ProductCard, Dialog } from '../components/ui';
+import OrderRatings from '../components/OrderRatings';
 import apiClient from '../services/api';
 import Toast from 'react-native-toast-message';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { getProductImageSource } from '../utils/productImages';
+import { fonts } from '../theme/typography';
 
 const CATEGORY_GRADIENTS = [
   '#fef9c3', '#d1fae5', '#dbeafe', '#fce7f3',
@@ -69,10 +72,10 @@ function renderStatusBadge(status) {
           backgroundColor: '#ecfdf5',
           borderRadius: 8,
           paddingHorizontal: 10,
-          paddingVertical: 5,
+          paddingVertical: 4.5,
         }}
       >
-        <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#059669', letterSpacing: 0.4 }}>
+        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#059669', letterSpacing: 0.3 }}>
           DELIVERED
         </Text>
       </View>
@@ -86,10 +89,10 @@ function renderStatusBadge(status) {
           backgroundColor: '#fef2f2',
           borderRadius: 8,
           paddingHorizontal: 10,
-          paddingVertical: 5,
+          paddingVertical: 4.5,
         }}
       >
-        <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#ef4444', letterSpacing: 0.4 }}>
+        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#ef4444', letterSpacing: 0.3 }}>
           CANCELLED
         </Text>
       </View>
@@ -103,10 +106,10 @@ function renderStatusBadge(status) {
         backgroundColor: '#fef3c7',
         borderRadius: 8,
         paddingHorizontal: 10,
-        paddingVertical: 5,
+        paddingVertical: 4.5,
       }}
     >
-      <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#d97706', letterSpacing: 0.4 }}>
+      <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#b45309', letterSpacing: 0.3 }}>
         ON THE WAY
       </Text>
     </View>
@@ -118,29 +121,27 @@ function EmptyOrders({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch empty state categories and featured products once on mount
   useEffect(() => {
-    const unsubCats = onSnapshot(
-      query(collection(db, 'categories'), where('isActive', '==', true)),
-      (snap) => {
-        const topLevel = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
+    let active = true;
+    Promise.allSettled([
+      getDocs(query(collection(db, 'categories'), where('isActive', '==', true))),
+      getDocs(query(collection(db, 'products'), where('isFeatured', '==', true), limit(8))),
+    ]).then(([catsSnap, featSnap]) => {
+      if (!active) return;
+      if (catsSnap.status === 'fulfilled') {
+        const topLevel = catsSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
         setCategories(topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 6));
-      },
-      (err) => console.warn('OrdersScreen categories listener error:', err)
-    );
-    const unsubFeatured = onSnapshot(
-      query(collection(db, 'products'), where('isFeatured', '==', true)),
-      (snap) => {
-        setFeatured(snap.docs.map((d) => ({ id: d.id, ...d.data() })).slice(0, 8));
-        setLoading(false);
-      },
-      (err) => {
-        console.warn('OrdersScreen featured products listener error:', err);
-        setLoading(false);
       }
-    );
+      if (featSnap.status === 'fulfilled') {
+        setFeatured(featSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })).slice(0, 8));
+      }
+      setLoading(false);
+    }).catch(() => {
+      if (active) setLoading(false);
+    });
     return () => {
-      unsubCats();
-      unsubFeatured();
+      active = false;
     };
   }, []);
 
@@ -263,12 +264,13 @@ function EmptyOrders({ navigation }) {
 
 export default function OrdersScreen({ navigation }) {
   const { userProfile } = useContext(AuthContext);
-  const { loadCart } = useCart();
+  const { loadCart, addItems } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [pendingDeleteOrder, setPendingDeleteOrder] = useState(null);
+  const [ratingOrder, setRatingOrder] = useState(null);
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'ONGOING' | 'DELIVERED'
 
   const fetchOrders = useCallback(async (isRefresh = false) => {
@@ -289,7 +291,12 @@ export default function OrdersScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      if (userProfile) fetchOrders();
+      if (!userProfile) return;
+      fetchOrders();
+      const interval = setInterval(() => {
+        fetchOrders(true);
+      }, 5000);
+      return () => clearInterval(interval);
     }, [userProfile, fetchOrders])
   );
   const handleBack = () => {
@@ -339,18 +346,56 @@ export default function OrdersScreen({ navigation }) {
   const handleReorder = async (order) => {
     if (!order?.items?.length) return;
     try {
-      const items = order.items.map((item) => ({
-        productId: item.productId,
-        variantId: item.variantId,
-        qty: item.qty,
-      }));
+      const entries = [];
+      for (const orderItem of order.items) {
+        try {
+          let prod = orderItem.product;
+          if (!prod && orderItem.productId) {
+            const { data } = await apiClient.get(`/products/${orderItem.productId}`);
+            prod = data;
+          }
+          const variant =
+            prod?.variants?.find((v) => v.id === orderItem.variantId) ||
+            prod?.variants?.[0] ||
+            { id: orderItem.variantId || 'default', label: orderItem.variantLabel || '1 Unit', stock: 99 };
+          if (prod) {
+            entries.push({ product: prod, variant, qty: orderItem.qty || 1 });
+          }
+        } catch {
+          // If fetching product details failed, fallback to direct entry if available
+          if (orderItem.productId) {
+            entries.push({
+              product: { id: orderItem.productId, name: orderItem.name, price: orderItem.price, availability: 'AVAILABLE' },
+              variant: { id: orderItem.variantId || 'default', label: orderItem.variantLabel || '1 Unit', stock: 99 },
+              qty: orderItem.qty || 1,
+            });
+          }
+        }
+      }
 
-      await apiClient.put('/cart', { items });
-      await loadCart(true, { force: true });
-      Toast.show({ type: 'success', text1: 'Items added to cart.' });
-      navigation.navigate('Cart');
-    } catch {
-      Toast.show({ type: 'error', text1: 'Could not reorder.' });
+      if (entries.length > 0 && typeof addItems === 'function') {
+        await addItems(entries);
+        Toast.show({
+          type: 'success',
+          text1: 'Items added to cart',
+          text2: `Reordered items from order #${order.orderNo || ''}`,
+        });
+        navigation.navigate('Cart');
+      } else {
+        // Fallback to direct cart sync
+        const items = order.items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId || 'default',
+          qty: item.qty || 1,
+        }));
+        await apiClient.put('/cart', { items });
+        await loadCart(true, { force: true });
+        Toast.show({ type: 'success', text1: 'Items added to cart.' });
+        navigation.navigate('Cart');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Could not reorder items';
+      Toast.show({ type: 'error', text1: msg });
     }
   };
 
@@ -554,7 +599,8 @@ export default function OrdersScreen({ navigation }) {
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
                       {item.items?.slice(0, 3).map((prod, pIdx) => {
                         const imageSource =
-                          getProductImageSource(prod) || { uri: optimizeCloudinaryUrl(prod.image, 200) };
+                          getProductImageSource(prod, 200) ||
+                          (prod?.image ? { uri: optimizeCloudinaryUrl(prod.image, 200) } : null);
                         return (
                           <View
                             key={pIdx}
@@ -570,12 +616,16 @@ export default function OrdersScreen({ navigation }) {
                               justifyContent: 'center',
                             }}
                           >
-                            <Image
-                              source={imageSource}
-                              style={{ width: '100%', height: '100%' }}
-                              contentFit="contain"
-                              cachePolicy="memory-disk"
-                            />
+                            {imageSource?.uri || typeof imageSource === 'number' ? (
+                              <Image
+                                source={imageSource}
+                                style={{ width: '100%', height: '100%' }}
+                                contentFit="contain"
+                                cachePolicy="memory-disk"
+                              />
+                            ) : (
+                              <Package size={22} color="#94a3b8" strokeWidth={1.8} />
+                            )}
                           </View>
                         );
                       })}
@@ -606,9 +656,58 @@ export default function OrdersScreen({ navigation }) {
                     </View>
                   </View>
 
-                  {/* Actions matching Image 4: [Track order / View details / Refund status] + [Reorder] */}
+                  {/* Rate this order bar for DELIVERED orders matching Image 2 */}
+                  {isDelivered && (
+                    <Pressable
+                      onPress={() => setRatingOrder(item)}
+                      style={{
+                        backgroundColor: '#fffbeb',
+                        borderRadius: 10,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        marginTop: 14,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#1e293b' }}>
+                          {item.ratings?.orderRating ? 'Rated ' : 'Rate this order'}
+                        </Text>
+                        {item.ratings?.orderRating ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Star size={13} color="#f59e0b" fill="#f59e0b" style={{ marginRight: 3 }} />
+                            <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#b45309' }}>
+                              {item.ratings.orderRating}/5
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const isFilled = star <= (item.ratings?.orderRating || 0);
+                          return (
+                            <Star
+                              key={star}
+                              size={18}
+                              color="#f59e0b"
+                              fill={isFilled ? '#f59e0b' : 'transparent'}
+                              strokeWidth={1.8}
+                            />
+                          );
+                        })}
+                      </View>
+                    </Pressable>
+                  )}
+
+                  {/* Actions:
+                      1. CANCELLED: [Refund status] + [View details]
+                      2. ONGOING: [Track order] + [View details] (NO Reorder button!)
+                      3. DELIVERED: [View details] + [Reorder]
+                  */}
                   {item.status === 'CANCELLED' ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 }}>
                       <Pressable
                         onPress={() =>
                           navigation.navigate('RefundStatus', {
@@ -619,14 +718,14 @@ export default function OrdersScreen({ navigation }) {
                         }
                         style={{
                           flex: 1,
-                          height: 46,
-                          borderRadius: 14,
-                          backgroundColor: '#047857',
+                          height: 44,
+                          borderRadius: 12,
+                          backgroundColor: '#087f46',
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
                       >
-                        <Text style={{ fontSize: 14.5, fontWeight: '800', color: '#ffffff' }}>
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#ffffff' }}>
                           Refund status
                         </Text>
                       </Pressable>
@@ -636,12 +735,13 @@ export default function OrdersScreen({ navigation }) {
                           navigation.navigate('OrderDetail', {
                             orderId: item.id,
                             orderNo: item.orderNo,
+                            order: item,
                           })
                         }
                         style={{
                           flex: 1,
-                          height: 46,
-                          borderRadius: 14,
+                          height: 44,
+                          borderRadius: 12,
                           borderWidth: 1,
                           borderColor: '#e2e8f0',
                           backgroundColor: '#ffffff',
@@ -649,25 +749,48 @@ export default function OrdersScreen({ navigation }) {
                           justifyContent: 'center',
                         }}
                       >
-                        <Text style={{ fontSize: 14.5, fontWeight: '700', color: '#0f172a' }}>
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#0f172a' }}>
                           View details
                         </Text>
                       </Pressable>
                     </View>
-                  ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 }}>
+                  ) : isOngoing ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 }}>
                       <Pressable
                         onPress={() =>
-                          navigation.navigate(isOngoing ? 'OrderTracking' : 'OrderDetail', {
+                          navigation.navigate('OrderTracking', {
                             orderId: item.id,
                             orderNo: item.orderNo,
+                            order: item,
                             fromOrders: true,
                           })
                         }
                         style={{
                           flex: 1,
-                          height: 46,
-                          borderRadius: 14,
+                          height: 44,
+                          borderRadius: 12,
+                          backgroundColor: '#087f46',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#ffffff' }}>
+                          Track order
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() =>
+                          navigation.navigate('OrderDetail', {
+                            orderId: item.id,
+                            orderNo: item.orderNo,
+                            order: item,
+                          })
+                        }
+                        style={{
+                          flex: 1,
+                          height: 44,
+                          borderRadius: 12,
                           borderWidth: 1,
                           borderColor: '#e2e8f0',
                           backgroundColor: '#ffffff',
@@ -675,8 +798,34 @@ export default function OrdersScreen({ navigation }) {
                           justifyContent: 'center',
                         }}
                       >
-                        <Text style={{ fontSize: 14.5, fontWeight: '700', color: '#0f172a' }}>
-                          {isOngoing ? 'Track order' : 'View details'}
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#0f172a' }}>
+                          View details
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 }}>
+                      <Pressable
+                        onPress={() =>
+                          navigation.navigate('OrderDetail', {
+                            orderId: item.id,
+                            orderNo: item.orderNo,
+                            order: item,
+                          })
+                        }
+                        style={{
+                          flex: 1,
+                          height: 44,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: '#e2e8f0',
+                          backgroundColor: '#ffffff',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#0f172a' }}>
+                          View details
                         </Text>
                       </Pressable>
 
@@ -684,14 +833,14 @@ export default function OrdersScreen({ navigation }) {
                         onPress={() => handleReorder(item)}
                         style={{
                           flex: 1,
-                          height: 46,
-                          borderRadius: 14,
-                          backgroundColor: '#059669',
+                          height: 44,
+                          borderRadius: 12,
+                          backgroundColor: '#087f46',
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
                       >
-                        <Text style={{ fontSize: 14.5, fontWeight: '700', color: '#ffffff' }}>
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#ffffff' }}>
                           Reorder
                         </Text>
                       </Pressable>
@@ -702,6 +851,48 @@ export default function OrdersScreen({ navigation }) {
             );
           }}
         />
+      )}
+
+      {/* Rating Modal containing comprehensive OrderRatings component */}
+      {ratingOrder && (
+        <Modal
+          visible={!!ratingOrder}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setRatingOrder(null)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setRatingOrder(null)}
+            />
+            <View
+              style={{
+                backgroundColor: '#f6f8f6',
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                maxHeight: '90%',
+                overflow: 'hidden',
+              }}
+            >
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16 }}>
+                <OrderRatings
+                  order={ratingOrder}
+                  onDismiss={() => {
+                    setRatingOrder(null);
+                    fetchOrders();
+                  }}
+                />
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
 
       <Dialog

@@ -19,11 +19,30 @@ export function CartProvider({ children }) {
   const lastLoadedAtRef = useRef(0);
   const SILENT_REFRESH_THROTTLE_MS = 15_000;
 
-  const computeTotals = (cartItems) => {
-    const sub = cartItems.reduce((acc, i) => acc + i.price * i.qty, 0);
+  const computeTotals = (cartItems, customDetails = undefined, customDiscount = undefined) => {
+    const sub = cartItems.reduce((acc, i) => acc + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
     const rounded = Number(sub.toFixed(2));
     setSubtotal(rounded);
-    setTotal(rounded);
+
+    const activeDetails = customDetails !== undefined ? customDetails : couponDetails;
+    let activeDisc = customDiscount !== undefined ? customDiscount : discount;
+
+    if (activeDetails) {
+      if (activeDetails.minValue && rounded < activeDetails.minValue) {
+        activeDisc = 0;
+      } else if (activeDetails.kind === 'PERCENT') {
+        const percDisc = (rounded * (Number(activeDetails.value) || 0)) / 100;
+        activeDisc = activeDetails.maxDiscount ? Math.min(activeDetails.maxDiscount, percDisc) : percDisc;
+        activeDisc = Number(Math.min(activeDisc, rounded).toFixed(2));
+      } else if (activeDetails.kind === 'FLAT') {
+        activeDisc = Number(Math.min(Number(activeDetails.value) || 0, rounded).toFixed(2));
+      }
+    } else if (customDiscount === undefined) {
+      activeDisc = 0;
+    }
+
+    setDiscount(activeDisc);
+    setTotal(Math.max(0, Number((rounded - activeDisc).toFixed(2))));
   };
 
   const loadCart = useCallback(async (silent = false, { force = false } = {}) => {
@@ -50,12 +69,17 @@ export function CartProvider({ children }) {
       const { data } = await apiClient.get('/cart', { __skipErrorToast: true });
       lastLoadedAtRef.current = Date.now();
       const serverItems = data.items || [];
+      const srvDiscount = data.discount ?? 0;
+      const srvTotal = data.total ?? 0;
+      const srvCouponCode = data.couponCode ?? null;
+      const srvCouponDetails = data.couponDetails ?? null;
+
       setItems(serverItems);
-      computeTotals(serverItems);
-      setDiscount(data.discount ?? 0);
-      setTotal(data.total ?? 0);
-      setCouponCode(data.couponCode ?? null);
-      setCouponDetails(data.couponDetails ?? null);
+      setDiscount(srvDiscount);
+      setTotal(srvTotal);
+      setCouponCode(srvCouponCode);
+      setCouponDetails(srvCouponDetails);
+      computeTotals(serverItems, srvCouponDetails, srvDiscount);
       await AsyncStorage.setItem('localCart', JSON.stringify(serverItems));
       if (data.removedCount > 0) {
         Toast.show({
@@ -170,6 +194,53 @@ export function CartProvider({ children }) {
     await putCart(newItems);
   };
 
+  const addItems = async (entries) => {
+    const next = items.map(item => ({ ...item }));
+    let added = 0;
+    for (const { product, variant, qty = 1 } of entries) {
+      if (!product?.id || !variant?.id || isProductUnavailable(product, variant)) continue;
+      const existing = next.find(item => item.productId === product.id && item.variantId === variant.id);
+      const available = variant.stock == null ? qty : Math.max(0, Number(variant.stock) - (existing?.qty || 0));
+      const count = Math.min(qty, available);
+      if (count <= 0) continue;
+      if (existing) existing.qty += count;
+      else next.push({ productId: product.id, variantId: variant.id, name: product.name, variantLabel: variant.label, price: variant.offerPrice ?? variant.price, images: product.images || [], qty: count, availability: product.availability, isAvailableToday: product.isAvailableToday, variantAvailability: variant.availability, stock: variant.stock });
+      added += count;
+    }
+    if (added > 0) {
+      setItems(next);
+      computeTotals(next);
+      await putCart(next);
+    }
+    Toast.show({ type: added ? 'success' : 'info', text1: added ? `${added} item(s) added to cart` : 'These items are currently unavailable', text2: 'Current prices and stock apply.' });
+    return added;
+  };
+
+  const validateCouponAfterChange = async (newItems) => {
+    const newSubtotal = newItems.reduce((acc, i) => acc + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
+    if (couponCode && couponDetails?.minValue && newSubtotal < couponDetails.minValue) {
+      const removedCode = couponCode;
+      setCouponCode(null);
+      setCouponDetails(null);
+      setDiscount(0);
+      setTotal(Number(newSubtotal.toFixed(2)));
+      if (token) {
+        try {
+          await apiClient.patch('/cart/coupon', { code: null }, { __skipErrorToast: true });
+        } catch (_) {}
+      }
+      Toast.show({
+        type: 'info',
+        text1: `Coupon ${removedCode} removed`,
+        text2: `Order value fell below minimum ₹${couponDetails.minValue}`,
+      });
+      return;
+    }
+    if (token) {
+      await loadCart(true, { force: true });
+    }
+  };
+
   const removeItem = async (productId, variantId) => {
     const newItems = items.filter(
       (i) => !(i.productId === productId && i.variantId === variantId)
@@ -179,6 +250,7 @@ export function CartProvider({ children }) {
     computeTotals(newItems);
     Toast.show({ type: 'success', text1: 'Removed from cart' });
     await putCart(newItems);
+    await validateCouponAfterChange(newItems);
   };
 
   const updateQty = async (productId, variantId, delta) => {
@@ -207,6 +279,7 @@ export function CartProvider({ children }) {
     computeTotals(newItems);
     Toast.show({ type: 'success', text1: 'Quantity updated' });
     await putCart(newItems);
+    await validateCouponAfterChange(newItems);
   };
 
   const clearCart = async () => {
@@ -240,19 +313,9 @@ export function CartProvider({ children }) {
         items,
       });
 
-      if (token) {
-        await apiClient.patch('/cart/coupon', { code: cleanCode });
-        await loadCart(false, { force: true });
-        Toast.show({
-          type: 'success',
-          text1: 'Coupon applied',
-          text2: `Saved ₹${valData.evaluatedDiscount}!`,
-        });
-        return;
-      }
-
-      // Local/guest cart mode
       const disc = valData.evaluatedDiscount || 0;
+
+      // INSTANT OPTIMISTIC UPDATE: Apply state immediately for zero-lag response
       setCouponCode(cleanCode);
       setCouponDetails(valData);
       setDiscount(disc);
@@ -262,6 +325,16 @@ export function CartProvider({ children }) {
         text1: 'Coupon applied',
         text2: `Saved ₹${disc}!`,
       });
+
+      if (token) {
+        // Sync to backend cart in background silently (no loading spinner or UI freeze)
+        apiClient
+          .patch('/cart/coupon', { code: cleanCode })
+          .then(() => loadCart(true, { force: true }))
+          .catch((err) => console.warn('Background cart coupon sync note:', err?.message));
+      }
+
+      return valData;
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Could not apply coupon';
       Toast.show({ type: 'error', text1: msg });
@@ -270,17 +343,21 @@ export function CartProvider({ children }) {
   };
 
   const removeCoupon = async () => {
-    if (token) {
-      try {
-        await apiClient.patch('/cart/coupon', { code: null });
-        await loadCart();
-      } catch {}
-    }
+    // Instant optimistic removal
     setCouponCode(null);
     setCouponDetails(null);
     setDiscount(0);
     setTotal(subtotal);
     Toast.show({ type: 'success', text1: 'Coupon removed' });
+
+    if (token) {
+      try {
+        await apiClient.patch('/cart/coupon', { code: null });
+        await loadCart(true, { force: true });
+      } catch (err) {
+        console.warn('Coupon removal sync note:', err?.message);
+      }
+    }
   };
 
   const getQty = useCallback(
@@ -307,6 +384,7 @@ export function CartProvider({ children }) {
         loading,
         itemCount,
         addItem,
+        addItems,
         removeItem,
         updateQty,
         clearCart,

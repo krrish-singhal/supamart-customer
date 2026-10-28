@@ -1,4 +1,11 @@
+import useStoreStatus from '../hooks/useStoreStatus';
+import { formatDeliveryAddress } from '../utils/addressForm';
+import { useConfig } from '../context/ConfigContext';
+import { FREE_DELIVERY_THRESHOLD } from '../utils/pricing';
+import useActiveOrder from '../hooks/useActiveOrder';
+import HeroBanner, { HOME_BANNERS } from '../components/ui/HeroBanner';
 import React, { useEffect, useState, useContext, useCallback, useRef, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -22,7 +29,8 @@ import {
   Tag,
   LayoutGrid,
   Bell,
-} from 'lucide-react-native';
+  Star,
+} from '../components/icons';
 import { useIsFocused } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import apiClient from '../services/api';
@@ -35,6 +43,9 @@ import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
+import { setCachedCategories, getCachedCategoryProducts, setCachedCategoryProducts } from './CategoryScreen';
 import { getProductImageSource } from '../utils/productImages';
 import { getCategoryVisual } from '../utils/categoryImages';
 import slugify from '../utils/slugify';
@@ -139,9 +150,13 @@ const ROTATING_SEARCH_TERMS = [
   '"fresh tomato"',
   '"atta"',
 ];
+const BANNER_GAP = 16;
 
 export default function HomeScreen({ navigation }) {
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const screenWidth = windowWidth;
+  const bannerCardWidth = Math.max(280, screenWidth - 32);
+  const bannerHeight = Math.max(136, Math.round(bannerCardWidth / 2.5));
   const { items: cartItems, addItem, updateQty, getQty, subtotal } = useCart();
   const { userProfile } = useContext(AuthContext);
   const { unreadCount } = useNotifications();
@@ -154,35 +169,110 @@ export default function HomeScreen({ navigation }) {
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [searchIndex, setSearchIndex] = useState(0);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [banners, setBanners] = useState([]);
   const [showClubModal, setShowClubModal] = useState(false);
+
+  const activeBanners = useMemo(() => {
+    return Array.isArray(banners) && banners.length > 0 ? banners : HOME_BANNERS;
+  }, [banners]);
 
   const bannerScrollRef = useRef(null);
   const bannerIndexRef = useRef(0);
   const isDraggingBannerRef = useRef(false);
   const isFocused = useIsFocused();
+  const { config } = useConfig();
+  const { isOpen: storeOpen } = useStoreStatus();
+  const { activeOrder, estimate } = useActiveOrder(userProfile?.id, isFocused);
+
+  // Real-time synchronization of banners from Firestore + instant HTTP fallback
+  useEffect(() => {
+    let isMounted = true;
+
+    // 1. Immediate HTTP fallback fetch for fast initial hydration
+    apiClient
+      .get('/banners', { __skipErrorToast: true })
+      .then(({ data }) => {
+        if (isMounted && Array.isArray(data?.items) && data.items.length > 0) {
+          setBanners(data.items);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Real-time Firestore onSnapshot listener for instant live updates
+    let unsubscribe = () => {};
+    try {
+      if (db) {
+        const bannersColRef = collection(db, 'banners');
+        unsubscribe = onSnapshot(
+          bannersColRef,
+          (snap) => {
+            if (!isMounted) return;
+            const rawItems = snap.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...docSnap.data(),
+            }));
+            const activeItems = rawItems
+              .filter((item) => item.isActive !== false && item.isActive !== 'false')
+              .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+
+            if (activeItems.length > 0) {
+              setBanners(activeItems);
+            } else {
+              setBanners(HOME_BANNERS);
+            }
+          },
+          (error) => {
+            console.warn('[HomeScreen] Real-time banners listener error:', error?.message);
+          }
+        );
+      }
+    } catch (err) {
+      console.warn('[HomeScreen] Could not attach real-time banners listener:', err?.message);
+    }
+
+    return () => {
+      isMounted = false;
+      try {
+        unsubscribe();
+      } catch (_e) {}
+    };
+  }, []);
+
+  // Ensure active banner index remains bounded when banners list updates in real time
+  useEffect(() => {
+    if (activeBannerIndex >= activeBanners.length) {
+      const safeIndex = Math.max(0, activeBanners.length - 1);
+      setActiveBannerIndex(safeIndex);
+      bannerIndexRef.current = safeIndex;
+    }
+  }, [activeBanners.length, activeBannerIndex]);
 
   useEffect(() => {
     bannerIndexRef.current = activeBannerIndex;
   }, [activeBannerIndex]);
 
+  useEffect(() => {
+    bannerScrollRef.current?.scrollTo({ x: bannerIndexRef.current * (bannerCardWidth + BANNER_GAP), animated: false });
+  }, [bannerCardWidth]);
+
   // Automatic & continuous hero banner slideshow
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused || activeBanners.length <= 1) return;
 
     const bannerTimer = setInterval(() => {
       if (isDraggingBannerRef.current) return;
-      const nextIndex = (bannerIndexRef.current + 1) % 3;
+      const nextIndex = (bannerIndexRef.current + 1) % activeBanners.length;
       bannerIndexRef.current = nextIndex;
       setActiveBannerIndex(nextIndex);
       bannerScrollRef.current?.scrollTo({
-        x: nextIndex * (bannerCardWidth + 14),
+        x: nextIndex * (bannerCardWidth + BANNER_GAP),
         animated: true,
       });
     }, 3500);
 
     return () => clearInterval(bannerTimer);
-  }, [bannerCardWidth, isFocused]);
+  }, [bannerCardWidth, isFocused, activeBanners.length]);
 
   // Rotating search term
   useEffect(() => {
@@ -192,9 +282,49 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch products, categories, and default address
+  // Hydrate from local cache immediately on mount so the user never sees an empty screen
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      AsyncStorage.getItem('@supamart_cached_home_products'),
+      AsyncStorage.getItem('@supamart_cached_home_categories'),
+      AsyncStorage.getItem('@supamart_cached_default_address'),
+    ])
+      .then(([cachedProds, cachedCats, cachedAddr]) => {
+        if (!active) return;
+        if (cachedProds) {
+          try {
+            const parsed = JSON.parse(cachedProds);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProducts(parsed);
+              setLoading(false);
+            }
+          } catch (_e) {}
+        }
+        if (cachedCats) {
+          try {
+            const parsed = JSON.parse(cachedCats);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setAllCategories(parsed);
+              setCachedCategories(parsed);
+            }
+          } catch (_e) {}
+        }
+        if (cachedAddr) {
+          try {
+            const parsed = JSON.parse(cachedAddr);
+            if (parsed) setDefaultAddress(parsed);
+          } catch (_e) {}
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Fetch products, categories, and default address with stale-while-revalidate persistence
   const loadData = useCallback(async () => {
-    setLoading(true);
     try {
       const [prodRes, catRes] = await Promise.allSettled([
         apiClient.get('/products', {
@@ -205,10 +335,32 @@ export default function HomeScreen({ navigation }) {
       ]);
 
       if (prodRes.status === 'fulfilled') {
-        setProducts(prodRes.value.data?.items || []);
+        const items = prodRes.value.data?.items || [];
+        if (items.length > 0) {
+          setProducts(items);
+          AsyncStorage.setItem('@supamart_cached_home_products', JSON.stringify(items)).catch(() => {});
+
+          const grouped = {};
+          items.forEach((p) => {
+            if (p.categoryId) {
+              if (!grouped[p.categoryId]) grouped[p.categoryId] = [];
+              grouped[p.categoryId].push(p);
+            }
+          });
+          Object.entries(grouped).forEach(([catId, prods]) => {
+            if (prods.length >= 2) {
+              setCachedCategoryProducts(catId, prods);
+            }
+          });
+        }
       }
       if (catRes.status === 'fulfilled') {
-        setAllCategories(catRes.value.data?.items || []);
+        const cats = catRes.value.data?.items || [];
+        if (cats.length > 0) {
+          setAllCategories(cats);
+          setCachedCategories(cats);
+          AsyncStorage.setItem('@supamart_cached_home_categories', JSON.stringify(cats)).catch(() => {});
+        }
       }
     } catch {
       // Fallback
@@ -220,6 +372,34 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!userProfile?.id) {
+      setDefaultAddress(null);
+      return;
+    }
+    if (!isFocused) return;
+    let active = true;
+    apiClient
+      .get(`/users/${userProfile.id}/addresses`, { __skipErrorToast: true })
+      .then(({ data }) => {
+        const addresses = data.items || [];
+        const selected = addresses.find((address) => address.isDefault)
+          || addresses.find((address) => address.id === userProfile.defaultAddressId)
+          || addresses[0]
+          || null;
+        if (active) {
+          setDefaultAddress(selected);
+          if (selected) {
+            AsyncStorage.setItem('@supamart_cached_default_address', JSON.stringify(selected)).catch(() => {});
+          }
+        }
+      })
+      .catch(() => {
+        if (active) setDefaultAddress(null);
+      });
+    return () => { active = false; };
+  }, [userProfile?.id, userProfile?.defaultAddressId, isFocused]);
 
   // Derived dynamic category list driven completely by admin-portal / backend
   const homeCategories = useMemo(() => {
@@ -290,26 +470,6 @@ export default function HomeScreen({ navigation }) {
     };
   }, [activeCategory, categoryProductsMap]);
 
-  // Fetch address
-  useEffect(() => {
-    if (!userProfile?.id) return;
-    apiClient
-      .get(`/users/${userProfile.id}/addresses`, { __skipErrorToast: true })
-      .then(({ data }) => {
-        const addrs = data.items || [];
-        const def = addrs.find((a) => a.isDefault) || addrs[0] || null;
-        setDefaultAddress(def);
-      })
-      .catch(() => {});
-  }, [userProfile?.id]);
-
-  const addressLabel = defaultAddress?.label || 'Home';
-  const addressSubtitle = defaultAddress
-    ? [defaultAddress.houseNo, defaultAddress.street, defaultAddress.landmark]
-        .filter(Boolean)
-        .join(', ') || 'Your delivery address'
-    : 'Your delivery address';
-
   // Filter products by selected admin category (including any child subcategories)
   const filteredProducts = useMemo(() => {
     if (activeCategory === 'all') return products;
@@ -340,8 +500,15 @@ export default function HomeScreen({ navigation }) {
 
   const bestPriceProducts = useMemo(() => products.flatMap((product) =>
     (product.variants || []).flatMap((variant) => {
+      if (
+        product.onSale === false ||
+        product.isOnSale === false ||
+        product.availability === 'UNAVAILABLE' ||
+        variant.offerPrice == null ||
+        variant.discountPercent === 0
+      ) return [];
       const mrp = Number(variant.price ?? variant.mrp ?? 0);
-      const price = Number(variant.offerPrice ?? variant.sellingPrice ?? mrp);
+      const price = Number(variant.offerPrice);
       if (!(mrp > 0 && price > 0 && price < mrp) || isProductUnavailable(product, variant)) return [];
       return [{
         id: `${product.id}-${variant.id}`,
@@ -354,7 +521,7 @@ export default function HomeScreen({ navigation }) {
         discount: Math.round(((mrp - price) / mrp) * 100),
       }];
     })
-  ).sort((a, b) => b.discount - a.discount).slice(0, 8), [products]);
+  ).sort((a, b) => b.discount - a.discount).slice(0, 4), [products]);
 
   const cartItemCount = cartItems.reduce((sum, item) => sum + (item.qty || 1), 0);
   const firstCartItem = cartItems[0];
@@ -363,11 +530,11 @@ export default function HomeScreen({ navigation }) {
     : null;
 
   // Free delivery calculation
-  const freeDeliveryThreshold = 200;
+  const freeDeliveryThreshold = config?.freeDeliveryThreshold ?? FREE_DELIVERY_THRESHOLD;
   const missingForFree = Math.max(0, freeDeliveryThreshold - subtotal);
-  const freeProgress = Math.min(1, subtotal / freeDeliveryThreshold);
+  const freeProgress = freeDeliveryThreshold === 0 ? 1 : Math.min(1, subtotal / freeDeliveryThreshold);
+  const deliveryAddressLine = formatDeliveryAddress(defaultAddress) || 'Choose your delivery address';
 
-  const bannerCardWidth = screenWidth - 32;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff', position: 'relative' }} edges={['top']}>
@@ -375,7 +542,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* TOP SECTION: Header, Search Bar, and Sub-categories */}
       <View style={{ backgroundColor: '#ffffff', paddingBottom: 0 }}>
-        {/* Header Row: [ms logo] [Delivery in 18 mins ⌵] [Profile Avatar] */}
+        {/* Header Row: [ms logo] [delivery estimate] [Profile Avatar] */}
         <Animated.View
           entering={FadeInDown.duration(300)}
           style={{
@@ -387,67 +554,53 @@ export default function HomeScreen({ navigation }) {
             paddingBottom: 6,
           }}
         >
-          {/* Left Brand Badge + Delivery Address Dropdown */}
-          <Pressable
-            onPress={() => navigation.navigate('LocationPrompt')}
-            style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}
-          >
-            {/* MS Traders App Logo */}
-            <View style={{ marginRight: 10 }}><BrandBadge size={40} /></View>
-
-            {/* Delivery in 18 mins & Address */}
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: '#059669',
-                    marginRight: 6,
-                  }}
-                />
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Medium',
-                    fontSize: 12,
-                    fontWeight: 'normal',
-                    color: '#475569',
-                  }}
-                >
-                  MS Traders · delivery in
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 1 }}>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-ExtraBold',
-                    fontSize: 22,
-                    fontWeight: 'normal',
-                    color: '#0f172a',
-                    letterSpacing: -0.4,
-                  }}
-                >
-                  18 mins
-                </Text>
-                <ChevronDown size={17} color="#0f172a" strokeWidth={3} style={{ marginLeft: 4 }} />
-              </View>
-
-              <Text
-                numberOfLines={1}
-                style={{
-                  fontFamily: 'Inter-Regular',
-                  fontSize: 12,
-                  fontWeight: 'normal',
-                  color: '#64748b',
-                  marginTop: 1,
-                }}
-              >
-                {addressLabel} · [{addressSubtitle}]
-              </Text>
+          {/* Delivery estimate and address selector */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: 12 }}>
+            <View style={{ marginRight: 8, flexShrink: 0 }}>
+              <BrandBadge size={36} />
             </View>
-          </Pressable>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Pressable
+                onPress={() => {
+                  if (activeOrder) {
+                    navigation.navigate('OrderTracking', { orderId: activeOrder.id || activeOrder.orderId });
+                  } else {
+                    navigation.navigate('LocationPrompt');
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={activeOrder ? `Order in progress. ${estimate || 'Arriving soon'}` : 'Delivery status'}
+                style={{ flexDirection: 'row', alignItems: 'center', minWidth: 0, paddingVertical: 1 }}
+              >
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0A7C47', marginRight: 6, flexShrink: 0 }} />
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: activeOrder ? '#0A7C47' : '#475569', fontWeight: activeOrder ? '700' : '500' }}>
+                  {activeOrder
+                    ? `MS Traders · ${estimate && estimate !== 'Updating arrival time' ? `Arriving in ${estimate.replace('~', '')}` : 'Arriving soon'}`
+                    : storeOpen
+                    ? 'Open until 11 PM · Deliver to'
+                    : 'Closed · Opens at 10 AM'}
+                </Text>
+                {Boolean(activeOrder) && (
+                  <ChevronRight size={13} color="#0A7C47" strokeWidth={2.4} style={{ marginLeft: 2 }} />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate('LocationPrompt')}
+                accessibilityRole="button"
+                accessibilityLabel={`${defaultAddress?.label === 'Current Location' ? 'Delivery address' : defaultAddress?.label || 'Select address'}. ${deliveryAddressLine}`}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 1 }}>
+                  <Text style={{ fontFamily: fonts.extraBold, fontSize: 22, color: '#121712', letterSpacing: -0.4 }}>
+                    {defaultAddress?.label === 'Current Location' ? 'Delivery address' : defaultAddress?.label || 'Select address'}
+                  </Text>
+                  <ChevronDown size={17} color="#121712" strokeWidth={3} style={{ marginLeft: 4 }} />
+                </View>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontFamily: fonts.regular, fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                  {deliveryAddressLine || 'Tap to complete your address'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
 
           {/* Notifications sit immediately left of the profile button. */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -467,7 +620,7 @@ export default function HomeScreen({ navigation }) {
                 justifyContent: 'center',
               }}
             >
-              <Bell size={19} color="#0f172a" strokeWidth={2.1} />
+              <Bell size={19} color="#121712" strokeWidth={2.1} />
               {unreadCount > 0 && (
                 <View
                   style={{
@@ -515,14 +668,14 @@ export default function HomeScreen({ navigation }) {
                   contentFit="cover"
                 />
               ) : (
-                <User size={20} color="#0f172a" strokeWidth={2.2} />
+                <User size={20} color="#121712" strokeWidth={2.2} />
               )}
             </Pressable>
           </View>
         </Animated.View>
 
         {/* Search Bar matching Images 1, 2, 3 */}
-        <Animated.View entering={FadeInDown.duration(300).delay(60)} style={{ paddingHorizontal: 16, marginTop: 10 }}>
+        <Animated.View entering={FadeInDown.duration(300).delay(60)} style={{ paddingHorizontal: 16, marginTop: 8, marginBottom: 2 }}>
           <Pressable
             onPress={() => navigation.navigate('Search')}
             style={{
@@ -542,7 +695,7 @@ export default function HomeScreen({ navigation }) {
             }}
           >
             <Search size={18} color="#64748b" strokeWidth={2.2} />
-            <View style={{ flex: 1, marginLeft: 10, height: 22, justifyContent: 'center', overflow: 'hidden' }}>
+            <View style={{ flex: 1, marginLeft: 10, minHeight: 22, justifyContent: 'center' }}>
               <Text
                 style={{
                   fontFamily: 'Inter-Regular',
@@ -556,6 +709,88 @@ export default function HomeScreen({ navigation }) {
             </View>
           </Pressable>
         </Animated.View>
+
+        {/* Active Order Live Tracking Banner */}
+        {activeOrder && (
+          <Animated.View entering={FadeInDown.duration(300)} style={{ paddingHorizontal: 16, marginTop: 8, marginBottom: 2 }}>
+            <Pressable
+              onPress={() => navigation.navigate('OrderTracking', { orderId: activeOrder.id || activeOrder.orderId })}
+              style={{
+                backgroundColor: activeOrder.delayReason ? '#fffbeb' : '#f0fdf4',
+                borderWidth: 1.5,
+                borderColor: activeOrder.delayReason ? '#f59e0b' : '#86efac',
+                borderRadius: 16,
+                padding: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.04,
+                shadowRadius: 6,
+                elevation: 2,
+              }}
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: activeOrder.delayReason ? '#fef3c7' : '#dcfce7',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Truck size={20} color={activeOrder.delayReason ? '#d97706' : '#15803d'} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 13.5, color: activeOrder.delayReason ? '#92400e' : '#14532d' }}>
+                    {activeOrder.delayReason
+                      ? `Delivery Delayed · #${activeOrder.orderNo || activeOrder.orderId?.slice(-6) || ''}`
+                      : `Order #${activeOrder.orderNo || activeOrder.orderId?.slice(-6) || ''} in progress`}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: activeOrder.delayReason ? '#fde68a' : '#bbf7d0',
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: activeOrder.delayReason ? '#b45309' : '#166534' }}>
+                      {activeOrder.delayReason
+                        ? activeOrder.deliveryDelay?.newEstimatedTime || 'Updated ETA'
+                        : estimate && estimate !== 'Updating arrival time'
+                        ? `ETA: ${estimate.replace('~', '')}`
+                        : 'On the way'}
+                    </Text>
+                  </View>
+                </View>
+                <Text numberOfLines={1} style={{ fontFamily: fonts.regular, fontSize: 12, color: activeOrder.delayReason ? '#78350f' : '#166534', marginTop: 3 }}>
+                  {activeOrder.delayReason
+                    ? `Reason: ${activeOrder.delayReason}`
+                    : (activeOrder.deliveryPartner?.name || activeOrder.deliveryBoyName)
+                    ? `Rider assigned: ${activeOrder.deliveryPartner?.name || activeOrder.deliveryBoyName}`
+                    : activeOrder.status === 'OUT_FOR_DELIVERY'
+                    ? 'Out for delivery with delivery partner'
+                    : activeOrder.status === 'PACKING' || activeOrder.status === 'PACKED'
+                    ? 'Items packed and being dispatched'
+                    : activeOrder.status === 'ORDER_ACCEPTED'
+                    ? 'Order accepted and being prepared'
+                    : 'Order confirmed and being prepared'}
+                  {activeOrder.items?.length ? ` · ${activeOrder.items.length} item${activeOrder.items.length > 1 ? 's' : ''}` : ''}
+                </Text>
+              </View>
+              <View style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: activeOrder.delayReason ? '#d97706' : '#15803d', marginRight: 2 }}>
+                  Track
+                </Text>
+                <ChevronRight size={16} color={activeOrder.delayReason ? '#d97706' : '#15803d'} strokeWidth={2.4} />
+              </View>
+            </Pressable>
+          </Animated.View>
+        )}
       </View>
 
       {/* BODY CONTENT SCROLLVIEW */}
@@ -565,17 +800,20 @@ export default function HomeScreen({ navigation }) {
         decelerationRate="normal"
         overScrollMode="never"
         scrollEventThrottle={16}
-        removeClippedSubviews={Platform.OS === 'android'}
+        // Android can incorrectly detach all following sections after a nested
+        // horizontal ScrollView (the category pills), leaving the Home feed blank.
+        removeClippedSubviews={false}
         style={{ flex: 1, backgroundColor: '#ffffff' }}
         contentContainerStyle={{
           paddingTop: 8,
-          paddingBottom: cartItemCount > 0 ? 90 : 32,
+          paddingBottom: cartItemCount > 0 ? 68 : 24,
         }}
       >
         {/* Sub-category Pills matching Images 1, 2, 3 */}
         <View style={{ marginBottom: 14 }}>
           <ScrollView
             horizontal
+            removeClippedSubviews={false}
             nestedScrollEnabled={true}
             overScrollMode="never"
             showsHorizontalScrollIndicator={false}
@@ -600,10 +838,26 @@ export default function HomeScreen({ navigation }) {
                     if (cat.id === 'all') {
                       setActiveCategory('all');
                     } else {
+                      if (!getCachedCategoryProducts(cat.id)) {
+                        apiClient
+                          .get('/products', { params: { categoryId: cat.id, limit: 30 }, __skipErrorToast: true })
+                          .then((res) => {
+                            const prods = res.data?.items || [];
+                            if (prods.length > 0) {
+                              setCachedCategoryProducts(cat.id, prods);
+                              const imgUrls = prods
+                                .map((p) => p.imageUrl || p.image || p.images?.[0])
+                                .filter((url) => typeof url === 'string' && url.startsWith('http'));
+                              if (imgUrls.length > 0) Image.prefetch(imgUrls);
+                            }
+                          })
+                          .catch(() => {});
+                      }
                       navigation.navigate('Category', {
                         id: cat.id,
                         name: cat.name || cat.label,
                         image: cat.image,
+                        allCategories,
                       });
                     }
                   }}
@@ -663,18 +917,21 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* HERO BANNER CAROUSEL matching Reference Images */}
-        <View style={{ marginBottom: 14 }}>
+        <View style={{ marginBottom: 14, minHeight: bannerHeight + 20 }}>
           <ScrollView
             ref={bannerScrollRef}
             horizontal
+            removeClippedSubviews={false}
             nestedScrollEnabled={true}
             overScrollMode="never"
             pagingEnabled={false}
-            snapToInterval={bannerCardWidth + 14}
+            snapToInterval={bannerCardWidth + BANNER_GAP}
             decelerationRate="fast"
             snapToAlignment="start"
+            disableIntervalMomentum={true}
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={16}
+            style={{ height: bannerHeight }}
             onScrollBeginDrag={() => {
               isDraggingBannerRef.current = true;
             }}
@@ -684,333 +941,44 @@ export default function HomeScreen({ navigation }) {
             onMomentumScrollEnd={(e) => {
               isDraggingBannerRef.current = false;
               const x = e.nativeEvent.contentOffset.x;
-              const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + 14))));
+              const maxIdx = Math.max(0, activeBanners.length - 1);
+              const idx = Math.min(maxIdx, Math.max(0, Math.round(x / (bannerCardWidth + BANNER_GAP))));
               bannerIndexRef.current = idx;
               setActiveBannerIndex(idx);
             }}
             onScroll={(e) => {
               const x = e.nativeEvent.contentOffset.x;
-              const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + 14))));
+              const maxIdx = Math.max(0, activeBanners.length - 1);
+              const idx = Math.min(maxIdx, Math.max(0, Math.round(x / (bannerCardWidth + BANNER_GAP))));
               if (idx !== activeBannerIndex) {
                 setActiveBannerIndex(idx);
                 bannerIndexRef.current = idx;
               }
             }}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: BANNER_GAP }}
           >
-            {/* Banner 1: Farm Fresh (Light Fresh Sage Green) */}
-            <View
-              style={{
-                width: bannerCardWidth,
-                height: 166,
-                borderRadius: 22,
-                backgroundColor: '#E4F2E9',
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-              }}
-            >
-              <View style={{ flex: 1, paddingRight: 8, justifyContent: 'center' }}>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Bold',
-                    fontSize: 10.5,
-                    fontWeight: 'normal',
-                    color: '#1C2E24',
-                    letterSpacing: 0.8,
-                    textTransform: 'uppercase',
-                    marginBottom: 3,
-                  }}
-                >
-                  FARM FRESH
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-ExtraBold',
-                    fontSize: 18,
-                    fontWeight: 'normal',
-                    color: '#111813',
-                    lineHeight: 22.5,
-                    letterSpacing: -0.4,
-                  }}
-                >
-                  Vegetables picked{'\n'}this morning
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Regular',
-                    fontSize: 12,
-                    fontWeight: 'normal',
-                    color: '#3B5145',
-                    marginTop: 3,
-                    marginBottom: 11,
-                  }}
-                >
-                  Starting at just ₹9
-                </Text>
-                <Pressable
-                  onPress={() => navigation.navigate('Main', { screen: 'Categories' })}
-                  hitSlop={8}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: '#0A7C47',
-                      borderRadius: 20,
-                      paddingHorizontal: 14,
-                      paddingVertical: 6.5,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: 'Inter-Bold',
-                        fontSize: 12.5,
-                        fontWeight: 'normal',
-                        color: '#ffffff',
-                        marginRight: 4,
-                      }}
-                    >
-                      Shop now
-                    </Text>
-                    <ChevronRight size={13} color="#ffffff" strokeWidth={2.8} />
-                  </View>
-                </Pressable>
-              </View>
-
-              {/* Graphic collage with fresh vegetables */}
-              <View
-                style={{
-                  width: 122,
-                  height: 74,
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+            {activeBanners.map((banner, index) => (
+              <HeroBanner
+                key={banner.id || banner.label || String(index)}
+                banner={banner}
+                width={bannerCardWidth}
+                onPress={() => {
+                  const dest = (banner.destination || banner.target || '').toLowerCase();
+                  if (dest.includes('offer')) {
+                    navigation.navigate('Offers');
+                  } else if (dest.includes('cat') || dest === 'home') {
+                    navigation.navigate('Main', { screen: 'Categories' });
+                  } else {
+                    navigation.navigate('Main', { screen: 'Categories' });
+                  }
                 }}
-              >
-                <Image
-                  source={require('../../assets/images/banner_collage_fresh.webp')}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
-
-            {/* Banner 2: Monthly Ration (Solid Vibrant Emerald Green) */}
-            <View
-              style={{
-                width: bannerCardWidth,
-                height: 166,
-                borderRadius: 22,
-                backgroundColor: '#0B7B43',
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-              }}
-            >
-              <View style={{ flex: 1, paddingRight: 8, justifyContent: 'center' }}>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Bold',
-                    fontSize: 10.5,
-                    fontWeight: 'normal',
-                    color: '#A7F3D0',
-                    letterSpacing: 0.8,
-                    textTransform: 'uppercase',
-                    marginBottom: 3,
-                  }}
-                >
-                  MONTHLY RATION
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-ExtraBold',
-                    fontSize: 18,
-                    fontWeight: 'normal',
-                    color: '#ffffff',
-                    lineHeight: 22.5,
-                    letterSpacing: -0.4,
-                  }}
-                >
-                  Wholesale prices,{'\n'}home delivered
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Regular',
-                    fontSize: 12,
-                    fontWeight: 'normal',
-                    color: '#D1FAE5',
-                    marginTop: 3,
-                    marginBottom: 11,
-                  }}
-                >
-                  Up to 20% off atta, rice & oil
-                </Text>
-                <Pressable
-                  onPress={() => navigation.navigate('Offers')}
-                  hitSlop={8}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: '#ffffff',
-                      borderRadius: 20,
-                      paddingHorizontal: 14,
-                      paddingVertical: 6.5,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: 'Inter-Bold',
-                        fontSize: 12.5,
-                        fontWeight: 'normal',
-                        color: '#0B7B43',
-                        marginRight: 4,
-                      }}
-                    >
-                      Shop now
-                    </Text>
-                    <ChevronRight size={13} color="#0B7B43" strokeWidth={2.8} />
-                  </View>
-                </Pressable>
-              </View>
-
-              {/* Graphic collage with staple items matching Reference Image 2 */}
-              <View
-                style={{
-                  width: 140,
-                  height: 86,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Image
-                  source={require('../../assets/images/banner_collage_ration.webp')}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
-
-            {/* Banner 3: Tea Time (Deep Charcoal Forest Green) */}
-            <View
-              style={{
-                width: bannerCardWidth,
-                height: 166,
-                borderRadius: 22,
-                backgroundColor: '#1E2B23',
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-              }}
-            >
-              <View style={{ flex: 1, paddingRight: 8, justifyContent: 'center' }}>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Bold',
-                    fontSize: 10.5,
-                    fontWeight: 'normal',
-                    color: '#94A3B8',
-                    letterSpacing: 0.8,
-                    textTransform: 'uppercase',
-                    marginBottom: 3,
-                  }}
-                >
-                  TEA TIME
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-ExtraBold',
-                    fontSize: 18,
-                    fontWeight: 'normal',
-                    color: '#ffffff',
-                    lineHeight: 22.5,
-                    letterSpacing: -0.4,
-                  }}
-                >
-                  Tea, biscuits &{'\n'}snacks
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Regular',
-                    fontSize: 12,
-                    fontWeight: 'normal',
-                    color: '#CBD5E1',
-                    marginTop: 3,
-                    marginBottom: 11,
-                  }}
-                >
-                  Buy 2, get 10% extra off
-                </Text>
-                <Pressable
-                  onPress={() => navigation.navigate('Main', { screen: 'Categories' })}
-                  hitSlop={8}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: '#ffffff',
-                      borderRadius: 20,
-                      paddingHorizontal: 14,
-                      paddingVertical: 6.5,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: 'Inter-Bold',
-                        fontSize: 12.5,
-                        fontWeight: 'normal',
-                        color: '#1E2B23',
-                        marginRight: 4,
-                      }}
-                    >
-                      Shop now
-                    </Text>
-                    <ChevronRight size={13} color="#1E2B23" strokeWidth={2.8} />
-                  </View>
-                </Pressable>
-              </View>
-
-              {/* Graphic collage with tea and snacks */}
-              <View
-                style={{
-                  width: 122,
-                  height: 74,
-                  backgroundColor: '#ffffff',
-                  borderRadius: 16,
-                  padding: 3,
-                  overflow: 'hidden',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Image
-                  source={require('../../assets/images/banner_collage_teatime.webp')}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
+              />
+            ))}
           </ScrollView>
 
-          {/* Dots Indicator matching Images 1, 2, 3 */}
+          {/* Dots Indicator matching number of active banners */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10, gap: 6 }}>
-            {[0, 1, 2].map((i) => {
+            {activeBanners.map((_, i) => {
               const isActive = activeBannerIndex === i;
               return (
                 <Pressable
@@ -1020,7 +988,7 @@ export default function HomeScreen({ navigation }) {
                     bannerIndexRef.current = i;
                     setActiveBannerIndex(i);
                     bannerScrollRef.current?.scrollTo({
-                      x: i * (bannerCardWidth + 14),
+                      x: i * (bannerCardWidth + BANNER_GAP),
                       animated: true,
                     });
                   }}
@@ -1053,25 +1021,25 @@ export default function HomeScreen({ navigation }) {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <Truck size={18} color="#047857" strokeWidth={2.2} style={{ marginRight: 8 }} />
+              <Truck size={18} color="#0A7C47" strokeWidth={2.2} style={{ marginRight: 8 }} />
               <Text style={{ fontSize: 13, color: '#334155' }}>
                 {missingForFree > 0 ? (
                   <>
                     <Text style={{ fontFamily: 'Inter-Regular', fontWeight: 'normal', color: '#334155' }}>
                       Add{' '}
                     </Text>
-                    <Text style={{ fontFamily: 'Inter-ExtraBold', fontWeight: 'normal', color: '#0f172a' }}>
-                      ₹{missingForFree}
+                    <Text style={{ fontFamily: 'Inter-ExtraBold', fontWeight: 'normal', color: '#121712' }}>
+                      ₹{Math.ceil(missingForFree)}
                     </Text>
                     <Text style={{ fontFamily: 'Inter-Regular', fontWeight: 'normal', color: '#334155' }}>
                       {' '}more for{' '}
                     </Text>
-                    <Text style={{ fontFamily: 'Inter-Bold', fontWeight: 'normal', color: '#047857' }}>
+                    <Text style={{ fontFamily: 'Inter-Bold', fontWeight: 'normal', color: '#0A7C47' }}>
                       free delivery
                     </Text>
                   </>
                 ) : (
-                  <Text style={{ fontFamily: 'Inter-Bold', fontWeight: 'normal', color: '#047857' }}>
+                  <Text style={{ fontFamily: 'Inter-Bold', fontWeight: 'normal', color: '#0A7C47' }}>
                     Free delivery applied to your order!
                   </Text>
                 )}
@@ -1084,7 +1052,7 @@ export default function HomeScreen({ navigation }) {
                 style={{
                   width: `${Math.round(freeProgress * 100)}%`,
                   height: '100%',
-                  backgroundColor: '#047857',
+                  backgroundColor: '#0A7C47',
                   borderRadius: 2.5,
                 }}
               />
@@ -1092,6 +1060,9 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
+        <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 16 }}>
+          {[{ name: 'Buy again', screen: 'BuyAgain' }, { name: 'Shopping lists', screen: 'ShoppingLists' }].map(action => <Pressable key={action.screen} accessibilityRole="button" onPress={() => (navigation.getParent() || navigation).navigate(action.screen)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#f0fdf4', borderRadius: 12 }}><Text style={{ fontFamily: fonts.bold, color: '#047857' }}>{action.name}</Text><ChevronRight size={16} color="#047857" /></Pressable>)}
+        </View>
         {/* DAILY ESSENTIALS SECTION matching Images 1, 2, 3 */}
         <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
           <View
@@ -1129,7 +1100,7 @@ export default function HomeScreen({ navigation }) {
                     marginRight: 10,
                   }}
                 >
-                  <ShoppingBag size={18} color="#047857" strokeWidth={2.2} />
+                  <ShoppingBag size={18} color="#0A7C47" strokeWidth={2.2} />
                 </View>
                 <View>
                   <Text
@@ -1137,7 +1108,7 @@ export default function HomeScreen({ navigation }) {
                       fontFamily: 'Inter-ExtraBold',
                       fontSize: 18,
                       fontWeight: 'normal',
-                      color: '#0f172a',
+                      color: '#121712',
                       letterSpacing: -0.3,
                     }}
                   >
@@ -1164,13 +1135,29 @@ export default function HomeScreen({ navigation }) {
               <Pressable
                 onPress={() => {
                   if (activeCategory === 'all') {
-                    navigation.navigate('Main', { screen: 'Categories' });
+                    navigation.navigate('ProductList', { title: 'Daily essentials' });
                   } else {
                     const selected = allCategories.find((c) => c.id === activeCategory);
+                    if (activeCategory && !getCachedCategoryProducts(activeCategory)) {
+                      apiClient
+                        .get('/products', { params: { categoryId: activeCategory, limit: 30 }, __skipErrorToast: true })
+                        .then((res) => {
+                          const prods = res.data?.items || [];
+                          if (prods.length > 0) {
+                            setCachedCategoryProducts(activeCategory, prods);
+                            const imgUrls = prods
+                              .map((p) => p.imageUrl || p.image || p.images?.[0])
+                              .filter((url) => typeof url === 'string' && url.startsWith('http'));
+                            if (imgUrls.length > 0) Image.prefetch(imgUrls);
+                          }
+                        })
+                        .catch(() => {});
+                    }
                     navigation.navigate('Category', {
                       id: activeCategory,
                       name: selected?.name || 'Category',
                       image: selected?.image,
+                      allCategories,
                     });
                   }
                 }}
@@ -1181,13 +1168,13 @@ export default function HomeScreen({ navigation }) {
                     fontFamily: 'Inter-Bold',
                     fontSize: 13.5,
                     fontWeight: 'normal',
-                    color: '#047857',
+                    color: '#0A7C47',
                     marginRight: 3,
                   }}
                 >
                   See all
                 </Text>
-                <ChevronRight size={15} color="#047857" strokeWidth={2.6} />
+                <ChevronRight size={15} color="#0A7C47" strokeWidth={2.6} />
               </Pressable>
             </View>
 
@@ -1212,7 +1199,7 @@ export default function HomeScreen({ navigation }) {
                 </Text>
               </View>
             ) : (
-              displayProducts.slice(0, 12).map((prod) => {
+              displayProducts.slice(0, 4).map((prod) => {
                 const variant = prod.variants?.[0];
                 const price = variant?.offerPrice ?? variant?.price ?? prod.price ?? 0;
                 const mrp = variant?.price ?? prod.price ?? 0;
@@ -1271,7 +1258,7 @@ export default function HomeScreen({ navigation }) {
                           fontFamily: 'Inter-Bold',
                           fontSize: 15,
                           fontWeight: 'normal',
-                          color: '#0f172a',
+                          color: '#121712',
                           lineHeight: 20,
                         }}
                       >
@@ -1294,7 +1281,7 @@ export default function HomeScreen({ navigation }) {
                             fontFamily: 'Inter-ExtraBold',
                             fontSize: 16,
                             fontWeight: 'normal',
-                            color: '#0f172a',
+                            color: '#121712',
                           }}
                         >
                           ₹{price}
@@ -1335,7 +1322,7 @@ export default function HomeScreen({ navigation }) {
                         onPress={() => addItem(prod, variant)}
                         style={{
                           borderWidth: 1.2,
-                          borderColor: '#047857',
+                          borderColor: '#0A7C47',
                           borderRadius: 8,
                           paddingHorizontal: 22,
                           paddingVertical: 7,
@@ -1347,7 +1334,7 @@ export default function HomeScreen({ navigation }) {
                             fontFamily: 'Inter-Bold',
                             fontSize: 13.5,
                             fontWeight: 'normal',
-                            color: '#047857',
+                            color: '#0A7C47',
                           }}
                         >
                           ADD
@@ -1358,7 +1345,7 @@ export default function HomeScreen({ navigation }) {
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
-                          backgroundColor: '#047857',
+                          backgroundColor: '#0A7C47',
                           borderRadius: 8,
                           paddingHorizontal: 6,
                           height: 34,
@@ -1430,7 +1417,7 @@ export default function HomeScreen({ navigation }) {
                     fontFamily: 'Inter-ExtraBold',
                     fontSize: 18,
                     fontWeight: 'normal',
-                    color: '#0f172a',
+                    color: '#121712',
                     letterSpacing: -0.3,
                   }}
                 >
@@ -1459,13 +1446,13 @@ export default function HomeScreen({ navigation }) {
                   fontFamily: 'Inter-Bold',
                   fontSize: 13,
                   fontWeight: 'normal',
-                  color: '#047857',
+                  color: '#0A7C47',
                   marginRight: 2,
                 }}
               >
                 See all
               </Text>
-              <ChevronRight size={15} color="#047857" strokeWidth={2.6} />
+              <ChevronRight size={15} color="#0A7C47" strokeWidth={2.6} />
             </Pressable>
           </View>
 
@@ -1494,7 +1481,7 @@ export default function HomeScreen({ navigation }) {
                   }}
                 >
                   {/* Discount is calculated only from this saved variant's MRP and offer price. */}
-                  {item.discount > 0 && <View
+                  {item.product?.onSale !== false && item.product?.isOnSale !== false && item.product?.availability !== 'UNAVAILABLE' && item.discount > 0 && <View
                     style={{
                       position: 'absolute',
                       top: 8,
@@ -1511,12 +1498,12 @@ export default function HomeScreen({ navigation }) {
                         fontFamily: 'Inter-ExtraBold',
                         fontSize: 10,
                         fontWeight: 'normal',
-                        color: '#0f172a',
+                        color: '#121712',
                         textAlign: 'center',
                         lineHeight: 12,
                       }}
                     >
-                      {item.discount}{'\n'}OFF
+                      {item.discount}%{'\n'}OFF
                     </Text>
                   </View>}
 
@@ -1549,7 +1536,7 @@ export default function HomeScreen({ navigation }) {
                       fontFamily: 'Inter-Bold',
                       fontSize: 13,
                       fontWeight: 'normal',
-                      color: '#0f172a',
+                      color: '#121712',
                       marginTop: 2,
                     }}
                   >
@@ -1571,7 +1558,7 @@ export default function HomeScreen({ navigation }) {
                           fontFamily: 'Inter-ExtraBold',
                           fontSize: 16,
                           fontWeight: 'normal',
-                          color: '#0f172a',
+                          color: '#121712',
                         }}
                       >
                         ₹{item.price}
@@ -1594,7 +1581,7 @@ export default function HomeScreen({ navigation }) {
                         onPress={() => addItem(item.product, item.variant)}
                         style={{
                           borderWidth: 1.2,
-                          borderColor: '#047857',
+                          borderColor: '#0A7C47',
                           borderRadius: 8,
                           paddingHorizontal: 14,
                           paddingVertical: 6,
@@ -1606,7 +1593,7 @@ export default function HomeScreen({ navigation }) {
                             fontFamily: 'Inter-Bold',
                             fontSize: 12.5,
                             fontWeight: 'normal',
-                            color: '#047857',
+                            color: '#0A7C47',
                           }}
                         >
                           ADD
@@ -1617,7 +1604,7 @@ export default function HomeScreen({ navigation }) {
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
-                          backgroundColor: '#047857',
+                          backgroundColor: '#0A7C47',
                           borderRadius: 8,
                           paddingHorizontal: 5,
                           height: 30,
@@ -1672,14 +1659,14 @@ export default function HomeScreen({ navigation }) {
                 marginRight: 9,
               }}
             >
-              <LayoutGrid size={16} color="#047857" strokeWidth={2.2} />
+              <LayoutGrid size={16} color="#0A7C47" strokeWidth={2.2} />
             </View>
             <Text
               style={{
                 fontFamily: 'Inter-ExtraBold',
                 fontSize: 18,
                 fontWeight: 'normal',
-                color: '#0f172a',
+                color: '#121712',
                 letterSpacing: -0.3,
               }}
             >
@@ -1699,7 +1686,7 @@ export default function HomeScreen({ navigation }) {
           >
             {loading && allCategories.length === 0 ? (
               Array.from({ length: 8 }, (_, index) => {
-                const cardW = Math.floor((screenWidth - 32 - 30) / 4);
+                const cardW = Math.max(60, Math.floor((screenWidth - 32 - 30) / 4));
                 return (
                   <View key={`shop-category-skeleton-${index}`} style={{ width: cardW, alignItems: 'center' }}>
                     <Skeleton width={cardW} height={cardW} borderRadius={18} />
@@ -1708,17 +1695,33 @@ export default function HomeScreen({ navigation }) {
                 );
               })
             ) : shopByCategories.map((cat) => {
-              const cardW = Math.floor((screenWidth - 32 - 30) / 4);
+              const cardW = Math.max(60, Math.floor((screenWidth - 32 - 30) / 4));
               const visualSource = getHomeScreenCategoryVisual(cat);
 
               return (
                 <Pressable
                   key={cat.id}
                   onPress={() => {
+                    if (!getCachedCategoryProducts(cat.id)) {
+                      apiClient
+                        .get('/products', { params: { categoryId: cat.id, limit: 30 }, __skipErrorToast: true })
+                        .then((res) => {
+                          const prods = res.data?.items || [];
+                          if (prods.length > 0) {
+                            setCachedCategoryProducts(cat.id, prods);
+                            const imgUrls = prods
+                              .map((p) => p.imageUrl || p.image || p.images?.[0])
+                              .filter((url) => typeof url === 'string' && url.startsWith('http'));
+                            if (imgUrls.length > 0) Image.prefetch(imgUrls);
+                          }
+                        })
+                        .catch(() => {});
+                    }
                     navigation.navigate('Category', {
                       id: cat.id,
                       name: cat.name,
                       image: cat.image,
+                      allCategories,
                     });
                   }}
                   style={{ width: cardW, alignItems: 'center' }}
@@ -1757,13 +1760,13 @@ export default function HomeScreen({ navigation }) {
                       fontFamily: 'Inter-Bold',
                       fontSize: 11.5,
                       fontWeight: 'normal',
-                      color: '#0f172a',
+                      color: '#121712',
                       marginTop: 6,
                       textAlign: 'center',
                       lineHeight: 14,
                     }}
                   >
-                    {cat.name}
+                    {cat.name.replace('& Confectionery', '& Sweets')}
                   </Text>
                 </Pressable>
               );
@@ -1776,42 +1779,34 @@ export default function HomeScreen({ navigation }) {
           style={{
             marginTop: 24,
             marginHorizontal: 16,
-            marginBottom: 34,
-            backgroundColor: '#fff8ec',
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: '#fed7aa',
-            padding: 16,
+            marginBottom: 28,
+            backgroundColor: '#FFF5E6',
+            borderRadius: 24,
+            paddingHorizontal: 20,
+            paddingVertical: 18,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.04,
-            shadowRadius: 4,
-            elevation: 1,
           }}
         >
-          <View style={{ flex: 1, paddingRight: 10 }}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
             <Text
               style={{
-                fontFamily: 'Inter-ExtraBold',
-                fontSize: 16.5,
-                fontWeight: 'normal',
-                color: '#1c1917',
+                fontFamily: fonts.extraBold,
+                fontSize: 18,
+                color: '#1a1614',
                 letterSpacing: -0.3,
+                marginBottom: 4,
               }}
             >
               Join MS Club
             </Text>
             <Text
               style={{
-                fontFamily: 'Inter-Regular',
-                fontSize: 12.5,
-                fontWeight: 'normal',
-                color: '#71717a',
-                marginTop: 3,
+                fontFamily: fonts.regular,
+                fontSize: 13,
                 lineHeight: 18,
+                color: '#52525b',
               }}
             >
               Free delivery on every order and{'\n'}extra 5% off bulk packs.
@@ -1819,19 +1814,18 @@ export default function HomeScreen({ navigation }) {
           </View>
           <View
             style={{
-              backgroundColor: '#18181b',
-              borderRadius: 12,
-              paddingHorizontal: 15,
-              paddingVertical: 9,
+              backgroundColor: '#121814',
+              borderRadius: 14,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
             <Text
               style={{
-                fontFamily: 'Inter-Bold',
+                fontFamily: fonts.bold,
                 fontSize: 13,
-                fontWeight: 'normal',
                 color: '#ffffff',
               }}
             >
@@ -1840,14 +1834,14 @@ export default function HomeScreen({ navigation }) {
           </View>
         </Pressable>
 
-        <View style={{ marginHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
+        <View style={{ marginHorizontal: 16, marginBottom: 16, alignItems: 'flex-start' }}>
           <Text
             accessibilityRole="text"
-            style={{ fontFamily: 'Inter-ExtraBold', fontSize: 38, lineHeight: 44, color: '#cbd6ce', letterSpacing: -1.4 }}
+            style={{ fontFamily: fonts.extraBold, fontSize: 38, lineHeight: 44, color: '#cbd6ce', letterSpacing: -1.4 }}
           >
             ms traders
           </Text>
-          <Text style={{ fontFamily: 'Inter-Regular', fontSize: 12, lineHeight: 17, color: '#647569' }}>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 12.5, lineHeight: 18, color: '#647569' }}>
             Your neighbourhood trader, now on your phone
           </Text>
         </View>
@@ -1870,9 +1864,10 @@ export default function HomeScreen({ navigation }) {
           >
             <View
               style={{
-                backgroundColor: '#0a7942',
+                backgroundColor: '#0A7C47',
                 borderRadius: 16,
-                height: 56,
+                minHeight: 56,
+                paddingVertical: 8,
                 paddingHorizontal: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -1904,7 +1899,7 @@ export default function HomeScreen({ navigation }) {
                   contentFit="contain"
                 />
               ) : (
-                <ShoppingBag size={20} color="#0a7942" />
+                <ShoppingBag size={20} color="#0A7C47" />
               )}
             </View>
 
