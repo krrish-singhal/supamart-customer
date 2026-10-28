@@ -36,9 +36,9 @@ export function NotificationsProvider({ children }) {
     let isFirstSnapshot = true;
 
     const q = query(
-      collection(db, 'users', uid, 'notifications', { pollInterval: 5000 }),
+      collection(db, 'users', uid, 'notifications', { pollInterval: 90000 }),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(15)
     );
     const unsubscribe = onSnapshot(
       q,
@@ -97,16 +97,11 @@ export function NotificationsProvider({ children }) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Firestore rules deny ALL client writes to users/{uid}/notifications outright
-  // (`allow write: if false` — see backend/firebase/firestore.rules; only the backend's
-  // Admin SDK can write there). A direct writeBatch() from here would fail permission-
-  // denied on every single call — silently, if wrapped in a try/catch — which is exactly
-  // why the bell badge never used to clear. This goes through the backend instead; the
-  // resulting Firestore write still comes back through the onSnapshot listener above,
-  // same as any other real-time update.
   const markAllRead = useCallback(async () => {
     if (!uid) return;
     if (!notifications.some((n) => !n.read)) return;
+    // Optimistically mark all as read immediately in UI
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     try {
       await apiClient.patch('/notifications/mark-all-read');
     } catch (err) {
@@ -114,8 +109,20 @@ export function NotificationsProvider({ children }) {
     }
   }, [uid, notifications]);
 
+  const markAsRead = useCallback(async (notifId) => {
+    if (!uid || !notifId) return;
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notifId ? { ...n, read: true } : n))
+    );
+    try {
+      await apiClient.patch(`/notifications/${notifId}/read`);
+    } catch (err) {
+      console.error('markAsRead failed', err);
+    }
+  }, [uid]);
+
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, markAllRead, activeDelayAlert, dismissDelayAlert }}>
+    <NotificationsContext.Provider value={{ notifications, unreadCount, markAllRead, markAsRead, activeDelayAlert, dismissDelayAlert }}>
       {children}
     </NotificationsContext.Provider>
   );

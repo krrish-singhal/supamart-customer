@@ -24,6 +24,8 @@ import { NotificationsProvider } from './src/context/NotificationsContext';
 import { NetworkProvider, useNetwork } from './src/context/NetworkContext';
 import OfflineScreen from './src/screens/OfflineScreen';
 import DeliveryDelayNotification from './src/components/DeliveryDelayNotification';
+import FreeDeliveryNotification from './src/components/FreeDeliveryNotification';
+import ShopClosedNotification from './src/components/ShopClosedNotification';
 
 LogBox.ignoreLogs([
   'Background location is limited in Expo Go',
@@ -61,7 +63,9 @@ function AppContent() {
   return (
     <>
       <Navigation />
+      <FreeDeliveryNotification />
       <DeliveryDelayNotification />
+      <ShopClosedNotification />
       {isOffline && !offlineDismissed && (
         <View style={[StyleSheet.absoluteFillObject, { zIndex: 999999, backgroundColor: '#ffffff' }]}>
           <OfflineScreen onRetry={checkConnection} onGoHome={handleGoHome} />

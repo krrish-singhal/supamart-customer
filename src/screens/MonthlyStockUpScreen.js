@@ -55,29 +55,7 @@ export default function MonthlyStockUpScreen({ navigation }) {
       setLoading(false);
     };
 
-    const unsubscribe = onSnapshot(
-      query(collection(db, 'products'), where('isMonthlyStockUp', '==', true)),
-      (snapshot) => {
-        if (cancelled) return;
-        firstSnapshotLoaded = true;
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'removed') liveProducts.set(change.doc.id, null);
-          else liveProducts.set(change.doc.id, { id: change.doc.id, ...change.doc.data() });
-        });
-        publishProducts();
-      },
-      (error) => {
-        snapshotFailed = true;
-        console.warn('Monthly stock-up live update unavailable:', error?.message);
-        if (!cancelled && apiLoaded && !apiSucceeded) {
-          setProducts([]);
-          setLoading(false);
-        }
-      }
-    );
-
     const loadAllPages = async () => {
-      // Start the first page before continuing with its cursor.
       try {
         let cursor = null;
         do {
@@ -90,17 +68,16 @@ export default function MonthlyStockUpScreen({ navigation }) {
           cursor = data?.cursor || null;
         } while (cursor);
         apiSucceeded = true;
-      } catch {
-        // Use the real-time catalog snapshot as the fallback.
+      } catch (err) {
+        console.warn('Monthly stock-up API load error:', err?.message || err);
       } finally {
         if (cancelled) return;
-        apiLoaded = true;
-        publishProducts();
-        if (!apiSucceeded && snapshotFailed && !firstSnapshotLoaded) setLoading(false);
+        setProducts(Array.from(baseProducts.values()));
+        setLoading(false);
       }
     };
     loadAllPages();
-    return () => { cancelled = true; unsubscribe(); };
+    return () => { cancelled = true; };
   }, []);
 
 

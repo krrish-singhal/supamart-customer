@@ -480,20 +480,31 @@ export default function DeliveryInstructionsScreen({ navigation, route }) {
         </Pressable>
       </ScrollView>
 
-      {/* Bottom Sticky Action Button matching Image 1 & 2 */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+      {/* Bottom Sticky Action Button with Maximum Visibility */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Pressable
           onPress={handleSave}
+          accessibilityRole="button"
+          accessibilityLabel={
+            totalSelectedCount > 0
+              ? `Save ${totalSelectedCount} delivery instructions`
+              : 'Save delivery instructions'
+          }
           style={({ pressed }) => [
             styles.saveButton,
-            pressed && { opacity: 0.9 },
+            pressed && styles.saveButtonPressed,
           ]}
         >
-          <Text style={styles.saveButtonText}>
-            {totalSelectedCount > 0
-              ? `Save ${totalSelectedCount} instruction${totalSelectedCount > 1 ? 's' : ''}`
-              : 'Save instructions'}
-          </Text>
+          <View style={styles.saveButtonInner}>
+            <View style={styles.saveButtonIconCircle}>
+              <Check size={16} color="#047857" strokeWidth={3} />
+            </View>
+            <Text style={styles.saveButtonText}>
+              {totalSelectedCount > 0
+                ? `Save ${totalSelectedCount} Instruction${totalSelectedCount > 1 ? 's' : ''}`
+                : 'Save Instructions'}
+            </Text>
+          </View>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -789,26 +800,55 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
     backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderColor: '#f1f5f9',
+    borderTopWidth: 1.5,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 8,
   },
   saveButton: {
+    width: '100%',
     height: 52,
     borderRadius: 16,
-    backgroundColor: '#047857',
+    backgroundColor: '#0A7C47',
+    borderWidth: 1.5,
+    borderColor: '#065f35',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#047857',
+    shadowColor: '#0A7C47',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 5,
+  },
+  saveButtonPressed: {
+    backgroundColor: '#08673a',
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
+  },
+  saveButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  saveButtonIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveButtonText: {
     fontFamily: fonts.bold,
-    fontSize: 15.5,
+    fontSize: 16,
     color: '#ffffff',
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
 });

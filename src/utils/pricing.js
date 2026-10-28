@@ -8,16 +8,20 @@ export const FREE_DELIVERY_THRESHOLD = 3000;
 export { haversineKm };
 
 export function computeBill(subtotal, discount = 0, taxPercent = DEFAULT_TAX_PERCENT, config = null, address = null) {
-  const baseTotal = Math.max(subtotal - discount, 0);
-  const tax = Number(((baseTotal * taxPercent) / 100).toFixed(2));
+  const tax = Number(((subtotal * taxPercent) / 100).toFixed(2));
   
   const { distanceKm, withinRadius, coordinatesValid } = evaluateServiceArea(address?.lat, address?.lng);
-  let deliveryFee = coordinatesValid ? deliveryChargeForDistance(distanceKm) : DELIVERY_FEE;
-
-  if (subtotal >= (config?.freeDeliveryThreshold ?? FREE_DELIVERY_THRESHOLD)) {
-    deliveryFee = 0;
+  let normalDeliveryFee = (coordinatesValid && withinRadius) ? deliveryChargeForDistance(distanceKm) : DELIVERY_FEE;
+  if (!normalDeliveryFee || normalDeliveryFee <= 0) {
+    normalDeliveryFee = DELIVERY_FEE;
   }
+
+  const threshold = config?.freeDeliveryThreshold ?? FREE_DELIVERY_THRESHOLD;
+  const isFreeDelivery = subtotal > 0 && subtotal >= threshold;
+  const deliveryFee = isFreeDelivery ? 0 : normalDeliveryFee;
   
-  const toPay = Number((baseTotal + tax + deliveryFee).toFixed(2));
-  return { deliveryFee, tax, taxPercent, baseTotal, toPay, distanceKm, withinRadius, coordinatesValid };
+  // From the total reduce the coupon amount; no need to adjust GST
+  const toPay = Number(Math.max(0, subtotal + tax + deliveryFee - discount).toFixed(2));
+  const baseTotal = subtotal;
+  return { deliveryFee, tax, taxPercent, baseTotal, toPay, distanceKm, withinRadius, coordinatesValid, isFreeDelivery, threshold };
 }

@@ -16,6 +16,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { getProductImageSource } from '../utils/productImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { fonts } from '../theme/typography';
+import apiClient from '../services/api';
 
 export default function OrderConfirmationScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -29,6 +30,28 @@ export default function OrderConfirmationScreen({ route, navigation }) {
     paymentMethod = 'UPI app',
     deliveryTime = 'View live order estimate',
   } = route.params || {};
+
+  const [resolvedOrderId, setResolvedOrderId] = useState(
+    orderId && orderId !== 'undefined' ? orderId : null
+  );
+  const [resolvedOrderNo, setResolvedOrderNo] = useState(
+    orderNo && orderNo !== '—' && orderNo !== 'undefined' ? orderNo : null
+  );
+
+  useEffect(() => {
+    if (!resolvedOrderId) {
+      apiClient
+        .get('/orders/mine', { __skipErrorToast: true })
+        .then(({ data }) => {
+          const latest = data?.items?.[0];
+          if (latest?.id) {
+            setResolvedOrderId(latest.id);
+            if (latest.orderNo) setResolvedOrderNo(latest.orderNo);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [resolvedOrderId]);
 
   const [deliveryInstructions, setDeliveryInstructions] = useState(null);
 
@@ -650,8 +673,8 @@ export default function OrderConfirmationScreen({ route, navigation }) {
             <Pressable
               onPress={() =>
                 navigation.replace('OrderTracking', {
-                  orderId,
-                  orderNo,
+                  orderId: resolvedOrderId || orderId,
+                  orderNo: resolvedOrderNo || orderNo,
                   fromCheckout: true,
                 })
               }

@@ -188,9 +188,10 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const currentVariant = selectedVariant || (variants.length > 1 ? variants[1] : variants[0]);
   const currentVariantUnavailable = !currentVariant || isProductUnavailable(product, currentVariant);
-  const price = currentVariant?.offerPrice ?? currentVariant?.price ?? 0;
+  const isProductOnSale = product?.onSale !== false && product?.isOnSale !== false && product?.availability !== 'UNAVAILABLE';
+  const price = isProductOnSale && currentVariant?.offerPrice != null ? currentVariant.offerPrice : (currentVariant?.price ?? 0);
   const mrp = currentVariant?.price ?? 0;
-  const discount = getDiscountPercent(currentVariant);
+  const discount = isProductOnSale ? getDiscountPercent(currentVariant) : 0;
   const currentQty = product ? getQty(product.id, currentVariant?.id) : 0;
   const productTags = useMemo(() => getProductTags(product), [product]);
 

@@ -11,7 +11,7 @@ import {
   Star,
 } from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { collection, query, where, onSnapshot } from '../services/reads';
+import { collection, query, where, getDocs, limit, onSnapshot } from '../services/reads';
 import { db } from '../config/firebase';
 import { AuthContext } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -121,29 +121,27 @@ function EmptyOrders({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch empty state categories and featured products once on mount
   useEffect(() => {
-    const unsubCats = onSnapshot(
-      query(collection(db, 'categories'), where('isActive', '==', true)),
-      (snap) => {
-        const topLevel = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
+    let active = true;
+    Promise.allSettled([
+      getDocs(query(collection(db, 'categories'), where('isActive', '==', true))),
+      getDocs(query(collection(db, 'products'), where('isFeatured', '==', true), limit(8))),
+    ]).then(([catsSnap, featSnap]) => {
+      if (!active) return;
+      if (catsSnap.status === 'fulfilled') {
+        const topLevel = catsSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
         setCategories(topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 6));
-      },
-      (err) => console.warn('OrdersScreen categories listener error:', err)
-    );
-    const unsubFeatured = onSnapshot(
-      query(collection(db, 'products'), where('isFeatured', '==', true)),
-      (snap) => {
-        setFeatured(snap.docs.map((d) => ({ id: d.id, ...d.data() })).slice(0, 8));
-        setLoading(false);
-      },
-      (err) => {
-        console.warn('OrdersScreen featured products listener error:', err);
-        setLoading(false);
       }
-    );
+      if (featSnap.status === 'fulfilled') {
+        setFeatured(featSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })).slice(0, 8));
+      }
+      setLoading(false);
+    }).catch(() => {
+      if (active) setLoading(false);
+    });
     return () => {
-      unsubCats();
-      unsubFeatured();
+      active = false;
     };
   }, []);
 
@@ -293,7 +291,12 @@ export default function OrdersScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      if (userProfile) fetchOrders();
+      if (!userProfile) return;
+      fetchOrders();
+      const interval = setInterval(() => {
+        fetchOrders(true);
+      }, 5000);
+      return () => clearInterval(interval);
     }, [userProfile, fetchOrders])
   );
   const handleBack = () => {

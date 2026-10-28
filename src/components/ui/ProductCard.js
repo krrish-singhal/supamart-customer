@@ -126,13 +126,15 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
 function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, style, layout = 'grid', cardWidth }) {
   const variant = item.variants?.[0];
   const mrp = Number(variant?.mrp ?? variant?.price ?? item.mrp ?? item.price ?? 0);
-  const rawOffer = variant ? (variant.offerPrice ?? variant.sellingPrice) : item.offerPrice;
+  const rawOffer = variant?.offerPrice != null ? variant.offerPrice : item.offerPrice;
   const offerPrice = (rawOffer != null && rawOffer !== '' && !isNaN(Number(rawOffer)) && Number(rawOffer) > 0)
     ? Number(rawOffer)
     : null;
-  const sellingPrice = offerPrice != null ? offerPrice : mrp;
-  const hasDiscount = mrp > 0 && offerPrice != null && offerPrice < mrp;
-  const discount = hasDiscount ? Math.round(((mrp - offerPrice) / mrp) * 100) : 0;
+  const isProductOnSale = item.onSale !== false && item.isOnSale !== false && item.availability !== 'UNAVAILABLE';
+  const effectiveOfferPrice = isProductOnSale ? offerPrice : null;
+  const sellingPrice = effectiveOfferPrice != null ? effectiveOfferPrice : Number(variant?.sellingPrice ?? variant?.price ?? item.price ?? mrp);
+  const hasDiscount = isProductOnSale && mrp > 0 && effectiveOfferPrice != null && effectiveOfferPrice < mrp && (variant?.discountPercent !== 0);
+  const discount = hasDiscount ? Math.round(((mrp - effectiveOfferPrice) / mrp) * 100) : 0;
   const strikeMrp = hasDiscount ? mrp : null;
 
   const stockStatus = getStockStatus(item, variant);
@@ -180,13 +182,13 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
         >
           {imageSource ? (
             <Image
+              key={`img-${item.id}`}
               source={imageSource}
               style={{ width: '100%', height: '100%' }}
               contentFit="contain"
               cachePolicy="memory-disk"
               priority="high"
               transition={0}
-              recyclingKey={item.id}
             />
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -478,13 +480,13 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
         <View style={{ width: 96, height: 96, borderRadius: 4, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           {imageSource ? (
             <Image
+              key={`img-${item.id}`}
               source={imageSource}
               style={{ width: '100%', height: '100%' }}
               contentFit="contain"
               cachePolicy="memory-disk"
               priority="high"
               transition={0}
-              recyclingKey={item.id}
             />
           ) : (
             <ShoppingBag size={28} color="#cbd5e1" />
@@ -503,7 +505,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             <View style={{ marginRight: discount > 0 ? 14 : 0 }}>
               <Text style={{ fontFamily: 'Inter-Regular', fontSize: 10, fontWeight: 'normal', color: '#94a3b8' }}>MRP</Text>
               <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 15, fontWeight: 'normal', color: '#0f172a' }}>
-                ₹{(offerPrice ?? mrp).toFixed(0)}
+                ₹{(effectiveOfferPrice ?? mrp).toFixed(0)}
               </Text>
             </View>
             {discount > 0 && (
@@ -546,13 +548,13 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
       <View style={{ width: '100%', height: 110, backgroundColor: '#f8fafc' }}>
         {imageSource ? (
           <Image
+            key={`img-${item.id}`}
             source={imageSource}
             style={{ width: '100%', height: '100%' }}
             contentFit="contain"
             cachePolicy="memory-disk"
             priority="high"
             transition={0}
-            recyclingKey={item.id}
           />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -576,7 +578,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
           <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 15, fontWeight: 'normal', color: '#0f172a' }}>
-            ₹{(offerPrice ?? mrp).toFixed(0)}
+            ₹{(effectiveOfferPrice ?? mrp).toFixed(0)}
           </Text>
           {discount > 0 && (
             <Text style={{ fontFamily: 'Inter-ExtraBold', fontSize: 10, fontWeight: 'normal', color: '#16a34a', marginLeft: 6 }}>{discount}% OFF</Text>
@@ -591,4 +593,17 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
   );
 }
 
-export default React.memo(ProductCard);
+export default React.memo(ProductCard, (prev, next) => {
+  return (
+    prev.item?.id === next.item?.id &&
+    prev.item?.name === next.item?.name &&
+    prev.item?.price === next.item?.price &&
+    prev.item?.offerPrice === next.item?.offerPrice &&
+    prev.item?.images?.[0] === next.item?.images?.[0] &&
+    prev.item?.imageUrl === next.item?.imageUrl &&
+    prev.item?.availability === next.item?.availability &&
+    prev.qty === next.qty &&
+    prev.cardWidth === next.cardWidth &&
+    prev.layout === next.layout
+  );
+});

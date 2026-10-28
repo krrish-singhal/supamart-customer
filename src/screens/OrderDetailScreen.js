@@ -73,7 +73,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       .catch(() => {});
 
     const unsub = onSnapshot(
-      doc(db, 'orders', orderId),
+      doc(db, 'orders', orderId, { pollInterval: 15000 }),
       (snap) => {
         if (snap.exists() && isMounted) {
           setOrder({ id: snap.id, ...snap.data() });
@@ -243,6 +243,8 @@ export default function OrderDetailScreen({ route, navigation }) {
                     >
                       {order?.status === 'OUT_FOR_DELIVERY'
                         ? 'On the way · arriving in 9 mins'
+                        : (order?.deliveryPartner?.name || order?.deliveryBoyName)
+                        ? `Assigned to ${order?.deliveryPartner?.name || order?.deliveryBoyName}`
                         : order?.status === 'PACKED'
                         ? 'Order packed · assigning delivery partner'
                         : 'Order confirmed · preparing your items'}

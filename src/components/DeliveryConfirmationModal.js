@@ -35,7 +35,7 @@ export default function DeliveryConfirmationModal() {
     }
 
     const q = query(
-      collection(db, 'orders'),
+      collection(db, 'orders', { pollInterval: 120000 }),
       where('userId', '==', userProfile.id),
       where('status', '==', 'PENDING_CONFIRMATION')
     );

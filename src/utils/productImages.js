@@ -24,15 +24,15 @@ import { optimizeCloudinaryUrl } from './cloudinaryImage';
 const productImages = {
   "Toor Dal (Unpolished)": require("../../assets/Cleaned_Products/Kadala Paruppu Chana Dal.webp"),
   "Toor Dal": require("../../assets/Cleaned_Products/Kadala Paruppu Chana Dal.webp"),
-  "Full Cream Milk": require("../../assets/Brand_Logos/Milma.webp"),
-  "Milk": require("../../assets/Brand_Logos/Milma.webp"),
+  "Full Cream Milk": require("../../assets/Cleaned_Products/full_cream_milk.jpg"),
+  "Milk": require("../../assets/Cleaned_Products/full_cream_milk.jpg"),
   "Tomato (Local)": require("../../assets/Fresh Vegetables/tomato-local__prod-tomato-local.webp"),
   "Tomato": require("../../assets/Fresh Vegetables/tomato-local__prod-tomato-local.webp"),
   "Sweet Corn": require("../../assets/Fresh Vegetables/sweet-corn__prod-sweet-corn.webp"),
-  "Green Chilli": require("../../assets/Fresh Vegetables/green-chilli__prod-green-chilli.webp"),
+  "Green Chilli": require("../../assets/Cleaned_Products/Green Chilly.webp"),
   "Bottle Gourd": require("../../assets/Cleaned_Products/Bottle Gourd.webp"),
-  "Onion": require("../../assets/Fresh Vegetables/onion__prod-onion.webp"),
-  "Potato": require("../../assets/Fresh Vegetables/potato__ywIos8c1XC5PEAUUZ8f0.webp"),
+  "Onion": require("../../assets/Cleaned_Products/Onion.webp"),
+  "Potato": require("../../assets/Cleaned_Products/Potato.webp"),
   "Local Greens (Bal Chambu)": require("../../assets/Cleaned_Products/Local Greens Bal Chambu.webp"),
   "Vada Paruppu (Urad Dal)": require("../../assets/Cleaned_Products/Vada Paruppu Urad Dal.webp"),
   "Dream Cream Orange / Cashewnut": require("../../assets/Cleaned_Products/Dream Cream Orange Cashewnut.webp"),
@@ -370,10 +370,35 @@ const productImages = {
 
 
 
+  "Sliced Bread": require("../../assets/Cleaned_Products/Sliced Bread.jpg"),
+  "Modern Bread": require("../../assets/Cleaned_Products/Sliced Bread.jpg"),
+  "Bread": require("../../assets/Cleaned_Products/Sliced Bread.jpg"),
+  "Farm Fresh Eggs": require("../../assets/Cleaned_Products/Farm Fresh Eggs.jpg"),
+  "Eggs": require("../../assets/Cleaned_Products/Farm Fresh Eggs.jpg"),
+  "Egg": require("../../assets/Cleaned_Products/Farm Fresh Eggs.jpg"),
+  "Aashirvaad Atta": require("../../assets/Cleaned_Products/Elite Atta.webp"),
+  "Atta": require("../../assets/Cleaned_Products/Elite Atta.webp"),
+  "Sunflower Oil": require("../../assets/Cleaned_Products/Ruchi Gold Palm Oil.webp"),
+  "Cooking Oil": require("../../assets/Cleaned_Products/Ruchi Gold Palm Oil.webp"),
+  "Oil": require("../../assets/Cleaned_Products/Ruchi Gold Palm Oil.webp"),
 };
 
 // Direct Firestore Product ID mapping for newly user-provided local assets
 export const productImagesById = {
+  // Curated list starter IDs
+  "p-rice": require("../../assets/Cleaned_Products/786 Surekha Rice.webp"),
+  "p-atta": require("../../assets/Cleaned_Products/Elite Atta.webp"),
+  "p-dal": require("../../assets/Rice Atta & Grains/kadala-paruppu-chana-dal__bsJzTmYafFijM3dEAGpP.webp"),
+  "p-oil": require("../../assets/Cleaned_Products/Ruchi Gold Palm Oil.webp"),
+  "p-tomato": require("../../assets/Fresh Vegetables/tomato-local__prod-tomato-local.webp"),
+  "p-onion": require("../../assets/Fresh Vegetables/onion__prod-onion.webp"),
+  "p-potato": require("../../assets/Fresh Vegetables/potato__ywIos8c1XC5PEAUUZ8f0.webp"),
+  "p-chilli": require("../../assets/Fresh Vegetables/green-chilli__prod-green-chilli.webp"),
+  "p-milk": require("../../assets/Cleaned_Products/full_cream_milk.jpg"),
+  "p-bread": require("../../assets/Cleaned_Products/Sliced Bread.jpg"),
+  "p-eggs": require("../../assets/Cleaned_Products/Farm Fresh Eggs.jpg"),
+  "p-biscuit": require("../../assets/Cleaned_Products/50-50 Biscuits.webp"),
+
   // Dry Fruits & Nuts
   "DOCUVuLTTkIO0DCgtTH9": require("../../assets/Dry Fruits & Nuts/cashew-split__DOCUVuLTTkIO0DCgtTH9.webp"),
   "Ym4Ei0GmBtFhGsSSwYFs": require("../../assets/Dry Fruits & Nuts/dates-syrup__Ym4Ei0GmBtFhGsSSwYFs.webp"),

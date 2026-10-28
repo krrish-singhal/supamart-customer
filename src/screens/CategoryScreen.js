@@ -165,7 +165,7 @@ export default function CategoryScreen({ route, navigation }) {
     let isCancelled = false;
     let receivedLiveCategories = false;
     const unsubscribe = onSnapshot(
-      query(collection(db, 'categories'), where('isActive', '==', true)),
+      query(collection(db, 'categories', { pollInterval: 180000 }), where('isActive', '==', true)),
       (snapshot) => {
         if (isCancelled) return;
         receivedLiveCategories = true;
@@ -212,7 +212,7 @@ export default function CategoryScreen({ route, navigation }) {
         if (cancelled) return;
         apiClient
           .get('/products', {
-            params: { categoryId: cat.id, limit: 30 },
+            params: { categoryId: cat.id, limit: 100 },
             __skipErrorToast: true,
           })
           .then((res) => {
@@ -289,7 +289,12 @@ export default function CategoryScreen({ route, navigation }) {
       list.sort(compareProductsDeterministic);
       if (list.length > 0 || apiLoadFinished) {
         categoryProductsCache.set(currentCatId, list);
-        setProducts(list);
+        setProducts((prev) => {
+          if (prev.length === list.length && prev.every((p, idx) => p.id === list[idx]?.id)) {
+            return prev;
+          }
+          return list;
+        });
         setProductsLoading(false);
         setInitialLoading(false);
 
@@ -306,70 +311,35 @@ export default function CategoryScreen({ route, navigation }) {
     const fetchCategoryProducts = async () => {
       try {
         let cursor = null;
-        let isFirstPage = true;
+        const allFetched = [];
         do {
           const { data } = await apiClient.get('/products', {
-            params: { categoryId: currentCatId, limit: 50, ...(cursor ? { cursor } : {}) },
+            params: { categoryId: currentCatId, limit: 100, ...(cursor ? { cursor } : {}) },
             __skipErrorToast: true,
           });
           if (isCancelled) return;
-          (data?.items || []).forEach((product) => productsMap.set(product.id, product));
-          cursor = data?.cursor || null;
-
-          if (isFirstPage) {
-            isFirstPage = false;
-            updateProductsFromMap(true);
+          if (Array.isArray(data?.items)) {
+            allFetched.push(...data.items);
           }
+          cursor = data?.cursor || null;
         } while (cursor);
+
+        if (isCancelled) return;
+        allFetched.forEach((product) => productsMap.set(product.id, product));
         apiLoadFinished = true;
         updateProductsFromMap(true);
-      } catch {
+      } catch (err) {
+        console.warn('Category products API load error:', err?.message || err);
         apiLoadFinished = true;
         updateProductsFromMap(true);
+        if (!isCancelled && productsMap.size === 0 && !categoryProductsCache.has(currentCatId)) {
+          setError(true);
+          setProductsLoading(false);
+          setInitialLoading(false);
+        }
       }
     };
     fetchCategoryProducts();
-
-    // 2. Real-time Firestore onSnapshot listeners for live pricing & stock changes
-    try {
-      chunks.forEach((batch) => {
-        const q = query(
-          collection(db, 'products'),
-          where('categoryId', 'in', batch),
-          orderBy('createdAt', 'desc')
-        );
-        const unsub = onSnapshot(
-          q,
-          (snapshot) => {
-            if (isCancelled) return;
-            snapshot.docChanges().forEach((change) => {
-              const docId = change.doc.id;
-              if (change.type === 'removed') {
-                productsMap.delete(docId);
-              } else {
-                productsMap.set(docId, { id: docId, ...change.doc.data() });
-              }
-            });
-            updateProductsFromMap(true);
-          },
-          (err) => {
-            console.warn('Category products snapshot error:', err.message || err);
-            updateProductsFromMap(true);
-            if (!isCancelled && productsMap.size === 0 && !categoryProductsCache.has(currentCatId)) {
-              setError(true);
-              setProductsLoading(false);
-              setInitialLoading(false);
-            }
-          }
-        );
-        unsubs.push(unsub);
-      });
-    } catch (err) {
-      console.error(err);
-      if (!isCancelled && productsMap.size === 0 && !categoryProductsCache.has(currentCatId)) setError(true);
-      setProductsLoading(false);
-      setInitialLoading(false);
-    }
 
     return () => {
       isCancelled = true;
@@ -443,6 +413,7 @@ export default function CategoryScreen({ route, navigation }) {
   const renderProduct = useCallback(
     ({ item }) => (
       <ProductCard
+        key={item.id}
         item={item}
         layout="categoryGrid"
         cardWidth={cardWidth}
@@ -866,7 +837,7 @@ export default function CategoryScreen({ route, navigation }) {
             <FlatList
               key={`cat-grid-${currentCatId}-${columns}`}
               data={visibleProducts}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item, index) => (item?.id ? String(item.id) : `cat-prod-${index}`)}
               extraData={items}
               numColumns={columns}
               columnWrapperStyle={columns > 1 ? { gap: GRID_GAP, justifyContent: 'flex-start' } : undefined}
@@ -878,13 +849,12 @@ export default function CategoryScreen({ route, navigation }) {
               style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
               renderItem={renderProduct}
-              initialNumToRender={6}
-              maxToRenderPerBatch={6}
-              windowSize={5}
-              updateCellsBatchingPeriod={50}
+              initialNumToRender={12}
+              maxToRenderPerBatch={12}
+              windowSize={11}
               scrollEventThrottle={16}
               overScrollMode="never"
-              removeClippedSubviews
+              removeClippedSubviews={false}
             />
           )}
         </View>

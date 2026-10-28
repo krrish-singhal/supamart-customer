@@ -7,7 +7,7 @@ export default {
   "orientation": "portrait",
   "icon": "./assets/icon.png",
   "scheme": "mstraders",
-  "userInterfaceStyle": "automatic",
+  "userInterfaceStyle": "light",
   "newArchEnabled": true,
   "notification": {
     "icon": "./assets/notification-icon.png",
@@ -56,7 +56,7 @@ export default {
     ]
   },
   "web": {
-    "favicon": "./MS-Traders-logo-kit/web/favicon-48.png",
+    "favicon": "./assets/branding/favicon-48.png",
     "name": "MS Traders",
     "themeColor": "#0A7C47",
     "backgroundColor": "#0A7C47"

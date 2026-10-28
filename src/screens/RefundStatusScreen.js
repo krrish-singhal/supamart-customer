@@ -216,9 +216,20 @@ export default function RefundStatusScreen({ route, navigation }) {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const isFormValid = selectedItemIds.length > 0 && selectedIssue.trim().length > 0;
+  const isOther = selectedIssue === 'Other';
+  const hasReasonIfOther = !isOther || otherReasonText.trim().length > 0;
+  const isFormValid = selectedItemIds.length > 0 && selectedIssue.trim().length > 0 && hasReasonIfOther;
 
   const handleSubmitRefundRequest = async () => {
+    if (selectedIssue === 'Other' && !otherReasonText.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Reason is required',
+        text2: 'Please describe the reason for choosing Other.',
+      });
+      setOtherReasonModal(true);
+      return;
+    }
     if (!selectedOrder?.id || !isFormValid || submitting) return;
     setSubmitting(true);
 
@@ -988,7 +999,10 @@ export default function RefundStatusScreen({ route, navigation }) {
           visible={otherReasonModal}
           transparent
           animationType="fade"
-          onRequestClose={() => setOtherReasonModal(false)}
+          onRequestClose={() => {
+            if (!otherReasonText.trim()) setSelectedIssue('');
+            setOtherReasonModal(false);
+          }}
         >
           <View
             style={{
@@ -1015,10 +1029,13 @@ export default function RefundStatusScreen({ route, navigation }) {
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <Text style={{ fontSize: 17, fontWeight: '900', color: '#0f172a' }}>
-                  Specify Reason
+                  Specify Reason <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
                 <Pressable
-                  onPress={() => setOtherReasonModal(false)}
+                  onPress={() => {
+                    if (!otherReasonText.trim()) setSelectedIssue('');
+                    setOtherReasonModal(false);
+                  }}
                   hitSlop={8}
                   style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}
                 >
@@ -1027,7 +1044,7 @@ export default function RefundStatusScreen({ route, navigation }) {
               </View>
 
               <Text style={{ fontSize: 13, color: '#64748b', marginBottom: 12, lineHeight: 18 }}>
-                Please provide details about what was wrong with the items for the shop admin.
+                Please provide details about what was wrong with the items. <Text style={{ fontWeight: '700', color: '#ef4444' }}>A reason is mandatory</Text> for the shop admin to process your refund.
               </Text>
 
               <TextInput
@@ -1035,12 +1052,12 @@ export default function RefundStatusScreen({ route, navigation }) {
                 numberOfLines={4}
                 value={otherReasonText}
                 onChangeText={setOtherReasonText}
-                placeholder="e.g. Received incorrect variant, broken seal, expired..."
+                placeholder="e.g. Received incorrect variant, broken seal, expired (Required)..."
                 placeholderTextColor="#94a3b8"
                 style={{
                   backgroundColor: '#f8fafc',
                   borderWidth: 1.5,
-                  borderColor: '#e2e8f0',
+                  borderColor: otherReasonText.trim() ? '#047857' : '#fca5a5',
                   borderRadius: 14,
                   padding: 12,
                   fontSize: 13.5,
@@ -1053,7 +1070,10 @@ export default function RefundStatusScreen({ route, navigation }) {
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Pressable
-                  onPress={() => setOtherReasonModal(false)}
+                  onPress={() => {
+                    if (!otherReasonText.trim()) setSelectedIssue('');
+                    setOtherReasonModal(false);
+                  }}
                   style={{
                     flex: 1,
                     height: 46,
@@ -1066,9 +1086,10 @@ export default function RefundStatusScreen({ route, navigation }) {
                   <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748b' }}>Cancel</Text>
                 </Pressable>
                 <Pressable
+                  disabled={!otherReasonText.trim()}
                   onPress={() => {
                     if (!otherReasonText.trim()) {
-                      Toast.show({ type: 'info', text1: 'Please enter a brief reason' });
+                      Toast.show({ type: 'error', text1: 'Reason is required', text2: 'Please describe the issue.' });
                       return;
                     }
                     setSelectedIssue('Other');
@@ -1078,7 +1099,7 @@ export default function RefundStatusScreen({ route, navigation }) {
                     flex: 1,
                     height: 46,
                     borderRadius: 12,
-                    backgroundColor: '#047857',
+                    backgroundColor: otherReasonText.trim() ? '#047857' : '#94a3b8',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}

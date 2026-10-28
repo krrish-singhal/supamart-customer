@@ -127,7 +127,45 @@ function getNotifConfig(item) {
     };
   }
 
-  // 5. Restock alert
+  // 5. Low Stock Alert
+  if (
+    type === 'LOW_STOCK' ||
+    title.includes('low stock') ||
+    title.includes('running low') ||
+    (body.includes('only') && body.includes('left in stock'))
+  ) {
+    return {
+      Icon: Package,
+      iconColor: '#d97706',
+      iconBg: '#fffbeb',
+      iconBorder: '#fde68a',
+      badgeText: 'LOW STOCK',
+      badgeBg: '#fffbeb',
+      badgeColor: '#b45309',
+      actionText: 'Buy now',
+    };
+  }
+
+  // 6. Admin / Support Reply
+  if (
+    type === 'ISSUE_REPLY' ||
+    type === 'SUPPORT_REPLY' ||
+    title.includes('reply from') ||
+    title.includes('ms traders')
+  ) {
+    return {
+      Icon: Bell,
+      iconColor: '#0A7C47',
+      iconBg: '#e6f4ea',
+      iconBorder: '#a7f3d0',
+      badgeText: 'SUPPORT',
+      badgeBg: '#ecfdf5',
+      badgeColor: '#059669',
+      actionText: item.data?.orderId ? 'View order' : 'View details',
+    };
+  }
+
+  // 7. Restock alert
   if (type === 'RESTOCK' || (item.data?.productId && title.includes('stock'))) {
     return {
       Icon: Package,
@@ -252,7 +290,7 @@ function renderStatusBadge(config) {
 
 export default function NotificationsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { notifications = [], unreadCount = 0, markAllRead, refreshNotifications } = useNotifications();
+  const { notifications = [], unreadCount = 0, markAllRead, markAsRead, refreshNotifications } = useNotifications();
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread' | 'orders'
   const [refreshing, setRefreshing] = useState(false);
 
@@ -307,14 +345,28 @@ export default function NotificationsScreen({ navigation }) {
   }, [refreshNotifications]);
 
   const handleItemPress = (item) => {
-    if (item.data?.type === 'RESTOCK' && item.data?.productId) {
+    if (!item.read && typeof markAsRead === 'function') {
+      markAsRead(item.id);
+    }
+    if ((item.data?.type === 'RESTOCK' || item.data?.type === 'LOW_STOCK') && item.data?.productId) {
       navigation.navigate('ProductDetail', { id: String(item.data.productId) });
     } else if (item.data?.productId) {
       navigation.navigate('ProductDetail', { id: String(item.data.productId) });
     } else if (item.data?.type === 'FREE_DELIVERY') {
       navigation.navigate('Main', { screen: 'Cart' });
+    } else if (item.data?.type === 'REFUND' || item.data?.refundId) {
+      navigation.navigate('RefundStatus', {
+        orderId: item.data?.orderId,
+        refundId: item.data?.refundId,
+      });
     } else if (item.data?.type === 'PAYMENT_REJECTED' && item.data?.orderId) {
       navigation.navigate('OrderDetail', { orderId: item.data.orderId });
+    } else if (item.data?.type === 'ISSUE_REPLY') {
+      if (item.data?.orderId) {
+        navigation.navigate('OrderDetail', { orderId: item.data.orderId, orderNo: item.data?.orderNo });
+      } else {
+        navigation.navigate('Orders');
+      }
     } else if (item.data?.orderId) {
       navigation.navigate('OrderTracking', {
         orderId: item.data.orderId,
@@ -621,12 +673,24 @@ export default function NotificationsScreen({ navigation }) {
                   </Pressable>
 
                   <Pressable
-                    onPress={() =>
-                      navigation.navigate('OrderDetail', {
-                        orderId: item.data.orderId,
-                        orderNo: item.data.orderNo,
-                      })
-                    }
+                    onPress={() => {
+                      if (!item.read && typeof markAsRead === 'function') {
+                        markAsRead(item.id);
+                      }
+                      if (item.data?.type === 'REFUND' || item.data?.refundId) {
+                        navigation.navigate('RefundStatus', {
+                          orderId: item.data?.orderId,
+                          refundId: item.data?.refundId,
+                        });
+                      } else if (item.data?.orderId) {
+                        navigation.navigate('OrderDetail', {
+                          orderId: item.data.orderId,
+                          orderNo: item.data.orderNo,
+                        });
+                      } else {
+                        navigation.navigate('Orders');
+                      }
+                    }}
                     style={({ pressed }) => [
                       {
                         flex: 1,

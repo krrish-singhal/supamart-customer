@@ -37,7 +37,11 @@ import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 
 export default function OrderTrackingScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const { orderId } = route.params;
+  const incomingId = route.params?.orderId;
+  const incomingNo = route.params?.orderNo;
+  const [resolvedOrderId, setResolvedOrderId] = useState(
+    incomingId && incomingId !== 'undefined' && incomingId !== 'null' ? incomingId : null
+  );
   const { loadCart } = useCart();
   const [order, setOrder] = useState(null);
   const [partnerDoc, setPartnerDoc] = useState(null);
@@ -50,10 +54,50 @@ export default function OrderTrackingScreen({ route, navigation }) {
   const [estimateNow, setEstimateNow] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setEstimateNow(Date.now()), 15000); return () => clearInterval(timer); }, []);
 
-  // 2. Real-time Firestore listener for the Order document (3.5s refresh)
+  // 1. Auto-recover order from /orders/mine if orderId is missing or undefined
   useEffect(() => {
+    if (!resolvedOrderId) {
+      let isMounted = true;
+      const recoverOrder = async () => {
+        try {
+          const { data } = await apiClient.get('/orders/mine', { __skipErrorToast: true });
+          if (!isMounted) return;
+          const items = data?.items || [];
+          let matched = null;
+          if (incomingNo && incomingNo !== '—') {
+            matched = items.find(
+              (o) => String(o.orderNo) === String(incomingNo) || o.id === incomingNo
+            );
+          }
+          if (!matched) {
+            matched = items.find(
+              (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED'
+            ) || items[0];
+          }
+          if (matched?.id) {
+            setResolvedOrderId(matched.id);
+            setOrder((prev) => (prev ? { ...prev, ...matched } : matched));
+            setLoading(false);
+          } else {
+            setLoading(false);
+          }
+        } catch {
+          if (isMounted) setLoading(false);
+        }
+      };
+      recoverOrder();
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [resolvedOrderId, incomingNo]);
+
+  // 2. Real-time Firestore listener for the Order document (15s refresh; stops on terminal states)
+  useEffect(() => {
+    if (!resolvedOrderId || resolvedOrderId === 'undefined') return;
+    if (order?.status === 'DELIVERED' || order?.status === 'CANCELLED') return;
     const unsubscribe = onSnapshot(
-      doc(db, 'orders', orderId, { pollInterval: 3500 }),
+      doc(db, 'orders', resolvedOrderId, { pollInterval: 15000 }),
       (snap) => {
         if (snap.exists()) {
           const data = snap.data();
@@ -67,10 +111,13 @@ export default function OrderTrackingScreen({ route, navigation }) {
       }
     );
     return unsubscribe;
-  }, [orderId]);
+  }, [resolvedOrderId, order?.status]);
 
-  // 3. Real-time Firestore listener for the Assigned Delivery Partner document
+  // 3. Real-time Firestore listener for the Assigned Delivery Partner document (15s refresh)
   useEffect(() => {
+    if (order?.status === 'DELIVERED' || order?.status === 'CANCELLED') {
+      return;
+    }
     const partnerId = order?.assignedPartnerId || order?.deliveryBoyId || order?.deliveryPartner?.id;
     if (!partnerId) {
       setPartnerDoc(null);
@@ -78,7 +125,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
     }
 
     const unsubscribe = onSnapshot(
-      doc(db, 'deliveryPartners', String(partnerId), { pollInterval: 4000 }),
+      doc(db, 'deliveryPartners', String(partnerId), { pollInterval: 15000 }),
       (snap) => {
         if (snap.exists()) {
           setPartnerDoc({ id: snap.id, ...snap.data() });
@@ -89,44 +136,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
       }
     );
     return unsubscribe;
-  }, [order?.assignedPartnerId, order?.deliveryBoyId, order?.deliveryPartner?.id]);
-
-  // 4. Polling backup (every 3.5 seconds) ensuring instant real-time sync when delivery boy updates time/delay
-  useEffect(() => {
-    if (order?.status === 'DELIVERED' || order?.status === 'CANCELLED') return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await apiClient.get(`/orders/${orderId}`);
-        const fresh = res.data?.order || res.data;
-        if (fresh?.id || fresh?.orderNo) {
-          setOrder((prev) => {
-            if (!prev) return fresh;
-
-            const delayChanged =
-              prev.delayReason !== fresh.delayReason ||
-              prev.delayReportedAt !== fresh.delayReportedAt ||
-              prev.estimatedDeliveryAt !== fresh.estimatedDeliveryAt ||
-              JSON.stringify(prev.deliveryDelay) !== JSON.stringify(fresh.deliveryDelay);
-
-            const statusChanged =
-              prev.status !== fresh.status ||
-              prev.assignedPartnerId !== fresh.assignedPartnerId ||
-              prev.deliveryBoyName !== fresh.deliveryBoyName ||
-              prev.deliveryBoyPhone !== fresh.deliveryBoyPhone ||
-              prev.paymentStatus !== fresh.paymentStatus ||
-              prev.updatedAt !== fresh.updatedAt ||
-              JSON.stringify(prev.partnerLocation) !== JSON.stringify(fresh.partnerLocation);
-
-            if (delayChanged || statusChanged) {
-              return { ...prev, ...fresh };
-            }
-            return prev;
-          });
-        }
-      } catch (_) {}
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [orderId, order?.status]);
+  }, [order?.assignedPartnerId, order?.deliveryBoyId, order?.deliveryPartner?.id, order?.status]);
 
   /**
    * Handle Back navigation cleanly to avoid the 2-screen loop:
@@ -187,10 +197,16 @@ export default function OrderTrackingScreen({ route, navigation }) {
   }), [destLat, destLng]);
 
   const pLoc = order?.partnerLocation;
-  const docLoc = partnerDoc?.location;
-  const partnerLat = Number(pLoc?.lat || docLoc?.lat);
-  const partnerLng = Number(pLoc?.lng || docLoc?.lng);
-  const hasPartnerCoords = !isNaN(partnerLat) && !isNaN(partnerLng) && partnerLat !== 0 && partnerLng !== 0;
+  const docLoc = partnerDoc?.currentLocation || partnerDoc?.location || partnerDoc?.lastLocation;
+  const partnerLat = Number(pLoc?.lat ?? pLoc?.latitude ?? docLoc?.lat ?? docLoc?.latitude);
+  const partnerLng = Number(pLoc?.lng ?? pLoc?.longitude ?? docLoc?.lng ?? docLoc?.longitude);
+  const hasPartnerCoords =
+    !isNaN(partnerLat) &&
+    !isNaN(partnerLng) &&
+    partnerLat !== 0 &&
+    partnerLng !== 0 &&
+    Math.abs(partnerLat) <= 90 &&
+    Math.abs(partnerLng) <= 180;
 
   // Order has an assigned delivery partner only if an admin assigned one or partner data is attached
   const assignedPartnerId =
@@ -214,8 +230,73 @@ export default function OrderTrackingScreen({ route, navigation }) {
     return null;
   }, [isPartnerAssigned, hasPartnerCoords, partnerLat, partnerLng]);
 
-  // Dynamic route coordinates connecting Store -> (Rider if assigned) -> Destination
-  const routePoints = useMemo(() => {
+  // Dynamic road routing via OSRM with seamless fallback to straight lines
+  const [roadRoutePoints, setRoadRoutePoints] = useState(null);
+  const [roadDurationSeconds, setRoadDurationSeconds] = useState(null);
+  const [roadDistanceMeters, setRoadDistanceMeters] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchRoute = async () => {
+      try {
+        const waypoints = [];
+        if (order?.status === 'OUT_FOR_DELIVERY' && riderCoord) {
+          waypoints.push(riderCoord);
+          waypoints.push(destCoord);
+        } else if (isPartnerAssigned && riderCoord) {
+          waypoints.push(storeCoord);
+          waypoints.push(riderCoord);
+          waypoints.push(destCoord);
+        } else {
+          waypoints.push(storeCoord);
+          waypoints.push(destCoord);
+        }
+
+        if (waypoints.length < 2) return;
+        const coordsStr = waypoints.map((p) => `${p.longitude},${p.latitude}`).join(';');
+        const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data?.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length > 1) {
+          const points = data.routes[0].geometry.coordinates.map(([lng, lat]) => ({
+            latitude: lat,
+            longitude: lng,
+          }));
+          setRoadRoutePoints(points);
+          setRoadDurationSeconds(data.routes[0].duration);
+          setRoadDistanceMeters(data.routes[0].distance);
+        }
+      } catch (_) {
+        // Quiet fallback
+      }
+    };
+
+    fetchRoute();
+    return () => {
+      cancelled = true;
+    };
+  }, [storeCoord, destCoord, riderCoord?.latitude, riderCoord?.longitude, order?.status, isPartnerAssigned]);
+
+  // Active route points for Leaflet map rendering (road polyline if ready, else geometric waypoints)
+  const activeRoutePoints = useMemo(() => {
+    if (roadRoutePoints && roadRoutePoints.length > 1) {
+      return roadRoutePoints;
+    }
+    if (isPartnerAssigned && riderCoord) {
+      return [storeCoord, riderCoord, destCoord];
+    }
+    return [storeCoord, destCoord];
+  }, [roadRoutePoints, isPartnerAssigned, storeCoord, riderCoord, destCoord]);
+
+  // Points to fit camera viewport safely without feeding thousands of road points
+  const fitPoints = useMemo(() => {
     if (isPartnerAssigned && riderCoord) {
       return [storeCoord, riderCoord, destCoord];
     }
@@ -227,13 +308,13 @@ export default function OrderTrackingScreen({ route, navigation }) {
   const lastFittedRiderRef = useRef(null);
 
   useEffect(() => {
-    if (mapError || !mapRef.current || routePoints.length < 2) return;
+    if (mapError || !mapRef.current || fitPoints.length < 2) return;
 
     if (!hasInitialFitRef.current) {
       hasInitialFitRef.current = true;
       lastFittedRiderRef.current = isPartnerAssigned && riderCoord ? riderCoord : null;
       try {
-        mapRef.current.fitToCoordinates(routePoints, {
+        mapRef.current.fitToCoordinates(fitPoints, {
           edgePadding: { top: 70, right: 60, bottom: 60, left: 60 },
           animated: false,
         });
@@ -251,7 +332,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
         if (moved) {
           lastFittedRiderRef.current = riderCoord;
           try {
-            mapRef.current.fitToCoordinates(routePoints, {
+            mapRef.current.fitToCoordinates(fitPoints, {
               edgePadding: { top: 70, right: 60, bottom: 60, left: 60 },
               animated: true,
             });
@@ -260,14 +341,14 @@ export default function OrderTrackingScreen({ route, navigation }) {
       } else {
         lastFittedRiderRef.current = riderCoord;
         try {
-          mapRef.current.fitToCoordinates(routePoints, {
+          mapRef.current.fitToCoordinates(fitPoints, {
             edgePadding: { top: 70, right: 60, bottom: 60, left: 60 },
             animated: true,
           });
         } catch (_) {}
       }
     }
-  }, [routePoints, riderCoord, isPartnerAssigned, mapError]);
+  }, [fitPoints, riderCoord, isPartnerAssigned, mapError]);
 
   // Delivery partner details - ONLY populated when assigned by admin
   const partnerName = isPartnerAssigned
@@ -363,6 +444,49 @@ export default function OrderTrackingScreen({ route, navigation }) {
     }
   };
 
+  const isCancelled = order?.status === 'CANCELLED';
+  const isDelivered = order?.status === 'DELIVERED' || order?.status === 'PENDING_CONFIRMATION';
+  const isOutForDelivery = order?.status === 'OUT_FOR_DELIVERY';
+  const isAccepted =
+    order?.status === 'ORDER_ACCEPTED' ||
+    order?.status === 'ACCEPTED' ||
+    order?.status === 'PACKED' ||
+    order?.status === 'READY_FOR_DELIVERY' ||
+    isOutForDelivery ||
+    isDelivered;
+  const isConfirmed = Boolean(order?.status) && !isCancelled;
+  const isStep2Done = isOutForDelivery || isDelivered || order?.status === 'PACKED' || order?.status === 'READY_FOR_DELIVERY';
+  const isStep2Active = isAccepted && !isStep2Done;
+
+  // Real-time dynamic ETA calculation (Hooks must be unconditional!)
+  const displayEstimatedTime = useMemo(() => {
+    if (isDelivered) return 'Delivered';
+    if (isCancelled) return 'Cancelled';
+    if (order?.deliveryDelay?.newEstimatedTime) {
+      const timeStr = String(order.deliveryDelay.newEstimatedTime).trim();
+      return timeStr.startsWith('+') ? timeStr.slice(1) : timeStr;
+    }
+    // If out for delivery and real road route travel time exists
+    if (isOutForDelivery && roadDurationSeconds) {
+      const mins = Math.max(2, Math.ceil(roadDurationSeconds / 60));
+      return roadDistanceMeters && roadDistanceMeters < 200 ? 'Arriving now' : `~${mins} mins`;
+    }
+    const dynamicEst = orderEstimate(order, estimateNow, riderCoord);
+    return dynamicEst || 'Confirm delivery';
+  }, [isDelivered, isCancelled, order, isOutForDelivery, roadDurationSeconds, roadDistanceMeters, estimateNow, riderCoord]);
+
+  const statusBadge = useMemo(() => {
+    if (isCancelled) return { label: 'CANCELLED', bg: '#fee2e2', text: '#dc2626' };
+    if (isDelivered) return { label: 'COMPLETED', bg: '#ecfdf5', text: '#059669' };
+    if (order?.delayReason || order?.deliveryDelay) return { label: 'DELAYED', bg: '#fef3c7', text: '#b45309' };
+    if (isOutForDelivery) return { label: 'ON THE WAY', bg: '#ecfdf5', text: '#059669' };
+    if (isAccepted) return { label: 'PREPARING', bg: '#ecfdf5', text: '#059669' };
+    return { label: 'ON TIME', bg: '#ecfdf5', text: '#059669' };
+  }, [isCancelled, isDelivered, order?.delayReason, order?.deliveryDelay, isOutForDelivery, isAccepted]);
+
+  const itemCount = order?.items?.length || 0;
+  const orderTotal = Math.round(order?.total || order?.totalAmount || 0);
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top', 'bottom']}>
@@ -376,43 +500,67 @@ export default function OrderTrackingScreen({ route, navigation }) {
     );
   }
 
-  const isCancelled = order?.status === 'CANCELLED';
-  const isDelivered = order?.status === 'DELIVERED';
-  const isOutForDelivery = order?.status === 'OUT_FOR_DELIVERY';
-  const isPacked =
-    order?.status === 'PACKED' ||
-    order?.status === 'ORDER_ACCEPTED' ||
-    isOutForDelivery ||
-    isDelivered;
-
-  // Real-time dynamic ETA calculation using distance
-  const etaMinutes = isDelivered ? 'Delivered' : isCancelled ? 'Cancelled' : orderEstimate(order, estimateNow) || 'Confirm delivery';
-
-  const displayEstimatedTime = (() => {
-    if (isDelivered) return 'Delivered';
-    if (isCancelled) return 'Cancelled';
-    if (order?.deliveryDelay?.newEstimatedTime) {
-      const timeStr = String(order.deliveryDelay.newEstimatedTime).trim();
-      return timeStr.startsWith('+') ? timeStr.slice(1) : timeStr;
-    }
-    return etaMinutes;
-  })();
-
-  const itemCount = order?.items?.length || 0;
-  const orderTotal = Math.round(order?.total || order?.totalAmount || 0);
-
-
-
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* TOP REAL-TIME MAP matching Image 1 */}
+      {/* TOP REAL-TIME MAP */}
       <View style={{ height: 300, width: '100%', backgroundColor: '#edf2ed', position: 'relative' }}>
-        <KeylessMap ref={mapRef} initialCenter={hasValidDest ? destCoord : storeCoord} selected={hasValidDest ? destCoord : null} rider={isPartnerAssigned ? riderCoord : null} route={hasValidDest ? routePoints : []} onReady={() => { setMapError(false); mapRef.current?.fitToCoordinates(routePoints); }} onTileState={ready => setMapError(!ready)} onError={() => setMapError(true)} />
-        <Text style={{ position: 'absolute', bottom: 22, left: 12, color: '#386047', backgroundColor: '#ffffffe6', fontSize: 10, padding: 4, borderRadius: 6 }}>Straight-line location guide</Text>
-        {mapError && <Pressable onPress={() => { setMapError(false); mapRef.current?.retry(); }} style={{ position: 'absolute', left: 60, right: 12, top: insets.top + 12, padding: 10, backgroundColor: '#fff3ee', borderRadius: 12 }}><Text style={{ fontSize: 12, color: '#9b2924' }}>Map unavailable · Tap to retry</Text></Pressable>}
-
+        <KeylessMap
+          ref={mapRef}
+          initialCenter={hasValidDest ? destCoord : storeCoord}
+          selected={hasValidDest ? destCoord : null}
+          rider={isPartnerAssigned ? riderCoord : null}
+          route={hasValidDest ? activeRoutePoints : []}
+          onReady={() => {
+            setMapError(false);
+            mapRef.current?.fitToCoordinates(fitPoints);
+          }}
+          onTileState={(ready) => setMapError(!ready)}
+          onError={() => setMapError(true)}
+        />
+        {isOutForDelivery && (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 22,
+              left: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#ffffffee',
+              paddingHorizontal: 9,
+              paddingVertical: 5,
+              borderRadius: 8,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.12,
+              shadowRadius: 3,
+              elevation: 3,
+            }}
+          >
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#059669', marginRight: 6 }} />
+            <Text style={{ fontSize: 11, fontWeight: '800', color: '#065f46' }}>Live Delivery Route</Text>
+          </View>
+        )}
+        {mapError && (
+          <Pressable
+            onPress={() => {
+              setMapError(false);
+              mapRef.current?.retry();
+            }}
+            style={{
+              position: 'absolute',
+              left: 60,
+              right: 12,
+              top: insets.top + 12,
+              padding: 10,
+              backgroundColor: '#fff3ee',
+              borderRadius: 12,
+            }}
+          >
+            <Text style={{ fontSize: 12, color: '#9b2924' }}>Map unavailable · Tap to retry</Text>
+          </Pressable>
+        )}
 
         {/* Floating circular back button matching Image 1 */}
         <Pressable
@@ -442,7 +590,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
         </Pressable>
       </View>
 
-      {/* BOTTOM FLOATING SHEET CARD matching Image 1 */}
+      {/* BOTTOM FLOATING SHEET CARD */}
       <View
         style={{
           flex: 1,
@@ -463,7 +611,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 20 }}
         >
-          {/* Header Row: Arriving in X mins + ON TIME badge matching Image 1 */}
+          {/* Header Row: Arriving in X mins + Status badge */}
           <Animated.View entering={FadeInDown.duration(350)}>
             <View
               style={{
@@ -476,7 +624,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
               <View>
                 {!isDelivered && !isCancelled && (
                   <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 2 }}>
-                    {order?.delayReason ? 'Updated ETA' : 'Arriving in'}
+                    {order?.delayReason ? 'Updated ETA' : isOutForDelivery ? 'Estimated Arrival' : 'Arriving in'}
                   </Text>
                 )}
                 <Text style={{ fontSize: 30, fontWeight: '900', color: '#0f172a', letterSpacing: -0.5 }}>
@@ -486,13 +634,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
 
               <View
                 style={{
-                  backgroundColor: isCancelled
-                    ? '#fee2e2'
-                    : isDelivered
-                    ? '#ecfdf5'
-                    : order?.delayReason
-                    ? '#fef3c7'
-                    : '#ecfdf5',
+                  backgroundColor: statusBadge.bg,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 10,
@@ -502,23 +644,11 @@ export default function OrderTrackingScreen({ route, navigation }) {
                   style={{
                     fontSize: 12,
                     fontWeight: '800',
-                    color: isCancelled
-                      ? '#dc2626'
-                      : isDelivered
-                      ? '#059669'
-                      : order?.delayReason
-                      ? '#b45309'
-                      : '#059669',
+                    color: statusBadge.text,
                     letterSpacing: 0.4,
                   }}
                 >
-                  {isCancelled
-                    ? 'CANCELLED'
-                    : isDelivered
-                    ? 'COMPLETED'
-                    : order?.delayReason
-                    ? 'DELAYED'
-                    : 'ON TIME'}
+                  {statusBadge.label}
                 </Text>
               </View>
             </View>
@@ -553,39 +683,73 @@ export default function OrderTrackingScreen({ route, navigation }) {
             )}
           </Animated.View>
 
-          {/* 4-Step Vertical Tracker Timeline matching Image 1 */}
+          {/* 4-Step Vertical Tracker Timeline */}
           <Animated.View entering={FadeInDown.duration(400).delay(80)}>
             <View style={{ marginBottom: 24 }}>
               {/* Step 1: Order confirmed */}
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                 <View style={{ alignItems: 'center', marginRight: 16 }}>
-                  <View
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 13,
-                      backgroundColor: '#059669',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Check size={15} color="#ffffff" strokeWidth={3} />
-                  </View>
+                  {isCancelled ? (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#ef4444',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <X size={15} color="#ffffff" strokeWidth={3} />
+                    </View>
+                  ) : isConfirmed ? (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#059669',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={15} color="#ffffff" strokeWidth={3} />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        borderWidth: 3,
+                        borderColor: '#059669',
+                        backgroundColor: '#ffffff',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#059669' }} />
+                    </View>
+                  )}
                   <View
                     style={{
                       width: 2.5,
                       height: 32,
-                      backgroundColor: isPacked ? '#059669' : '#e2e8f0',
+                      backgroundColor: isAccepted ? '#059669' : '#e2e8f0',
                       marginVertical: 3,
                     }}
                   />
                 </View>
                 <View style={{ flex: 1, paddingTop: 2 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
-                    Order confirmed
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isCancelled ? '#ef4444' : '#0f172a' }}>
+                    {isCancelled ? 'Order cancelled' : 'Order confirmed'}
                   </Text>
                   <Text style={{ fontSize: 12.5, fontWeight: '500', color: '#64748b', marginTop: 1 }}>
-                    We have received your order
+                    {isCancelled
+                      ? 'This order was cancelled'
+                      : isConfirmed
+                      ? 'We have received your order'
+                      : 'Received · Awaiting store confirmation'}
                   </Text>
                 </View>
               </View>
@@ -593,20 +757,46 @@ export default function OrderTrackingScreen({ route, navigation }) {
               {/* Step 2: Packed */}
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                 <View style={{ alignItems: 'center', marginRight: 16 }}>
-                  <View
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 13,
-                      backgroundColor: isPacked ? '#059669' : '#ffffff',
-                      borderWidth: isPacked ? 0 : 2,
-                      borderColor: '#cbd5e1',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {isPacked && <Check size={15} color="#ffffff" strokeWidth={3} />}
-                  </View>
+                  {isStep2Done ? (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#059669',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={15} color="#ffffff" strokeWidth={3} />
+                    </View>
+                  ) : isStep2Active ? (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        borderWidth: 3,
+                        borderColor: '#059669',
+                        backgroundColor: '#ffffff',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#059669' }} />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        borderWidth: 2,
+                        borderColor: '#cbd5e1',
+                        backgroundColor: '#ffffff',
+                      }}
+                    />
+                  )}
                   <View
                     style={{
                       width: 2.5,
@@ -621,13 +811,17 @@ export default function OrderTrackingScreen({ route, navigation }) {
                     style={{
                       fontSize: 15,
                       fontWeight: '800',
-                      color: isPacked ? '#0f172a' : '#94a3b8',
+                      color: isStep2Done || isStep2Active ? '#0f172a' : '#94a3b8',
                     }}
                   >
                     Packed
                   </Text>
                   <Text style={{ fontSize: 12.5, fontWeight: '500', color: '#64748b', marginTop: 1 }}>
-                    Your items are packed at the store
+                    {isStep2Done
+                      ? 'Your items are packed at the store'
+                      : isStep2Active
+                      ? 'Your items are being packed at the store'
+                      : 'Will be packed once confirmed'}
                   </Text>
                 </View>
               </View>
@@ -660,7 +854,9 @@ export default function OrderTrackingScreen({ route, navigation }) {
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
-                    />
+                    >
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#059669' }} />
+                    </View>
                   ) : (
                     <View
                       style={{
@@ -696,7 +892,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
                     {isDelivered
                       ? 'Delivered to your address'
                       : isOutForDelivery
-                      ? 'Your delivery partner is on the way'
+                      ? (partnerName ? `${partnerName} is on the way` : 'Your delivery partner is on the way')
                       : isPartnerAssigned
                       ? `Assigned to ${partnerName}`
                       : 'Delivery partner will be assigned soon'}
@@ -744,7 +940,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
                     Delivered
                   </Text>
                   <Text style={{ fontSize: 12.5, fontWeight: '500', color: '#64748b', marginTop: 1 }}>
-                    Enjoy your groceries
+                    {isDelivered ? 'Order delivered successfully' : 'Enjoy your groceries'}
                   </Text>
                 </View>
               </View>

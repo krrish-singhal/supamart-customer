@@ -8,9 +8,9 @@ import { FREE_DELIVERY_THRESHOLD } from '../../utils/pricing';
 // delivery" once the cart clears FREE_DELIVERY_THRESHOLD, or how much more to add.
 export default function FreeDeliveryBanner({ subtotal, style }) {
   const { config } = useConfig();
-  if (!config) return null;
-  const remaining = Math.max(0, (config.freeDeliveryThreshold ?? FREE_DELIVERY_THRESHOLD) - subtotal);
-  const unlocked = remaining <= 0;
+  const threshold = config?.freeDeliveryThreshold ?? FREE_DELIVERY_THRESHOLD;
+  const remaining = Math.max(0, threshold - subtotal);
+  const unlocked = subtotal > 0 && remaining <= 0;
 
   return (
     <View

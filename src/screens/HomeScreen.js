@@ -35,7 +35,6 @@ import { useIsFocused } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import apiClient from '../services/api';
 import BrandBadge from '../components/BrandBadge';
-import FreeDeliveryNotification from '../components/FreeDeliveryNotification';
 import { Skeleton } from '../components/ui';
 import MSClubModal from '../components/MSClubModal';
 import { fonts } from '../theme/typography';
@@ -44,6 +43,8 @@ import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { setCachedCategories, getCachedCategoryProducts, setCachedCategoryProducts } from './CategoryScreen';
 import { getProductImageSource } from '../utils/productImages';
 import { getCategoryVisual } from '../utils/categoryImages';
@@ -153,9 +154,9 @@ const BANNER_GAP = 16;
 
 export default function HomeScreen({ navigation }) {
   const { width: windowWidth, fontScale } = useWindowDimensions();
-  const [layoutWidth, setLayoutWidth] = useState(null);
-  const screenWidth = layoutWidth ?? windowWidth;
-  const bannerCardWidth = Math.max(1, screenWidth - 32);
+  const screenWidth = windowWidth;
+  const bannerCardWidth = Math.max(280, screenWidth - 32);
+  const bannerHeight = Math.max(136, Math.round(bannerCardWidth / 2.5));
   const { items: cartItems, addItem, updateQty, getQty, subtotal } = useCart();
   const { userProfile } = useContext(AuthContext);
   const { unreadCount } = useNotifications();
@@ -168,8 +169,13 @@ export default function HomeScreen({ navigation }) {
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [searchIndex, setSearchIndex] = useState(0);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [banners, setBanners] = useState([]);
   const [showClubModal, setShowClubModal] = useState(false);
+
+  const activeBanners = useMemo(() => {
+    return Array.isArray(banners) && banners.length > 0 ? banners : HOME_BANNERS;
+  }, [banners]);
 
   const bannerScrollRef = useRef(null);
   const bannerIndexRef = useRef(0);
@@ -178,6 +184,69 @@ export default function HomeScreen({ navigation }) {
   const { config } = useConfig();
   const { isOpen: storeOpen } = useStoreStatus();
   const { activeOrder, estimate } = useActiveOrder(userProfile?.id, isFocused);
+
+  // Real-time synchronization of banners from Firestore + instant HTTP fallback
+  useEffect(() => {
+    let isMounted = true;
+
+    // 1. Immediate HTTP fallback fetch for fast initial hydration
+    apiClient
+      .get('/banners', { __skipErrorToast: true })
+      .then(({ data }) => {
+        if (isMounted && Array.isArray(data?.items) && data.items.length > 0) {
+          setBanners(data.items);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Real-time Firestore onSnapshot listener for instant live updates
+    let unsubscribe = () => {};
+    try {
+      if (db) {
+        const bannersColRef = collection(db, 'banners');
+        unsubscribe = onSnapshot(
+          bannersColRef,
+          (snap) => {
+            if (!isMounted) return;
+            const rawItems = snap.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...docSnap.data(),
+            }));
+            const activeItems = rawItems
+              .filter((item) => item.isActive !== false && item.isActive !== 'false')
+              .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+
+            if (activeItems.length > 0) {
+              setBanners(activeItems);
+            } else {
+              setBanners(HOME_BANNERS);
+            }
+          },
+          (error) => {
+            console.warn('[HomeScreen] Real-time banners listener error:', error?.message);
+          }
+        );
+      }
+    } catch (err) {
+      console.warn('[HomeScreen] Could not attach real-time banners listener:', err?.message);
+    }
+
+    return () => {
+      isMounted = false;
+      try {
+        unsubscribe();
+      } catch (_e) {}
+    };
+  }, []);
+
+  // Ensure active banner index remains bounded when banners list updates in real time
+  useEffect(() => {
+    if (activeBannerIndex >= activeBanners.length) {
+      const safeIndex = Math.max(0, activeBanners.length - 1);
+      setActiveBannerIndex(safeIndex);
+      bannerIndexRef.current = safeIndex;
+    }
+  }, [activeBanners.length, activeBannerIndex]);
 
   useEffect(() => {
     bannerIndexRef.current = activeBannerIndex;
@@ -189,11 +258,11 @@ export default function HomeScreen({ navigation }) {
 
   // Automatic & continuous hero banner slideshow
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused || activeBanners.length <= 1) return;
 
     const bannerTimer = setInterval(() => {
       if (isDraggingBannerRef.current) return;
-      const nextIndex = (bannerIndexRef.current + 1) % 3;
+      const nextIndex = (bannerIndexRef.current + 1) % activeBanners.length;
       bannerIndexRef.current = nextIndex;
       setActiveBannerIndex(nextIndex);
       bannerScrollRef.current?.scrollTo({
@@ -203,7 +272,7 @@ export default function HomeScreen({ navigation }) {
     }, 3500);
 
     return () => clearInterval(bannerTimer);
-  }, [bannerCardWidth, isFocused]);
+  }, [bannerCardWidth, isFocused, activeBanners.length]);
 
   // Rotating search term
   useEffect(() => {
@@ -431,8 +500,15 @@ export default function HomeScreen({ navigation }) {
 
   const bestPriceProducts = useMemo(() => products.flatMap((product) =>
     (product.variants || []).flatMap((variant) => {
+      if (
+        product.onSale === false ||
+        product.isOnSale === false ||
+        product.availability === 'UNAVAILABLE' ||
+        variant.offerPrice == null ||
+        variant.discountPercent === 0
+      ) return [];
       const mrp = Number(variant.price ?? variant.mrp ?? 0);
-      const price = Number(variant.offerPrice ?? variant.sellingPrice ?? mrp);
+      const price = Number(variant.offerPrice);
       if (!(mrp > 0 && price > 0 && price < mrp) || isProductUnavailable(product, variant)) return [];
       return [{
         id: `${product.id}-${variant.id}`,
@@ -461,7 +537,7 @@ export default function HomeScreen({ navigation }) {
 
 
   return (
-    <SafeAreaView onLayout={({ nativeEvent }) => setLayoutWidth(nativeEvent.layout.width)} style={{ flex: 1, backgroundColor: '#ffffff', position: 'relative' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff', position: 'relative' }} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {/* TOP SECTION: Header, Search Bar, and Sub-categories */}
@@ -478,38 +554,53 @@ export default function HomeScreen({ navigation }) {
             paddingBottom: 6,
           }}
         >
-          {/* Delivery estimate and the address saved as the user's default. */}
-          <Pressable
-            onPress={() => navigation.navigate('LocationPrompt')}
-            accessibilityRole="button"
-            accessibilityLabel={`${estimate || 'Choose delivery address'}. ${deliveryAddressLine}`}
-            style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: 12 }}
-          >
+          {/* Delivery estimate and address selector */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: 12 }}>
             <View style={{ marginRight: 8, flexShrink: 0 }}>
               <BrandBadge size={36} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', minWidth: 0 }}>
+              <Pressable
+                onPress={() => {
+                  if (activeOrder) {
+                    navigation.navigate('OrderTracking', { orderId: activeOrder.id || activeOrder.orderId });
+                  } else {
+                    navigation.navigate('LocationPrompt');
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={activeOrder ? `Order in progress. ${estimate || 'Arriving soon'}` : 'Delivery status'}
+                style={{ flexDirection: 'row', alignItems: 'center', minWidth: 0, paddingVertical: 1 }}
+              >
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0A7C47', marginRight: 6, flexShrink: 0 }} />
-                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: '#475569' }}>
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: activeOrder ? '#0A7C47' : '#475569', fontWeight: activeOrder ? '700' : '500' }}>
                   {activeOrder
                     ? `MS Traders · ${estimate && estimate !== 'Updating arrival time' ? `Arriving in ${estimate.replace('~', '')}` : 'Arriving soon'}`
                     : storeOpen
                     ? 'Open until 11 PM · Deliver to'
                     : 'Closed · Opens at 10 AM'}
                 </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 1 }}>
-                <Text style={{ fontFamily: fonts.extraBold, fontSize: 22, color: '#121712', letterSpacing: -0.4 }}>
-                  {defaultAddress?.label === 'Current Location' ? 'Delivery address' : defaultAddress?.label || 'Select address'}
+                {Boolean(activeOrder) && (
+                  <ChevronRight size={13} color="#0A7C47" strokeWidth={2.4} style={{ marginLeft: 2 }} />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate('LocationPrompt')}
+                accessibilityRole="button"
+                accessibilityLabel={`${defaultAddress?.label === 'Current Location' ? 'Delivery address' : defaultAddress?.label || 'Select address'}. ${deliveryAddressLine}`}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 1 }}>
+                  <Text style={{ fontFamily: fonts.extraBold, fontSize: 22, color: '#121712', letterSpacing: -0.4 }}>
+                    {defaultAddress?.label === 'Current Location' ? 'Delivery address' : defaultAddress?.label || 'Select address'}
+                  </Text>
+                  <ChevronDown size={17} color="#121712" strokeWidth={3} style={{ marginLeft: 4 }} />
+                </View>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontFamily: fonts.regular, fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                  {deliveryAddressLine || 'Tap to complete your address'}
                 </Text>
-                <ChevronDown size={17} color="#121712" strokeWidth={3} style={{ marginLeft: 4 }} />
-              </View>
-              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontFamily: fonts.regular, fontSize: 12, color: '#64748b', marginTop: 1 }}>
-                {deliveryAddressLine || 'Tap to complete your address'}
-              </Text>
+              </Pressable>
             </View>
-          </Pressable>
+          </View>
 
           {/* Notifications sit immediately left of the profile button. */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -619,38 +710,84 @@ export default function HomeScreen({ navigation }) {
           </Pressable>
         </Animated.View>
 
-        {/* Delivery Delay Notification Banner */}
-        {activeOrder?.delayReason && (
+        {/* Active Order Live Tracking Banner */}
+        {activeOrder && (
           <Animated.View entering={FadeInDown.duration(300)} style={{ paddingHorizontal: 16, marginTop: 8, marginBottom: 2 }}>
             <Pressable
               onPress={() => navigation.navigate('OrderTracking', { orderId: activeOrder.id || activeOrder.orderId })}
               style={{
-                backgroundColor: '#fffbeb',
+                backgroundColor: activeOrder.delayReason ? '#fffbeb' : '#f0fdf4',
                 borderWidth: 1.5,
-                borderColor: '#f59e0b',
-                borderRadius: 12,
-                padding: 10,
+                borderColor: activeOrder.delayReason ? '#f59e0b' : '#86efac',
+                borderRadius: 16,
+                padding: 12,
                 flexDirection: 'row',
                 alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.04,
+                shadowRadius: 6,
+                elevation: 2,
               }}
             >
-              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fef3c7', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                <Truck size={18} color="#d97706" />
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: activeOrder.delayReason ? '#fef3c7' : '#dcfce7',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Truck size={20} color={activeOrder.delayReason ? '#d97706' : '#15803d'} strokeWidth={2.2} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: '#92400e' }}>
-                    Delivery Delayed · Order #{activeOrder.orderNo || activeOrder.orderId?.slice(-6) || ''}
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 13.5, color: activeOrder.delayReason ? '#92400e' : '#14532d' }}>
+                    {activeOrder.delayReason
+                      ? `Delivery Delayed · #${activeOrder.orderNo || activeOrder.orderId?.slice(-6) || ''}`
+                      : `Order #${activeOrder.orderNo || activeOrder.orderId?.slice(-6) || ''} in progress`}
                   </Text>
-                  <Text style={{ fontFamily: fonts.semiBold, fontSize: 11, color: '#b45309' }}>
-                    {activeOrder.deliveryDelay?.newEstimatedTime || 'Updated ETA'}
-                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: activeOrder.delayReason ? '#fde68a' : '#bbf7d0',
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: activeOrder.delayReason ? '#b45309' : '#166534' }}>
+                      {activeOrder.delayReason
+                        ? activeOrder.deliveryDelay?.newEstimatedTime || 'Updated ETA'
+                        : estimate && estimate !== 'Updating arrival time'
+                        ? `ETA: ${estimate.replace('~', '')}`
+                        : 'On the way'}
+                    </Text>
+                  </View>
                 </View>
-                <Text numberOfLines={2} style={{ fontFamily: fonts.regular, fontSize: 12, color: '#78350f', marginTop: 2 }}>
-                  Reason: {activeOrder.delayReason}
+                <Text numberOfLines={1} style={{ fontFamily: fonts.regular, fontSize: 12, color: activeOrder.delayReason ? '#78350f' : '#166534', marginTop: 3 }}>
+                  {activeOrder.delayReason
+                    ? `Reason: ${activeOrder.delayReason}`
+                    : (activeOrder.deliveryPartner?.name || activeOrder.deliveryBoyName)
+                    ? `Rider assigned: ${activeOrder.deliveryPartner?.name || activeOrder.deliveryBoyName}`
+                    : activeOrder.status === 'OUT_FOR_DELIVERY'
+                    ? 'Out for delivery with delivery partner'
+                    : activeOrder.status === 'PACKING' || activeOrder.status === 'PACKED'
+                    ? 'Items packed and being dispatched'
+                    : activeOrder.status === 'ORDER_ACCEPTED'
+                    ? 'Order accepted and being prepared'
+                    : 'Order confirmed and being prepared'}
+                  {activeOrder.items?.length ? ` · ${activeOrder.items.length} item${activeOrder.items.length > 1 ? 's' : ''}` : ''}
                 </Text>
               </View>
-              <ChevronRight size={16} color="#d97706" style={{ marginLeft: 6 }} />
+              <View style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: activeOrder.delayReason ? '#d97706' : '#15803d', marginRight: 2 }}>
+                  Track
+                </Text>
+                <ChevronRight size={16} color={activeOrder.delayReason ? '#d97706' : '#15803d'} strokeWidth={2.4} />
+              </View>
             </Pressable>
           </Animated.View>
         )}
@@ -663,17 +800,20 @@ export default function HomeScreen({ navigation }) {
         decelerationRate="normal"
         overScrollMode="never"
         scrollEventThrottle={16}
-        removeClippedSubviews={Platform.OS === 'android'}
+        // Android can incorrectly detach all following sections after a nested
+        // horizontal ScrollView (the category pills), leaving the Home feed blank.
+        removeClippedSubviews={false}
         style={{ flex: 1, backgroundColor: '#ffffff' }}
         contentContainerStyle={{
           paddingTop: 8,
-          paddingBottom: cartItemCount > 0 ? 90 * Math.max(1, fontScale) : 32,
+          paddingBottom: cartItemCount > 0 ? 68 : 24,
         }}
       >
         {/* Sub-category Pills matching Images 1, 2, 3 */}
         <View style={{ marginBottom: 14 }}>
           <ScrollView
             horizontal
+            removeClippedSubviews={false}
             nestedScrollEnabled={true}
             overScrollMode="never"
             showsHorizontalScrollIndicator={false}
@@ -777,18 +917,21 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* HERO BANNER CAROUSEL matching Reference Images */}
-        <View style={{ marginBottom: 14 }}>
+        <View style={{ marginBottom: 14, minHeight: bannerHeight + 20 }}>
           <ScrollView
             ref={bannerScrollRef}
             horizontal
+            removeClippedSubviews={false}
             nestedScrollEnabled={true}
             overScrollMode="never"
             pagingEnabled={false}
             snapToInterval={bannerCardWidth + BANNER_GAP}
             decelerationRate="fast"
             snapToAlignment="start"
+            disableIntervalMomentum={true}
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={16}
+            style={{ height: bannerHeight }}
             onScrollBeginDrag={() => {
               isDraggingBannerRef.current = true;
             }}
@@ -798,13 +941,15 @@ export default function HomeScreen({ navigation }) {
             onMomentumScrollEnd={(e) => {
               isDraggingBannerRef.current = false;
               const x = e.nativeEvent.contentOffset.x;
-              const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + BANNER_GAP))));
+              const maxIdx = Math.max(0, activeBanners.length - 1);
+              const idx = Math.min(maxIdx, Math.max(0, Math.round(x / (bannerCardWidth + BANNER_GAP))));
               bannerIndexRef.current = idx;
               setActiveBannerIndex(idx);
             }}
             onScroll={(e) => {
               const x = e.nativeEvent.contentOffset.x;
-              const idx = Math.min(2, Math.max(0, Math.round(x / (bannerCardWidth + BANNER_GAP))));
+              const maxIdx = Math.max(0, activeBanners.length - 1);
+              const idx = Math.min(maxIdx, Math.max(0, Math.round(x / (bannerCardWidth + BANNER_GAP))));
               if (idx !== activeBannerIndex) {
                 setActiveBannerIndex(idx);
                 bannerIndexRef.current = idx;
@@ -812,17 +957,28 @@ export default function HomeScreen({ navigation }) {
             }}
             contentContainerStyle={{ paddingHorizontal: 16, gap: BANNER_GAP }}
           >
-            {HOME_BANNERS.map((banner) => (
-              <HeroBanner key={banner.label} banner={banner} width={bannerCardWidth}
-                onPress={() => banner.destination === 'offers'
-                  ? navigation.navigate('Offers')
-                  : navigation.navigate('Main', { screen: 'Categories' })} />
+            {activeBanners.map((banner, index) => (
+              <HeroBanner
+                key={banner.id || banner.label || String(index)}
+                banner={banner}
+                width={bannerCardWidth}
+                onPress={() => {
+                  const dest = (banner.destination || banner.target || '').toLowerCase();
+                  if (dest.includes('offer')) {
+                    navigation.navigate('Offers');
+                  } else if (dest.includes('cat') || dest === 'home') {
+                    navigation.navigate('Main', { screen: 'Categories' });
+                  } else {
+                    navigation.navigate('Main', { screen: 'Categories' });
+                  }
+                }}
+              />
             ))}
           </ScrollView>
 
-          {/* Dots Indicator matching Images 1, 2, 3 */}
+          {/* Dots Indicator matching number of active banners */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10, gap: 6 }}>
-            {[0, 1, 2].map((i) => {
+            {activeBanners.map((_, i) => {
               const isActive = activeBannerIndex === i;
               return (
                 <Pressable
@@ -1325,7 +1481,7 @@ export default function HomeScreen({ navigation }) {
                   }}
                 >
                   {/* Discount is calculated only from this saved variant's MRP and offer price. */}
-                  {item.discount > 0 && <View
+                  {item.product?.onSale !== false && item.product?.isOnSale !== false && item.product?.availability !== 'UNAVAILABLE' && item.discount > 0 && <View
                     style={{
                       position: 'absolute',
                       top: 8,
@@ -1347,7 +1503,7 @@ export default function HomeScreen({ navigation }) {
                         lineHeight: 12,
                       }}
                     >
-                      {item.discount}{'\n'}OFF
+                      {item.discount}%{'\n'}OFF
                     </Text>
                   </View>}
 
@@ -1530,7 +1686,7 @@ export default function HomeScreen({ navigation }) {
           >
             {loading && allCategories.length === 0 ? (
               Array.from({ length: 8 }, (_, index) => {
-                const cardW = Math.floor((screenWidth - 32 - 30) / 4);
+                const cardW = Math.max(60, Math.floor((screenWidth - 32 - 30) / 4));
                 return (
                   <View key={`shop-category-skeleton-${index}`} style={{ width: cardW, alignItems: 'center' }}>
                     <Skeleton width={cardW} height={cardW} borderRadius={18} />
@@ -1539,7 +1695,7 @@ export default function HomeScreen({ navigation }) {
                 );
               })
             ) : shopByCategories.map((cat) => {
-              const cardW = Math.floor((screenWidth - 32 - 30) / 4);
+              const cardW = Math.max(60, Math.floor((screenWidth - 32 - 30) / 4));
               const visualSource = getHomeScreenCategoryVisual(cat);
 
               return (
@@ -1678,7 +1834,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </Pressable>
 
-        <View style={{ marginHorizontal: 16, marginBottom: cartItemCount > 0 ? 84 : 24, alignItems: 'flex-start' }}>
+        <View style={{ marginHorizontal: 16, marginBottom: 16, alignItems: 'flex-start' }}>
           <Text
             accessibilityRole="text"
             style={{ fontFamily: fonts.extraBold, fontSize: 38, lineHeight: 44, color: '#cbd6ce', letterSpacing: -1.4 }}
@@ -1790,7 +1946,6 @@ export default function HomeScreen({ navigation }) {
       </View>
       )}
 
-      <FreeDeliveryNotification active={isFocused} />
       {/* MS Club Modal */}
       <MSClubModal visible={showClubModal} onClose={() => setShowClubModal(false)} />
     </SafeAreaView>

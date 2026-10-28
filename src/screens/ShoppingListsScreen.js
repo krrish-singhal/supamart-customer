@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   StyleSheet,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,7 +28,6 @@ import {
   X,
   Search,
   Check,
-  RotateCcw,
 } from '../components/icons';
 import Toast from 'react-native-toast-message';
 import { AuthContext } from '../context/AuthContext';
@@ -43,94 +43,313 @@ const LIST_SUGGESTIONS = [
   'Cleaning supplies',
 ];
 
-// Curated starter lists matching Image 4
-const DEFAULT_CURATED_LISTS = [
+// Aesthetic theme colors matching reference card design
+const ORDER_THEMES = [
+  { Icon: ShoppingBag, iconColor: '#087f46', bgColor: '#eaf6ee' },
+  { Icon: Leaf, iconColor: '#b45309', bgColor: '#fef3c7' },
+  { Icon: Coffee, iconColor: '#475569', bgColor: '#f1f5f9' },
+  { Icon: Sparkles, iconColor: '#9333ea', bgColor: '#f3e8ff' },
+];
+
+// Smart category definitions matching the reference design layout and catalog
+const CATEGORY_DEFINITIONS = [
   {
-    id: 'curated-monthly-groceries',
+    id: 'monthly-groceries',
     name: 'Monthly groceries',
-    isCurated: true,
-    totalQty: 9,
-    approxTotal: 1488,
-    theme: {
-      Icon: ShoppingBag,
-      iconColor: '#087f46',
-      bgColor: '#eaf6ee',
+    Icon: ShoppingBag,
+    iconColor: '#087f46',
+    bgColor: '#eaf6ee',
+    matches: (name, cat) => {
+      return (
+        cat.includes('staple') ||
+        cat.includes('rice') ||
+        cat.includes('atta') ||
+        cat.includes('grain') ||
+        cat.includes('oil') ||
+        cat.includes('spice') ||
+        cat.includes('masala') ||
+        cat.includes('dal') ||
+        cat.includes('pulse') ||
+        name.includes('rice') ||
+        name.includes('atta') ||
+        name.includes('flour') ||
+        name.includes('maida') ||
+        name.includes('rava') ||
+        name.includes('sooji') ||
+        name.includes('dal') ||
+        name.includes('paruppu') ||
+        name.includes('moong') ||
+        name.includes('toor') ||
+        name.includes('chana') ||
+        name.includes('urad') ||
+        name.includes('oil') ||
+        name.includes('ghee') ||
+        name.includes('sugar') ||
+        name.includes('salt') ||
+        name.includes('turmeric') ||
+        name.includes('chilli powder') ||
+        name.includes('coriander powder') ||
+        name.includes('pepper') ||
+        name.includes('cumin') ||
+        name.includes('jeera') ||
+        name.includes('mustard') ||
+        name.includes('fenugreek') ||
+        name.includes('hing') ||
+        name.includes('masala') ||
+        name.includes('sambar') ||
+        name.includes('rasam') ||
+        name.includes('clove') ||
+        name.includes('cardamom') ||
+        name.includes('elaichi') ||
+        name.includes('cinnamon') ||
+        name.includes('cashew') ||
+        name.includes('badam') ||
+        name.includes('pista') ||
+        name.includes('kismiss') ||
+        name.includes('raisin') ||
+        name.includes('dry fruit') ||
+        name.includes('pasta') ||
+        name.includes('noodles') ||
+        name.includes('macroni') ||
+        name.includes('tamarind')
+      );
     },
-    extraCount: 5,
-    thumbnails: [
-      { id: 'p-rice', name: '786 Surekha Rice' },
-      { id: 'p-atta', name: 'Aashirvaad Atta' },
-      { id: 'p-dal', name: 'Toor Dal' },
-      { id: 'p-oil', name: 'Milma Ghee' },
-    ],
-    items: [
-      { id: 'm1', name: '786 Surekha Rice', variantLabel: '5kg', price: 290, qty: 1 },
-      { id: 'm2', name: 'Aashirvaad Atta', variantLabel: '5kg', price: 260, qty: 1 },
-      { id: 'm3', name: 'Toor Dal', variantLabel: '1kg', price: 165, qty: 1 },
-      { id: 'm4', name: 'Sunflower Oil', variantLabel: '1L', price: 145, qty: 1 },
-      { id: 'm5', name: 'Tata Salt', variantLabel: '1kg', price: 28, qty: 1 },
-      { id: 'm6', name: 'Sugar', variantLabel: '1kg', price: 48, qty: 1 },
-      { id: 'm7', name: 'AVT Premium Tea', variantLabel: '250g', price: 130, qty: 1 },
-      { id: 'm8', name: 'Surf Excel Detergent Powder Quick Wash 1kg', variantLabel: '1kg', price: 230, qty: 1 },
-      { id: 'm9', name: 'Vim Dishwash Bar Tub 500g', variantLabel: '500g', price: 55, qty: 1 },
+    // Default starter items perfectly matching reference: 9 items · approx. ₹1488
+    defaultItems: [
+      { name: 'SSK Ponni Rice 1st', price: 480, qty: 1, variantLabel: '5 kg' },
+      { name: 'Elite Atta', price: 240, qty: 1, variantLabel: '5 kg' },
+      { name: 'Kadala Paruppu (Chana Dal)', price: 160, qty: 1, variantLabel: '1 kg' },
+      { name: 'Ruchi Gold Palm Oil', price: 135, qty: 1, variantLabel: '1 L' },
+      { name: 'Prakrithi Coconut Oil', price: 220, qty: 1, variantLabel: '1 L' },
+      { name: 'DH Turmeric Powder', price: 39, qty: 1, variantLabel: '250 g' },
+      { name: 'Iodized Crystal Salt', price: 24, qty: 1, variantLabel: '1 kg' },
+      { name: 'Refined Sugar', price: 45, qty: 1, variantLabel: '1 kg' },
+      { name: 'Black Pepper Powder', price: 145, qty: 1, variantLabel: '200 g' },
     ],
   },
   {
-    id: 'curated-weekly-veg',
+    id: 'weekly-vegetables',
     name: 'Weekly vegetables',
-    isCurated: true,
-    totalQty: 7,
-    approxTotal: 196,
-    theme: {
-      Icon: Leaf,
-      iconColor: '#b45309',
-      bgColor: '#fef3c7',
+    Icon: Leaf,
+    iconColor: '#b45309',
+    bgColor: '#fef3c7',
+    matches: (name, cat) => {
+      return (
+        cat.includes('vegetable') ||
+        cat.includes('fruit') ||
+        cat.includes('produce') ||
+        cat.includes('fresh') ||
+        name.includes('tomato') ||
+        name.includes('onion') ||
+        name.includes('potato') ||
+        name.includes('chilly') ||
+        name.includes('chili') ||
+        name.includes('green chilli') ||
+        name.includes('carrot') ||
+        name.includes('beans') ||
+        name.includes('cabbage') ||
+        name.includes('cauliflower') ||
+        name.includes('brinjal') ||
+        name.includes('cucumber') ||
+        name.includes('gourd') ||
+        name.includes('bottle gourd') ||
+        name.includes('drumstick') ||
+        name.includes('beet root') ||
+        name.includes('curry leave') ||
+        name.includes('mint leave') ||
+        name.includes('coriander leave') ||
+        name.includes('greens') ||
+        name.includes('spinach') ||
+        name.includes('palak') ||
+        name.includes('corn') ||
+        name.includes('sweet corn') ||
+        name.includes('capsicum') ||
+        name.includes('lemon') ||
+        name.includes('lime') ||
+        name.includes('ginger') ||
+        name.includes('garlic') ||
+        name.includes('banana') ||
+        name.includes('apple') ||
+        name.includes('orange') ||
+        name.includes('mango')
+      );
     },
-    extraCount: 3,
-    thumbnails: [
-      { id: 'p-tomato', name: 'Tomato (Local)' },
-      { id: 'p-onion', name: 'Onion' },
-      { id: 'p-potato', name: 'Potato' },
-      { id: 'p-chilli', name: 'Green Chilli' },
-    ],
-    items: [
-      { id: 'v1', name: 'Tomato (Local)', variantLabel: '1kg', price: 35, qty: 1 },
-      { id: 'v2', name: 'Onion', variantLabel: '1kg', price: 40, qty: 1 },
-      { id: 'v3', name: 'Potato', variantLabel: '1kg', price: 38, qty: 1 },
-      { id: 'v4', name: 'Green Chilli', variantLabel: '200g', price: 18, qty: 1 },
-      { id: 'v5', name: 'Ginger', variantLabel: '200g', price: 25, qty: 1 },
-      { id: 'v6', name: 'Beans', variantLabel: '500g', price: 30, qty: 1 },
-      { id: 'v7', name: 'Curry Leaves (K. Leaves)', variantLabel: '1 bunch', price: 10, qty: 1 },
+    // Default starter items perfectly matching reference: 7 items · approx. ₹196
+    defaultItems: [
+      { name: 'Tomato (Local)', price: 28, qty: 1, variantLabel: '1 kg' },
+      { name: 'Onion', price: 38, qty: 1, variantLabel: '1 kg' },
+      { name: 'Potato', price: 35, qty: 1, variantLabel: '1 kg' },
+      { name: 'Green Chilli', price: 20, qty: 1, variantLabel: '250 g' },
+      { name: 'Carrot', price: 35, qty: 1, variantLabel: '500 g' },
+      { name: 'Sweet Corn', price: 25, qty: 1, variantLabel: '1 pc' },
+      { name: 'Curry Leaves (K. Leaves)', price: 15, qty: 1, variantLabel: '1 bunch' },
     ],
   },
   {
-    id: 'curated-breakfast',
+    id: 'breakfast',
     name: 'Breakfast',
-    isCurated: true,
-    totalQty: 4,
-    approxTotal: 141,
-    theme: {
-      Icon: Coffee,
-      iconColor: '#475569',
-      bgColor: '#f1f5f9',
+    Icon: Coffee,
+    iconColor: '#475569',
+    bgColor: '#f1f5f9',
+    matches: (name, cat) => {
+      return (
+        cat.includes('breakfast') ||
+        cat.includes('dairy') ||
+        cat.includes('bakery') ||
+        cat.includes('tea') ||
+        cat.includes('coffee') ||
+        name.includes('milk') ||
+        name.includes('bread') ||
+        name.includes('egg') ||
+        name.includes('butter') ||
+        name.includes('paneer') ||
+        name.includes('curd') ||
+        name.includes('yogurt') ||
+        name.includes('cheese') ||
+        name.includes('tea') ||
+        name.includes('coffee') ||
+        name.includes('biscuit') ||
+        name.includes('cookie') ||
+        name.includes('rusk') ||
+        name.includes('marie') ||
+        name.includes('good day') ||
+        name.includes('bourbon') ||
+        name.includes('toast') ||
+        name.includes('jam') ||
+        name.includes('cereal') ||
+        name.includes('corn flakes') ||
+        name.includes('chocos') ||
+        name.includes('oats') ||
+        name.includes('muesli') ||
+        name.includes('horlicks') ||
+        name.includes('boost') ||
+        name.includes('glucose') ||
+        name.includes('kappi') ||
+        name.includes('appam') ||
+        name.includes('idiyappam') ||
+        name.includes('puttu')
+      );
     },
-    extraCount: 0,
-    thumbnails: [
-      { id: 'p-milk', name: 'Full Cream Milk' },
-      { id: 'p-bread', name: 'Modern Bread' },
-      { id: 'p-eggs', name: 'Farm Fresh Eggs' },
-      { id: 'p-biscuit', name: '50-50 Biscuits' },
+    // Default starter items perfectly matching reference: 4 items · approx. ₹141 (+0 extra)
+    defaultItems: [
+      { name: 'Milk', price: 32, qty: 1, variantLabel: '500 ml' },
+      { name: 'Sliced Bread', price: 40, qty: 1, variantLabel: '400 g' },
+      { name: 'Farm Fresh Eggs', price: 42, qty: 1, variantLabel: '6 pcs' },
+      { name: 'Milma Butter', price: 27, qty: 1, variantLabel: '100 g' },
     ],
-    items: [
-      { id: 'b1', name: 'Full Cream Milk', variantLabel: '500ml', price: 28, qty: 1 },
-      { id: 'b2', name: 'Modern Bread', variantLabel: '400g', price: 45, qty: 1 },
-      { id: 'b3', name: 'Farm Fresh Eggs', variantLabel: '6 pcs', price: 48, qty: 1 },
-      { id: 'b4', name: '50-50 Biscuits', variantLabel: '100g', price: 20, qty: 1 },
-    ],
+  },
+  {
+    id: 'party-snacks',
+    name: 'Party snacks',
+    Icon: Sparkles,
+    iconColor: '#9333ea',
+    bgColor: '#f3e8ff',
+    matches: (name, cat) => {
+      return (
+        cat.includes('snack') ||
+        cat.includes('chip') ||
+        cat.includes('confectionery') ||
+        name.includes('pringles') ||
+        name.includes('chips') ||
+        name.includes('namkeen') ||
+        name.includes('mixture') ||
+        name.includes('chocolate') ||
+        name.includes('kit kat') ||
+        name.includes('snickers') ||
+        name.includes('munch') ||
+        name.includes('drink') ||
+        name.includes('juice') ||
+        name.includes('cola')
+      );
+    },
+    defaultItems: [],
+  },
+  {
+    id: 'cleaning-supplies',
+    name: 'Cleaning supplies',
+    Icon: Package,
+    iconColor: '#0284c7',
+    bgColor: '#e0f2fe',
+    matches: (name, cat) => {
+      return (
+        cat.includes('clean') ||
+        cat.includes('household') ||
+        cat.includes('detergent') ||
+        cat.includes('dishwash') ||
+        name.includes('detergent') ||
+        name.includes('surf excel') ||
+        name.includes('rin') ||
+        name.includes('wheel') ||
+        name.includes('vim') ||
+        name.includes('dishwash') ||
+        name.includes('harpic') ||
+        name.includes('lizol') ||
+        name.includes('comfort') ||
+        name.includes('ujala') ||
+        name.includes('bleach') ||
+        name.includes('maxo') ||
+        name.includes('soap') ||
+        name.includes('shampoo')
+      );
+    },
+    defaultItems: [],
+  },
+  {
+    id: 'pooja-items',
+    name: 'Pooja items',
+    Icon: Sparkles,
+    iconColor: '#ea580c',
+    bgColor: '#ffedd5',
+    matches: (name, cat) => {
+      return (
+        cat.includes('pooja') ||
+        cat.includes('puja') ||
+        cat.includes('devotional') ||
+        name.includes('agarbathi') ||
+        name.includes('agarbatti') ||
+        name.includes('camphor') ||
+        name.includes('kapoor') ||
+        name.includes('pooja') ||
+        name.includes('puja') ||
+        name.includes('diya') ||
+        name.includes('dhoop')
+      );
+    },
+    defaultItems: [],
   },
 ];
 
-// Helper to determine icon & soft background matching Image 4 aesthetics
+// Helper to categorize an order item into one of the smart lists
+function categorizeOrderItem(item, product) {
+  const name = ((item?.name || '') + ' ' + (product?.name || '')).toLowerCase();
+  const cat = (
+    (product?.category || '') +
+    ' ' +
+    (product?.categoryId || '') +
+    ' ' +
+    (product?.subCategory || '')
+  ).toLowerCase();
+
+  // Priority 1: Weekly vegetables
+  if (CATEGORY_DEFINITIONS[1].matches(name, cat)) return 'weekly-vegetables';
+
+  // Priority 2: Breakfast & Dairy
+  if (CATEGORY_DEFINITIONS[2].matches(name, cat)) return 'breakfast';
+
+  // Priority 3: Pooja items
+  if (CATEGORY_DEFINITIONS[5].matches(name, cat)) return 'pooja-items';
+
+  // Priority 4: Party snacks
+  if (CATEGORY_DEFINITIONS[3].matches(name, cat)) return 'party-snacks';
+
+  // Priority 5: Cleaning & Household
+  if (CATEGORY_DEFINITIONS[4].matches(name, cat)) return 'cleaning-supplies';
+
+  // Priority 6: Default to Monthly groceries
+  return 'monthly-groceries';
+}
+
+// Helper to determine icon & soft background matching reference aesthetics
 function getThemeForList(name, index = 0) {
   const lower = (name || '').toLowerCase();
   if (lower.includes('veg') || lower.includes('fruit') || lower.includes('fresh')) {
@@ -140,35 +359,51 @@ function getThemeForList(name, index = 0) {
       bgColor: '#fef3c7',
     };
   }
-  if (lower.includes('breakfast') || lower.includes('coffee') || lower.includes('tea') || lower.includes('milk') || lower.includes('bread')) {
+  if (
+    lower.includes('breakfast') ||
+    lower.includes('coffee') ||
+    lower.includes('tea') ||
+    lower.includes('milk') ||
+    lower.includes('bread')
+  ) {
     return {
       Icon: Coffee,
       iconColor: '#475569',
       bgColor: '#f1f5f9',
     };
   }
-  if (lower.includes('pooja') || lower.includes('party') || lower.includes('snack') || lower.includes('clean') || lower.includes('soap')) {
+  if (
+    lower.includes('pooja') ||
+    lower.includes('party') ||
+    lower.includes('snack') ||
+    lower.includes('clean') ||
+    lower.includes('soap')
+  ) {
     return {
       Icon: Sparkles,
       iconColor: '#9333ea',
       bgColor: '#f3e8ff',
     };
   }
-  if (lower.includes('order')) {
-    return {
-      Icon: Package,
-      iconColor: '#087f46',
-      bgColor: '#eaf6ee',
-    };
-  }
-  // Default alternating themes matching Image 4
-  const themes = [
-    { Icon: ShoppingBag, iconColor: '#087f46', bgColor: '#eaf6ee' },
-    { Icon: Leaf, iconColor: '#b45309', bgColor: '#fef3c7' },
-    { Icon: Coffee, iconColor: '#475569', bgColor: '#f1f5f9' },
-    { Icon: Sparkles, iconColor: '#9333ea', bgColor: '#f3e8ff' },
-  ];
-  return themes[index % themes.length];
+  return ORDER_THEMES[index % ORDER_THEMES.length];
+}
+
+function DashedChip({ label, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.dashedChipBtn,
+        pressed && { opacity: 0.75 },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`Start list for ${label}`}
+    >
+      <Text numberOfLines={1} style={styles.suggestionChipText}>
+        + {label}
+      </Text>
+    </Pressable>
+  );
 }
 
 export default function ShoppingListsScreen({ navigation }) {
@@ -192,123 +427,153 @@ export default function ShoppingListsScreen({ navigation }) {
   const [searching, setSearching] = useState(false);
   const [createSourceTab, setCreateSourceTab] = useState('orders'); // 'orders' | 'cart' | 'search'
 
+  const [refreshing, setRefreshing] = useState(false);
+
   // View Details Modal
   const [activeListDetail, setActiveListDetail] = useState(null);
 
   const searchDebounceRef = useRef(null);
 
-  // Load all user's lists and past orders
-  const loadData = useCallback(async () => {
-    if (!userId || !token) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+  // Load all user's lists and delivered orders strictly
+  const loadData = useCallback(
+    async (showLoading = true) => {
+      if (!userId || !token) {
+        setLoading(false);
+        return;
+      }
+      if (showLoading) setLoading(true);
 
-    try {
-      // 1. Fetch user's saved shopping lists
-      const listsPromise = apiClient
-        .get(`/users/${userId}/shopping-lists`)
-        .then(({ data }) => data.items || [])
-        .catch(() => []);
+      try {
+        // 1. Fetch user's saved shopping lists
+        const listsPromise = apiClient
+          .get(`/users/${userId}/shopping-lists`)
+          .then(({ data }) => data.items || [])
+          .catch(() => []);
 
-      // 2. Fetch user's actual past orders strictly
-      const ordersPromise = apiClient
-        .get('/orders/mine?limit=15')
-        .then(({ data }) => data.items || [])
-        .catch(() => []);
+        // 2. Fetch user's delivered orders strictly (received from delivery partner)
+        const ordersPromise = apiClient
+          .get('/orders/mine?limit=50')
+          .then(({ data }) => {
+            const items = data.items || [];
+            return items.filter((o) => {
+              const st = String(o?.status || '').toUpperCase();
+              return (
+                (st === 'DELIVERED' || st === 'COMPLETED' || st === 'CLOSED') &&
+                !o.hiddenFromUser &&
+                (o.items || []).length > 0
+              );
+            });
+          })
+          .catch(() => []);
 
-      // 3. Fetch user's buy-again purchases strictly
-      const buyAgainPromise = apiClient
-        .get('/orders/buy-again')
-        .then(({ data }) => data.items || [])
-        .catch(() => []);
+        // 3. Fetch user's buy-again purchases
+        const buyAgainPromise = apiClient
+          .get('/orders/buy-again')
+          .then(({ data }) => data.items || [])
+          .catch(() => []);
 
-      const [lists, orders, buyAgain] = await Promise.all([
-        listsPromise,
-        ordersPromise,
-        buyAgainPromise,
-      ]);
+        const [lists, orders, buyAgain] = await Promise.all([
+          listsPromise,
+          ordersPromise,
+          buyAgainPromise,
+        ]);
 
-      setSavedLists(lists);
-      setPastOrders(orders);
-      setBuyAgainItems(buyAgain);
+        setSavedLists(lists);
+        setPastOrders(orders);
+        setBuyAgainItems(buyAgain);
 
-      // Collect all product IDs in saved lists that need metadata
-      const neededIds = new Set();
-      lists.forEach((list) => {
-        (list.items || []).forEach((item) => {
-          if (item.productId) neededIds.add(item.productId);
+        // Collect all product IDs that need metadata
+        const neededIds = new Set();
+        lists.forEach((list) => {
+          (list.items || []).forEach((item) => {
+            if (item.productId) neededIds.add(item.productId);
+          });
         });
-      });
+        orders.forEach((order) => {
+          (order.items || []).forEach((item) => {
+            if (item.productId) neededIds.add(item.productId);
+          });
+        });
 
-      // Populate from buyAgain items first
-      const pMap = {};
-      buyAgain.forEach((item) => {
-        if (item.product?.id) {
-          pMap[item.product.id] = item.product;
-        }
-      });
-
-      // Populate from past orders
-      orders.forEach((order) => {
-        (order.items || []).forEach((item) => {
-          if (item.productId && !pMap[item.productId]) {
-            pMap[item.productId] = {
-              id: item.productId,
-              name: item.name,
-              images: item.images || (item.image ? [item.image] : []),
-              price: item.price,
-              variants: [
-                {
-                  id: item.variantId,
-                  label: item.variantLabel || '',
-                  price: item.price,
-                  offerPrice: item.price,
-                },
-              ],
-            };
+        // Seed details map from buyAgain items
+        const pMap = {};
+        buyAgain.forEach((item) => {
+          if (item.product?.id) {
+            pMap[item.product.id] = item.product;
           }
         });
-      });
 
-      // Fetch remaining missing products
-      const missingIds = [...neededIds].filter((id) => !pMap[id]);
-      if (missingIds.length > 0) {
-        for (let i = 0; i < missingIds.length; i += 8) {
-          const slice = missingIds.slice(i, i + 8);
-          await Promise.all(
-            slice.map(async (id) => {
-              try {
-                const { data } = await apiClient.get(`/products/${id}`, {
-                  __skipErrorToast: true,
-                });
-                if (data?.id) pMap[data.id] = data;
-              } catch {
-                // Ignore 404s
-              }
-            })
-          );
+        // Seed details map from past delivered orders
+        orders.forEach((order) => {
+          (order.items || []).forEach((item) => {
+            if (item.productId && !pMap[item.productId]) {
+              pMap[item.productId] = {
+                id: item.productId,
+                name: item.name,
+                images: item.images || (item.image ? [item.image] : []),
+                price: item.price,
+                variants: [
+                  {
+                    id: item.variantId || 'default',
+                    label: item.variantLabel || '',
+                    price: item.price,
+                    offerPrice: item.price,
+                  },
+                ],
+              };
+            }
+          });
+        });
+
+        // Fetch remaining missing products
+        const missingIds = [...neededIds].filter((id) => !pMap[id]);
+        if (missingIds.length > 0) {
+          for (let i = 0; i < missingIds.length; i += 8) {
+            const slice = missingIds.slice(i, i + 8);
+            await Promise.all(
+              slice.map(async (id) => {
+                try {
+                  const { data } = await apiClient.get(`/products/${id}`, {
+                    __skipErrorToast: true,
+                  });
+                  if (data?.id) pMap[data.id] = data;
+                } catch {
+                  // Ignore 404s
+                }
+              })
+            );
+          }
         }
-      }
 
-      setProductDetailsMap(pMap);
-    } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Could not load your lists',
-        text2: 'Please check your connection and pull to refresh.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, token]);
+        setProductDetailsMap(pMap);
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Could not load your lists',
+          text2: 'Please check your connection and pull to refresh.',
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [userId, token]
+  );
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      loadData(true);
+      const interval = setInterval(() => {
+        loadData(false);
+      }, 5000);
+      return () => clearInterval(interval);
     }, [loadData])
   );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData(false);
+    setRefreshing(false);
+  };
 
   // Search catalog products live inside list creation modal
   const handleCatalogSearch = (text) => {
@@ -335,63 +600,113 @@ export default function ShoppingListsScreen({ navigation }) {
     }, 280);
   };
 
-  // Add all items in a saved list to cart
-  const handleAddAllSavedList = async (list) => {
-    if (actionBusy) return;
-    setActionBusy(true);
+  // Compute smart categorized lists from user's delivered orders and curated catalog fallbacks
+  const smartCategorizedLists = useMemo(() => {
+    // Collect all items across delivered orders
+    const itemsByCatId = {
+      'monthly-groceries': [],
+      'weekly-vegetables': [],
+      'breakfast': [],
+      'party-snacks': [],
+      'cleaning-supplies': [],
+      'pooja-items': [],
+    };
 
-    try {
-      const itemsToAdd = [];
-      for (const item of list.items || []) {
-        const product = productDetailsMap[item.productId];
-        if (product) {
-          const variant =
-            product.variants?.find((v) => v.id === item.variantId) ||
-            product.variants?.[0];
-          itemsToAdd.push({
-            product,
-            variant,
-            qty: item.qty || 1,
+    pastOrders.forEach((order) => {
+      (order.items || []).forEach((item) => {
+        const prod = productDetailsMap[item.productId] || {};
+        const catId = categorizeOrderItem(item, prod);
+        if (itemsByCatId[catId]) {
+          itemsByCatId[catId].push({
+            ...item,
+            product: prod,
           });
         }
-      }
+      });
+    });
 
-      if (itemsToAdd.length === 0) {
-        Toast.show({
-          type: 'info',
-          text1: 'Products in this list are no longer available',
+    // Deduplicate items within each category
+    const dedupedByCatId = {};
+    Object.keys(itemsByCatId).forEach((catId) => {
+      const map = new Map();
+      itemsByCatId[catId].forEach((it) => {
+        const key = it.productId || it.name;
+        if (!map.has(key)) {
+          map.set(key, { ...it });
+        } else {
+          const existing = map.get(key);
+          existing.qty = (existing.qty || 1) + (it.qty || 1);
+          if (it.price) existing.price = it.price;
+          if (it.product && (!existing.product || !existing.product.id)) {
+            existing.product = it.product;
+          }
+        }
+      });
+      dedupedByCatId[catId] = Array.from(map.values());
+    });
+
+    // Build the categorized smart cards
+    const result = [];
+    CATEGORY_DEFINITIONS.forEach((catDef) => {
+      const userItems = dedupedByCatId[catDef.id] || [];
+      let items = [];
+      let isUserOrderData = false;
+
+      if (catDef.defaultItems && catDef.defaultItems.length > 0) {
+        const mergedMap = new Map();
+        userItems.forEach((it) => {
+          mergedMap.set((it.name || '').toLowerCase(), it);
         });
+        catDef.defaultItems.forEach((it) => {
+          const key = (it.name || '').toLowerCase();
+          if (!mergedMap.has(key)) {
+            mergedMap.set(key, it);
+          }
+        });
+        items = Array.from(mergedMap.values());
+        isUserOrderData = userItems.length > 0;
+      } else if (userItems.length > 0) {
+        items = userItems;
+        isUserOrderData = true;
+      } else {
         return;
       }
 
-      const added = await addItems(itemsToAdd);
-      if (added > 0) {
-        Toast.show({
-          type: 'success',
-          text1: `Added ${added} item(s) from "${list.name}" to cart`,
-        });
-      }
-    } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Could not add items to cart',
-        text2: 'Please try again.',
-      });
-    } finally {
-      setActionBusy(false);
-    }
-  };
+      const totalQty = items.reduce((sum, i) => sum + (i.qty || 1), 0);
+      const approxTotal = Math.round(
+        items.reduce(
+          (sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 1),
+          0
+        )
+      );
 
-  // Add all items from a past order to cart
-  const handleAddAllPastOrder = async (order) => {
+      result.push({
+        id: catDef.id,
+        name: catDef.name,
+        Icon: catDef.Icon,
+        iconColor: catDef.iconColor,
+        bgColor: catDef.bgColor,
+        items,
+        totalQty,
+        approxTotal,
+        isUserOrderData,
+        isCategorizedList: true,
+      });
+    });
+
+    return result;
+  }, [pastOrders, productDetailsMap]);
+
+  // Add all items from any list (categorized or saved) to cart
+  const handleAddAllItems = async (list) => {
     if (actionBusy) return;
     setActionBusy(true);
 
     try {
       const entries = [];
-      for (const item of order.items || []) {
-        let product = productDetailsMap[item.productId];
-        if (!product) {
+      for (const item of list.items || []) {
+        let product = productDetailsMap[item.productId] || item.product;
+        if (!product && item.productId) {
           try {
             const { data } = await apiClient.get(`/products/${item.productId}`, {
               __skipErrorToast: true,
@@ -402,22 +717,40 @@ export default function ShoppingListsScreen({ navigation }) {
           }
         }
 
-        if (product) {
-          const variant =
-            product.variants?.find((v) => v.id === item.variantId) ||
-            product.variants?.[0];
-          entries.push({
-            product,
-            variant,
-            qty: item.qty || 1,
-          });
-        }
+        const fallbackVariant = {
+          id: item.variantId || 'default',
+          label: item.variantLabel || '1 Unit',
+          price: item.price || 0,
+          offerPrice: item.price || 0,
+        };
+
+        const resolvedProduct = product || {
+          id:
+            item.productId ||
+            `prod-${(item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+          name: item.name,
+          images: item.images || (item.image ? [item.image] : []),
+          availability: 'AVAILABLE',
+          isAvailableToday: true,
+          variants: [fallbackVariant],
+        };
+
+        const variant =
+          resolvedProduct.variants?.find((v) => v.id === item.variantId) ||
+          resolvedProduct.variants?.[0] ||
+          fallbackVariant;
+
+        entries.push({
+          product: resolvedProduct,
+          variant,
+          qty: item.qty || 1,
+        });
       }
 
       if (entries.length === 0) {
         Toast.show({
           type: 'info',
-          text1: 'Products from this order are no longer available',
+          text1: 'Products in this list are no longer available',
         });
         return;
       }
@@ -426,54 +759,13 @@ export default function ShoppingListsScreen({ navigation }) {
       if (added > 0) {
         Toast.show({
           type: 'success',
-          text1: `Added ${added} items from order #${order.id.slice(-6).toUpperCase()} to cart`,
+          text1: `Added ${added} items from "${list.name}" to cart`,
         });
       }
     } catch {
       Toast.show({
         type: 'error',
-        text1: 'Failed to reorder items',
-      });
-    } finally {
-      setActionBusy(false);
-    }
-  };
-
-  // Add all items from a curated starter list to cart
-  const handleAddAllCuratedList = async (curatedList) => {
-    if (actionBusy) return;
-    setActionBusy(true);
-
-    try {
-      const entries = curatedList.items.map((item) => ({
-        product: {
-          id: item.id,
-          name: item.name,
-          images: [],
-          availability: 'AVAILABLE',
-          isAvailableToday: true,
-        },
-        variant: {
-          id: `${item.id}-v1`,
-          label: item.variantLabel,
-          price: item.price,
-          offerPrice: item.price,
-          availability: 'AVAILABLE',
-        },
-        qty: item.qty || 1,
-      }));
-
-      const added = await addItems(entries);
-      if (added > 0) {
-        Toast.show({
-          type: 'success',
-          text1: `Added ${added} items from "${curatedList.name}" to cart`,
-        });
-      }
-    } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Could not add items to cart',
+        text1: 'Failed to add items to cart',
       });
     } finally {
       setActionBusy(false);
@@ -511,7 +803,13 @@ export default function ShoppingListsScreen({ navigation }) {
     setSelectedItems({});
     setCatalogSearch('');
     setSearchResults([]);
-    setCreateSourceTab(buyAgainItems.length > 0 ? 'orders' : cartItems.length > 0 ? 'cart' : 'search');
+    setCreateSourceTab(
+      buyAgainItems.length > 0
+        ? 'orders'
+        : cartItems.length > 0
+        ? 'cart'
+        : 'search'
+    );
     setCreateModalVisible(true);
   };
 
@@ -523,7 +821,9 @@ export default function ShoppingListsScreen({ navigation }) {
       return;
     }
 
-    const itemsArray = Object.values(selectedItems).filter((item) => item.qty > 0);
+    const itemsArray = Object.values(selectedItems).filter(
+      (item) => item.qty > 0
+    );
     if (itemsArray.length === 0) {
       Toast.show({
         type: 'error',
@@ -543,11 +843,14 @@ export default function ShoppingListsScreen({ navigation }) {
         })),
       };
 
-      const { data } = await apiClient.post(`/users/${userId}/shopping-lists`, payload);
+      const { data } = await apiClient.post(
+        `/users/${userId}/shopping-lists`,
+        payload
+      );
       setSavedLists((prev) => [data, ...prev]);
       setCreateModalVisible(false);
       Toast.show({ type: 'success', text1: 'Shopping list saved!' });
-      loadData();
+      loadData(false);
     } catch (err) {
       Toast.show({
         type: 'error',
@@ -602,18 +905,80 @@ export default function ShoppingListsScreen({ navigation }) {
     });
   };
 
-  // Render a saved shopping list card matching Image 5
-  const renderSavedListCard = (list, index) => {
-    const theme = getThemeForList(list.name, index);
-    const IconComponent = theme.Icon;
-
+  // Render a shopping list card matching the reference design layout
+  const renderListCard = (list) => {
+    const IconComponent = list.Icon || ShoppingBag;
     const items = list.items || [];
-    const totalQty = items.reduce((sum, i) => sum + (i.qty || 1), 0);
+    const thumbnails = items.slice(0, 4);
+    const extraCount = Math.max(0, items.length - 4);
 
-    // Compute approximate total price
+    return (
+      <Pressable
+        key={list.id}
+        onPress={() => setActiveListDetail(list)}
+        style={styles.listCard}
+      >
+        {/* Top row: Icon, Title & subtitle, Chevron */}
+        <View style={styles.cardTopRow}>
+          <View style={[styles.iconBox, { backgroundColor: list.bgColor }]}>
+            <IconComponent size={20} color={list.iconColor} strokeWidth={2.2} />
+          </View>
+          <View style={styles.cardHeaderContent}>
+            <Text numberOfLines={1} style={styles.cardTitle}>
+              {list.name}
+            </Text>
+            <Text style={styles.cardSubtitle}>
+              {items.length} items · approx. ₹{list.approxTotal}
+            </Text>
+          </View>
+          <ChevronRight size={18} color="#94a3b8" strokeWidth={2.2} />
+        </View>
+
+        {/* Bottom row: Thumbnails + Add all button */}
+        <View style={styles.cardBottomRow}>
+          <View style={styles.thumbnailsWrap}>
+            {thumbnails.map((item, tIdx) => {
+              const prod = productDetailsMap[item.productId] || item.product || item;
+              const source = getProductImageSource(prod, 120);
+              return (
+                <View key={`thumb-${list.id}-${tIdx}`} style={styles.thumbBox}>
+                  {source ? (
+                    <Image
+                      source={source}
+                      style={styles.thumbImg}
+                      contentFit="contain"
+                    />
+                  ) : (
+                    <ShoppingBag size={18} color="#94a3b8" />
+                  )}
+                </View>
+              );
+            })}
+            <Text style={styles.thumbExtraText}>+{extraCount}</Text>
+          </View>
+
+          <Pressable
+            disabled={actionBusy}
+            onPress={() => handleAddAllItems(list)}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.addAllBtn,
+              pressed && { opacity: 0.75 },
+              actionBusy && { opacity: 0.6 },
+            ]}
+          >
+            <Text style={styles.addAllText}>Add all</Text>
+          </Pressable>
+        </View>
+      </Pressable>
+    );
+  };
+
+  // Render a user's custom saved shopping list
+  const renderCustomSavedListCard = (list, index) => {
+    const theme = getThemeForList(list.name, index);
+    const items = list.items || [];
     let approxTotal = 0;
-    const thumbnails = [];
-
     items.forEach((item) => {
       const prod = productDetailsMap[item.productId];
       const variant =
@@ -621,244 +986,25 @@ export default function ShoppingListsScreen({ navigation }) {
         prod?.variants?.[0];
       const price = variant?.offerPrice ?? variant?.price ?? 0;
       approxTotal += price * (item.qty || 1);
-
-      if (prod && thumbnails.length < 4) {
-        thumbnails.push(prod);
-      }
     });
 
-    const extraCount = Math.max(0, items.length - 4);
-
-    return (
-      <Pressable
-        key={list.id}
-        onPress={() =>
-          setActiveListDetail({
-            ...list,
-            approxTotal: Math.round(approxTotal),
-            totalQty,
-            isSavedList: true,
-          })
-        }
-        style={styles.listCard}
-      >
-        {/* Top row: Icon, Title & subtitle, Chevron */}
-        <View style={styles.cardTopRow}>
-          <View style={[styles.iconBox, { backgroundColor: theme.bgColor }]}>
-            <IconComponent size={20} color={theme.iconColor} strokeWidth={2.2} />
-          </View>
-          <View style={styles.cardHeaderContent}>
-            <Text numberOfLines={1} style={styles.cardTitle}>
-              {list.name}
-            </Text>
-            <Text style={styles.cardSubtitle}>
-              {totalQty} items · approx. ₹{Math.round(approxTotal)}
-            </Text>
-          </View>
-          <ChevronRight size={18} color="#94a3b8" strokeWidth={2.2} />
-        </View>
-
-        {/* Bottom row: Thumbnails + Add all button */}
-        <View style={styles.cardBottomRow}>
-          <View style={styles.thumbnailsWrap}>
-            {thumbnails.map((prod, tIdx) => {
-              const source = getProductImageSource(prod, 120);
-              return (
-                <View key={`thumb-${tIdx}`} style={styles.thumbBox}>
-                  {source ? (
-                    <Image source={source} style={styles.thumbImg} contentFit="contain" />
-                  ) : (
-                    <ShoppingBag size={18} color="#94a3b8" />
-                  )}
-                </View>
-              );
-            })}
-            <Text style={styles.thumbExtraText}>+{extraCount}</Text>
-          </View>
-
-          <Pressable
-            disabled={actionBusy}
-            onPress={() => handleAddAllSavedList(list)}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.addAllBtn,
-              pressed && { opacity: 0.75 },
-              actionBusy && { opacity: 0.6 },
-            ]}
-          >
-            <Text style={styles.addAllText}>Add all</Text>
-          </Pressable>
-        </View>
-      </Pressable>
-    );
-  };
-
-  // Render a past order card matching Image 5
-  const renderPastOrderCard = (order, index) => {
-    const theme = {
-      Icon: Package,
-      iconColor: '#087f46',
-      bgColor: '#e8f5e9',
+    const adaptedList = {
+      ...list,
+      Icon: theme.Icon,
+      iconColor: theme.iconColor,
+      bgColor: theme.bgColor,
+      approxTotal: Math.round(approxTotal),
+      isSavedList: true,
     };
-    const items = order.items || [];
-    const totalQty = items.reduce((sum, i) => sum + (i.qty || 1), 0);
-    const approxTotal = order.total || order.pricing?.total || 0;
 
-    const thumbnails = [];
-    items.forEach((item) => {
-      if (thumbnails.length < 4) {
-        thumbnails.push(item);
-      }
-    });
-    const extraCount = Math.max(0, items.length - 4);
-
-    const orderNo = order.id.slice(-6).toUpperCase();
-    const dateStr = order.createdAt
-      ? new Date(order.createdAt).toLocaleDateString('en-IN', {
-          day: 'numeric',
-          month: 'short',
-        })
-      : '';
-
-    return (
-      <Pressable
-        key={`order-${order.id}`}
-        onPress={() =>
-          setActiveListDetail({
-            id: order.id,
-            name: `Order #${orderNo} · ${dateStr}`,
-            items: order.items,
-            approxTotal: Math.round(approxTotal),
-            totalQty,
-            isPastOrder: true,
-            order,
-          })
-        }
-        style={styles.listCard}
-      >
-        {/* Top row */}
-        <View style={styles.cardTopRow}>
-          <View style={[styles.iconBox, { backgroundColor: theme.bgColor }]}>
-            <theme.Icon size={20} color={theme.iconColor} strokeWidth={2.2} />
-          </View>
-          <View style={styles.cardHeaderContent}>
-            <Text numberOfLines={1} style={styles.cardTitle}>
-              Order #{orderNo} · {dateStr}
-            </Text>
-            <Text style={styles.cardSubtitle}>
-              {totalQty} items · approx. ₹{Math.round(approxTotal)}
-            </Text>
-          </View>
-          <ChevronRight size={18} color="#94a3b8" strokeWidth={2.2} />
-        </View>
-
-        {/* Bottom row */}
-        <View style={styles.cardBottomRow}>
-          <View style={styles.thumbnailsWrap}>
-            {thumbnails.map((item, tIdx) => {
-              const source = getProductImageSource(item, 120);
-              return (
-                <View key={`thumb-order-${tIdx}`} style={styles.thumbBox}>
-                  {source ? (
-                    <Image source={source} style={styles.thumbImg} contentFit="contain" />
-                  ) : (
-                    <ShoppingBag size={18} color="#94a3b8" />
-                  )}
-                </View>
-              );
-            })}
-            <Text style={styles.thumbExtraText}>+{extraCount}</Text>
-          </View>
-
-          <Pressable
-            disabled={actionBusy}
-            onPress={() => handleAddAllPastOrder(order)}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.addAllBtn,
-              pressed && { opacity: 0.75 },
-              actionBusy && { opacity: 0.6 },
-            ]}
-          >
-            <Text style={styles.addAllText}>Add all</Text>
-          </Pressable>
-        </View>
-      </Pressable>
-    );
-  };
-
-  // Render a curated starter list card matching Image 4
-  const renderCuratedListCard = (curatedList) => {
-    const { theme } = curatedList;
-    const IconComponent = theme.Icon;
-
-    return (
-      <Pressable
-        key={curatedList.id}
-        onPress={() =>
-          setActiveListDetail({
-            ...curatedList,
-            isCurated: true,
-          })
-        }
-        style={styles.listCard}
-      >
-        {/* Top row: Icon, Title & subtitle, Chevron */}
-        <View style={styles.cardTopRow}>
-          <View style={[styles.iconBox, { backgroundColor: theme.bgColor }]}>
-            <IconComponent size={21} color={theme.iconColor} strokeWidth={2.3} />
-          </View>
-          <View style={styles.cardHeaderContent}>
-            <Text numberOfLines={1} style={styles.cardTitle}>
-              {curatedList.name}
-            </Text>
-            <Text style={styles.cardSubtitle}>
-              {curatedList.totalQty} items · approx. ₹{curatedList.approxTotal}
-            </Text>
-          </View>
-          <ChevronRight size={18} color="#94a3b8" strokeWidth={2.2} />
-        </View>
-
-        {/* Bottom row: Thumbnails + Add all button */}
-        <View style={styles.cardBottomRow}>
-          <View style={styles.thumbnailsWrap}>
-            {curatedList.thumbnails.map((item, tIdx) => {
-              const source = getProductImageSource(item, 120);
-              return (
-                <View key={`curated-thumb-${tIdx}`} style={styles.thumbBox}>
-                  {source ? (
-                    <Image source={source} style={styles.thumbImg} contentFit="contain" />
-                  ) : (
-                    <ShoppingBag size={18} color="#94a3b8" />
-                  )}
-                </View>
-              );
-            })}
-            <Text style={styles.thumbExtraText}>+{curatedList.extraCount}</Text>
-          </View>
-
-          <Pressable
-            disabled={actionBusy}
-            onPress={() => handleAddAllCuratedList(curatedList)}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.addAllBtn,
-              pressed && { opacity: 0.75 },
-              actionBusy && { opacity: 0.6 },
-            ]}
-          >
-            <Text style={styles.addAllText}>Add all</Text>
-          </Pressable>
-        </View>
-      </Pressable>
-    );
+    return renderListCard(adaptedList);
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f3f6f3" />
 
-      {/* Header matching Image 4: Back, "My lists", and "+ New list" pill button */}
+      {/* Header: Back, "My lists", and "+ New list" pill button */}
       <View style={styles.header}>
         <View style={styles.headerLeftGroup}>
           <Pressable
@@ -880,18 +1026,28 @@ export default function ShoppingListsScreen({ navigation }) {
           ]}
           accessibilityLabel="Create new list"
         >
-          <Plus size={16} color="#087f46" strokeWidth={2.4} style={{ marginRight: 4 }} />
-          <Text style={styles.newListHeaderText}>New list</Text>
+          <Text numberOfLines={1} style={styles.newListHeaderText}>
+            + New list
+          </Text>
         </Pressable>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#087f46']}
+            tintColor="#087f46"
+          />
+        }
       >
-        {/* Subtitle text matching Image 4 */}
+        {/* Subtitle text matching reference */}
         <Text style={styles.subtitleText}>
-          Keep your regular shopping in one place and add a whole list to the cart in one tap.
+          Keep your regular shopping in one place and add a whole list to the
+          cart in one tap.
         </Text>
 
         {loading ? (
@@ -900,44 +1056,34 @@ export default function ShoppingListsScreen({ navigation }) {
           </View>
         ) : (
           <>
-            {/* 1. Saved Lists from user account */}
-            {savedLists.map((list, idx) => renderSavedListCard(list, idx))}
+            {/* 1. Categorized Smart Shopping Lists (Monthly groceries, Weekly vegetables, Breakfast...) */}
+            {smartCategorizedLists.map((list) => renderListCard(list))}
 
-            {/* 2. Default Curated Starter Lists matching Image 4 */}
-            {savedLists.length === 0 &&
-              DEFAULT_CURATED_LISTS.map((curated) => renderCuratedListCard(curated))}
+            {/* 2. User's custom saved shopping lists (if any created) */}
+            {savedLists.map((list, idx) => renderCustomSavedListCard(list, idx))}
 
-            {/* 3. Quick Order from actual past orders */}
-            {pastOrders.length > 0 && (
-              <>
-                <Text style={styles.sectionHeaderLabel}>Quick reorder from recent orders</Text>
-                {pastOrders.slice(0, 5).map((order, idx) => renderPastOrderCard(order, idx))}
-              </>
-            )}
-
-            {savedLists.length > 0 && (
-              <>
-                <Text style={styles.sectionHeaderLabel}>Starter list templates</Text>
-                {DEFAULT_CURATED_LISTS.map((curated) => renderCuratedListCard(curated))}
-              </>
-            )}
-
-            {/* "Start a new list" Section matching Image 4 */}
+            {/* "Start a new list" Section with dashed green pills */}
             <View style={styles.startListSection}>
               <Text style={styles.startListTitle}>Start a new list</Text>
-              <View style={styles.chipsWrap}>
-                {LIST_SUGGESTIONS.map((suggestion) => (
-                  <Pressable
-                    key={suggestion}
-                    onPress={() => openCreateModal(suggestion)}
-                    style={({ pressed }) => [
-                      styles.suggestionChip,
-                      pressed && { opacity: 0.75, backgroundColor: '#f0fdf4' },
-                    ]}
-                  >
-                    <Text style={styles.suggestionChipText}>+ {suggestion}</Text>
-                  </Pressable>
-                ))}
+              <View style={styles.chipsRow}>
+                <DashedChip
+                  label="Monthly groceries"
+                  onPress={() => openCreateModal('Monthly groceries')}
+                />
+                <DashedChip
+                  label="Pooja items"
+                  onPress={() => openCreateModal('Pooja items')}
+                />
+              </View>
+              <View style={styles.chipsRow}>
+                <DashedChip
+                  label="Party snacks"
+                  onPress={() => openCreateModal('Party snacks')}
+                />
+                <DashedChip
+                  label="Cleaning supplies"
+                  onPress={() => openCreateModal('Cleaning supplies')}
+                />
               </View>
             </View>
           </>
@@ -1057,7 +1203,8 @@ export default function ShoppingListsScreen({ navigation }) {
               <>
                 {buyAgainItems.length === 0 ? (
                   <Text style={styles.emptyTabText}>
-                    No past purchases yet. Use “Search store” to add items from the catalog.
+                    No past purchases yet. Use “Search store” to add items from the
+                    catalog.
                   </Text>
                 ) : (
                   buyAgainItems.map((item) => {
@@ -1082,7 +1229,9 @@ export default function ShoppingListsScreen({ navigation }) {
                               isSelected && styles.checkboxSquareSelected,
                             ]}
                           >
-                            {isSelected && <Check size={14} color="#ffffff" strokeWidth={3} />}
+                            {isSelected && (
+                              <Check size={14} color="#ffffff" strokeWidth={3} />
+                            )}
                           </View>
                           <View style={styles.modalProductThumb}>
                             <Image
@@ -1096,7 +1245,8 @@ export default function ShoppingListsScreen({ navigation }) {
                               {prod.name}
                             </Text>
                             <Text style={styles.modalProdVariant}>
-                              {variant.label} · ₹{variant.offerPrice ?? variant.price}
+                              {variant.label} · ₹
+                              {variant.offerPrice ?? variant.price}
                             </Text>
                           </View>
                         </Pressable>
@@ -1104,14 +1254,18 @@ export default function ShoppingListsScreen({ navigation }) {
                         {isSelected && (
                           <View style={styles.qtyCounterRow}>
                             <Pressable
-                              onPress={() => updateItemQty(prod.id, variant.id, -1)}
+                              onPress={() =>
+                                updateItemQty(prod.id, variant.id, -1)
+                              }
                               style={styles.qtyBtn}
                             >
                               <Text style={styles.qtyBtnText}>-</Text>
                             </Pressable>
                             <Text style={styles.qtyText}>{selectedQty}</Text>
                             <Pressable
-                              onPress={() => updateItemQty(prod.id, variant.id, 1)}
+                              onPress={() =>
+                                updateItemQty(prod.id, variant.id, 1)
+                              }
                               style={styles.qtyBtn}
                             >
                               <Text style={styles.qtyBtnText}>+</Text>
@@ -1130,15 +1284,24 @@ export default function ShoppingListsScreen({ navigation }) {
                 {cartItems.map((cartItem) => {
                   const key = `${cartItem.productId}:${cartItem.variantId}`;
                   const isSelected = Boolean(selectedItems[key]);
-                  const selectedQty = selectedItems[key]?.qty || cartItem.qty || 1;
+                  const selectedQty =
+                    selectedItems[key]?.qty || cartItem.qty || 1;
 
                   return (
                     <View key={key} style={styles.modalProductRow}>
                       <Pressable
                         onPress={() =>
                           toggleItemSelection(
-                            { id: cartItem.productId, name: cartItem.name, images: cartItem.images },
-                            { id: cartItem.variantId, label: cartItem.variantLabel, price: cartItem.price },
+                            {
+                              id: cartItem.productId,
+                              name: cartItem.name,
+                              images: cartItem.images,
+                            },
+                            {
+                              id: cartItem.variantId,
+                              label: cartItem.variantLabel,
+                              price: cartItem.price,
+                            },
                             cartItem.qty || 1
                           )
                         }
@@ -1150,7 +1313,9 @@ export default function ShoppingListsScreen({ navigation }) {
                             isSelected && styles.checkboxSquareSelected,
                           ]}
                         >
-                          {isSelected && <Check size={14} color="#ffffff" strokeWidth={3} />}
+                          {isSelected && (
+                            <Check size={14} color="#ffffff" strokeWidth={3} />
+                          )}
                         </View>
                         <View style={styles.modalProductThumb}>
                           <Image
@@ -1172,14 +1337,26 @@ export default function ShoppingListsScreen({ navigation }) {
                       {isSelected && (
                         <View style={styles.qtyCounterRow}>
                           <Pressable
-                            onPress={() => updateItemQty(cartItem.productId, cartItem.variantId, -1)}
+                            onPress={() =>
+                              updateItemQty(
+                                cartItem.productId,
+                                cartItem.variantId,
+                                -1
+                              )
+                            }
                             style={styles.qtyBtn}
                           >
                             <Text style={styles.qtyBtnText}>-</Text>
                           </Pressable>
                           <Text style={styles.qtyText}>{selectedQty}</Text>
                           <Pressable
-                            onPress={() => updateItemQty(cartItem.productId, cartItem.variantId, 1)}
+                            onPress={() =>
+                              updateItemQty(
+                                cartItem.productId,
+                                cartItem.variantId,
+                                1
+                              )
+                            }
                             style={styles.qtyBtn}
                           >
                             <Text style={styles.qtyBtnText}>+</Text>
@@ -1213,7 +1390,9 @@ export default function ShoppingListsScreen({ navigation }) {
                             isSelected && styles.checkboxSquareSelected,
                           ]}
                         >
-                          {isSelected && <Check size={14} color="#ffffff" strokeWidth={3} />}
+                          {isSelected && (
+                            <Check size={14} color="#ffffff" strokeWidth={3} />
+                          )}
                         </View>
                         <View style={styles.modalProductThumb}>
                           <Image
@@ -1227,7 +1406,8 @@ export default function ShoppingListsScreen({ navigation }) {
                             {prod.name}
                           </Text>
                           <Text style={styles.modalProdVariant}>
-                            {variant.label} · ₹{variant.offerPrice ?? variant.price}
+                            {variant.label} · ₹
+                            {variant.offerPrice ?? variant.price}
                           </Text>
                         </View>
                       </Pressable>
@@ -1235,14 +1415,18 @@ export default function ShoppingListsScreen({ navigation }) {
                       {isSelected && (
                         <View style={styles.qtyCounterRow}>
                           <Pressable
-                            onPress={() => updateItemQty(prod.id, variant.id, -1)}
+                            onPress={() =>
+                              updateItemQty(prod.id, variant.id, -1)
+                            }
                             style={styles.qtyBtn}
                           >
                             <Text style={styles.qtyBtnText}>-</Text>
                           </Pressable>
                           <Text style={styles.qtyText}>{selectedQty}</Text>
                           <Pressable
-                            onPress={() => updateItemQty(prod.id, variant.id, 1)}
+                            onPress={() =>
+                              updateItemQty(prod.id, variant.id, 1)
+                            }
                             style={styles.qtyBtn}
                           >
                             <Text style={styles.qtyBtnText}>+</Text>
@@ -1299,7 +1483,8 @@ export default function ShoppingListsScreen({ navigation }) {
                     {activeListDetail.name}
                   </Text>
                   <Text style={styles.cardSubtitle}>
-                    {activeListDetail.totalQty} items · approx. ₹{activeListDetail.approxTotal}
+                    {activeListDetail.items?.length || 0} items · approx. ₹
+                    {activeListDetail.approxTotal}
                   </Text>
                 </View>
                 <Pressable
@@ -1314,16 +1499,29 @@ export default function ShoppingListsScreen({ navigation }) {
               {/* Items List */}
               <ScrollView contentContainerStyle={styles.modalScrollContent}>
                 {(activeListDetail.items || []).map((item, idx) => {
-                  const prod = productDetailsMap[item.productId] || item.product || item;
+                  const prod =
+                    productDetailsMap[item.productId] ||
+                    item.product ||
+                    item;
                   const source = getProductImageSource(prod, 120);
-                  const price = item.price || (prod?.variants?.[0]?.offerPrice ?? prod?.variants?.[0]?.price ?? 0);
-                  const label = item.variantLabel || prod?.variants?.[0]?.label || '';
+                  const price =
+                    item.price != null
+                      ? item.price
+                      : (prod?.variants?.[0]?.offerPrice ??
+                         prod?.variants?.[0]?.price ??
+                         0);
+                  const label =
+                    item.variantLabel || prod?.variants?.[0]?.label || '';
 
                   return (
                     <View key={`detail-item-${idx}`} style={styles.detailItemRow}>
                       <View style={styles.detailThumbBox}>
                         {source ? (
-                          <Image source={source} style={styles.thumbImg} contentFit="contain" />
+                          <Image
+                            source={source}
+                            style={styles.thumbImg}
+                            contentFit="contain"
+                          />
                         ) : (
                           <ShoppingBag size={18} color="#94a3b8" />
                         )}
@@ -1349,13 +1547,7 @@ export default function ShoppingListsScreen({ navigation }) {
                 <Pressable
                   disabled={actionBusy}
                   onPress={() => {
-                    if (activeListDetail.isSavedList) {
-                      handleAddAllSavedList(activeListDetail);
-                    } else if (activeListDetail.isPastOrder) {
-                      handleAddAllPastOrder(activeListDetail.order);
-                    } else if (activeListDetail.isCurated) {
-                      handleAddAllCuratedList(activeListDetail);
-                    }
+                    handleAddAllItems(activeListDetail);
                     setActiveListDetail(null);
                   }}
                   style={({ pressed }) => [
@@ -1372,8 +1564,51 @@ export default function ShoppingListsScreen({ navigation }) {
                     onPress={() => handleDeleteList(activeListDetail)}
                     style={styles.deleteListBtn}
                   >
-                    <Trash2 size={16} color="#dc2626" style={{ marginRight: 6 }} />
+                    <Trash2
+                      size={16}
+                      color="#dc2626"
+                      style={{ marginRight: 6 }}
+                    />
                     <Text style={styles.deleteListText}>Delete this list</Text>
+                  </Pressable>
+                )}
+
+                {activeListDetail.isCategorizedList && (
+                  <Pressable
+                    onPress={() => {
+                      const list = activeListDetail;
+                      setActiveListDetail(null);
+                      const preselected = {};
+                      (list.items || []).forEach((item) => {
+                        const key = `${
+                          item.productId ||
+                          item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+                        }:${item.variantId || 'default'}`;
+                        preselected[key] = {
+                          productId:
+                            item.productId ||
+                            item.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                          variantId: item.variantId || 'default',
+                          qty: item.qty || 1,
+                          name: item.name,
+                          variantLabel: item.variantLabel || '',
+                          price: item.price,
+                        };
+                      });
+                      setSelectedItems(preselected);
+                      setNewListName(list.name);
+                      setCreateModalVisible(true);
+                    }}
+                    style={styles.saveOrderAsListBtn}
+                  >
+                    <Plus
+                      size={16}
+                      color="#087f46"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.saveOrderAsListText}>
+                      Save as a custom shopping list
+                    </Text>
                   </Pressable>
                 )}
               </View>
@@ -1412,19 +1647,20 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   newListHeaderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderWidth: 1.5,
     borderColor: '#087f46',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newListHeaderText: {
-    fontFamily: fonts.bold,
-    fontSize: 13.5,
+    fontFamily: fonts.semiBold,
+    fontSize: 14,
     color: '#087f46',
+    includeFontPadding: false,
   },
   subtitleText: {
     fontFamily: fonts.regular,
@@ -1443,30 +1679,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionHeaderLabel: {
-    fontFamily: fonts.bold,
-    fontSize: 13,
-    color: '#64748b',
-    paddingHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
 
-  /* List Card Matching Image 4 */
+  /* Card Matching Reference Design */
   listCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: '#edf2ed',
-    padding: 18,
+    padding: 16,
     marginHorizontal: 16,
     marginBottom: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowOpacity: 0.035,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardTopRow: {
@@ -1499,12 +1725,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 14,
+    flexWrap: 'nowrap',
   },
   thumbnailsWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
   },
   thumbBox: {
     width: 42,
@@ -1518,64 +1746,36 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   thumbImg: {
-    width: 34,
-    height: 34,
+    width: 38,
+    height: 38,
   },
   thumbExtraText: {
     fontFamily: fonts.bold,
     fontSize: 13.5,
     color: '#64748b',
-    marginLeft: 6,
+    marginLeft: 4,
+    includeFontPadding: false,
   },
   addAllBtn: {
-    backgroundColor: '#eaf6ee',
-    borderRadius: 18,
+    backgroundColor: '#e6f7ef',
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   addAllText: {
     fontFamily: fonts.bold,
     fontSize: 13.5,
-    color: '#047857',
+    color: '#087f46',
+    includeFontPadding: false,
   },
 
-  /* Empty state */
-  emptyCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#edf2ed',
-  },
-  emptyIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#eaf6ee',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    fontFamily: fonts.bold,
-    fontSize: 16,
-    color: '#0f172a',
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-
-  /* Start a new list Section Matching Image 4 */
+  /* Start a new list Section */
   startListSection: {
-    marginTop: 14,
+    marginTop: 20,
+    marginBottom: 32,
     paddingHorizontal: 16,
   },
   startListTitle: {
@@ -1584,24 +1784,28 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     marginBottom: 14,
   },
-  chipsWrap: {
+  chipsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 10,
+    marginBottom: 12,
   },
-  suggestionChip: {
-    borderWidth: 1.2,
-    borderColor: '#86efac',
-    borderStyle: 'dashed',
-    borderRadius: 24,
+  dashedChipBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
+    borderRadius: 24,
     backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   suggestionChipText: {
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
     fontSize: 13.5,
-    color: '#047857',
+    color: '#064e3b',
+    includeFontPadding: false,
   },
 
   /* Modal Styles */
@@ -1620,7 +1824,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: fonts.bold,
-    fontWeight: 'normal',
     fontSize: 18,
     color: '#0f172a',
   },
@@ -1634,7 +1837,6 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontFamily: fonts.medium,
-    fontWeight: 'normal',
     fontSize: 12,
     color: '#64748b',
     marginBottom: 4,
@@ -1668,7 +1870,6 @@ const styles = StyleSheet.create({
   },
   tabBtnText: {
     fontFamily: fonts.medium,
-    fontWeight: 'normal',
     fontSize: 12.5,
     color: '#475569',
   },
@@ -1750,7 +1951,6 @@ const styles = StyleSheet.create({
   },
   modalProdName: {
     fontFamily: fonts.medium,
-    fontWeight: 'normal',
     fontSize: 14,
     color: '#0f172a',
   },
@@ -1804,7 +2004,6 @@ const styles = StyleSheet.create({
   },
   saveListBtnText: {
     fontFamily: fonts.bold,
-    fontWeight: 'normal',
     fontSize: 15,
     color: '#ffffff',
   },
@@ -1830,7 +2029,6 @@ const styles = StyleSheet.create({
   },
   detailProdName: {
     fontFamily: fonts.bold,
-    fontWeight: 'normal',
     fontSize: 14.5,
     color: '#0f172a',
   },
@@ -1842,7 +2040,6 @@ const styles = StyleSheet.create({
   },
   detailItemPrice: {
     fontFamily: fonts.bold,
-    fontWeight: 'normal',
     fontSize: 14.5,
     color: '#0f172a',
     marginLeft: 8,
@@ -1864,5 +2061,21 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 13.5,
     color: '#dc2626',
+  },
+  saveOrderAsListBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#087f46',
+    backgroundColor: '#ffffff',
+  },
+  saveOrderAsListText: {
+    fontFamily: fonts.bold,
+    fontSize: 14,
+    color: '#087f46',
   },
 });

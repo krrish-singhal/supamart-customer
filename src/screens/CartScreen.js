@@ -96,26 +96,24 @@ export default function CartScreen({ navigation }) {
     }, [])
   );
 
-  // Fetch categories and popular products for empty state
+  // Fetch categories and popular products for empty state (one-time fetch on mount)
   useEffect(() => {
-    const unsubCats = onSnapshot(
-      query(collection(db, 'categories'), where('isActive', '==', true)),
-      (snap) => {
-        const topLevel = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
+    let active = true;
+    Promise.allSettled([
+      getDocs(query(collection(db, 'categories'), where('isActive', '==', true))),
+      getDocs(query(collection(db, 'products'), limit(8))),
+    ]).then(([catsSnap, popSnap]) => {
+      if (!active) return;
+      if (catsSnap.status === 'fulfilled') {
+        const topLevel = catsSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
         setEmptyCategories(topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 8));
-      },
-      () => {}
-    );
-    const unsubPop = onSnapshot(
-      query(collection(db, 'products'), limit(8)),
-      (snap) => {
-        setPopularProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      },
-      () => {}
-    );
+      }
+      if (popSnap.status === 'fulfilled') {
+        setPopularProducts(popSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })));
+      }
+    }).catch(() => {});
     return () => {
-      unsubCats();
-      unsubPop();
+      active = false;
     };
   }, []);
 
@@ -184,14 +182,16 @@ export default function CartScreen({ navigation }) {
   );
 
   // Compute bill
-  const { deliveryFee, toPay } = computeBill(subtotal, discount, taxPercent, deliveryConfig, defaultAddress);
+  const { deliveryFee, toPay, isFreeDelivery, threshold } = computeBill(subtotal, discount, taxPercent, deliveryConfig, defaultAddress);
+  const remainingForFree = Math.max(0, (threshold || 3000) - subtotal);
+  const freeProgress = (threshold || 3000) > 0 ? Math.min(1, Math.max(0, subtotal / (threshold || 3000))) : 1;
 
   // Calculate total MRP savings
   const totalMrp = items.reduce((sum, item) => {
     const mrp = item.price || item.offerPrice || 0;
     return sum + mrp * (item.qty || 1);
   }, 0);
-  const savings = Math.max(0, Math.round(totalMrp - subtotal + (deliveryFee === 0 ? 30 : 0)));
+  const savings = Math.max(0, Math.round(totalMrp - subtotal + (isFreeDelivery ? 30 : 0)));
 
   if (loading && !items.length) {
     return (
@@ -614,33 +614,27 @@ export default function CartScreen({ navigation }) {
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: '#ecfdf5',
+                backgroundColor: isFreeDelivery ? '#ecfdf5' : '#f1f5f9',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginRight: 10,
               }}
             >
-              <Truck size={17} color="#047857" strokeWidth={2.4} />
+              <Truck size={17} color={isFreeDelivery ? '#047857' : '#64748b'} strokeWidth={2.4} />
             </View>
-            <Text style={{ fontFamily: fonts.medium, fontSize: 14, fontWeight: 'normal', color: '#334155', flex: 1 }}>
-              {deliveryFee === 0 ? (
-                savings > 0 ? (
-                  <>
-                    <Text style={{ fontFamily: fonts.extraBold, fontWeight: 'normal', color: '#047857' }}>₹{savings} saved!</Text> Free delivery applied
-                  </>
-                ) : (
-                  <Text style={{ fontFamily: fonts.extraBold, fontWeight: 'normal', color: '#047857' }}>Free delivery applied to your order!</Text>
-                )
+            <Text style={{ fontFamily: fonts.medium, fontSize: 13.5, color: '#334155', flex: 1 }}>
+              {isFreeDelivery ? (
+                <>
+                  <Text style={{ fontFamily: fonts.extraBold, color: '#047857' }}>Free delivery unlocked!</Text> Applied to your order.
+                </>
+              ) : remainingForFree > 0 ? (
+                <>
+                  Add <Text style={{ fontFamily: fonts.extraBold, color: '#047857' }}>₹{Math.ceil(remainingForFree)}</Text> more for <Text style={{ fontFamily: fonts.bold, color: '#047857' }}>FREE delivery</Text>
+                </>
               ) : (
-                savings > 0 ? (
-                  <>
-                    <Text style={{ fontFamily: fonts.extraBold, fontWeight: 'normal', color: '#047857' }}>₹{savings} saved</Text> on this order!
-                  </>
-                ) : (
-                  <Text style={{ fontFamily: fonts.semiBold, fontWeight: 'normal', color: '#334155' }}>
-                    Delivery to your <Text style={{ fontFamily: fonts.extraBold, color: '#047857', fontWeight: 'normal' }}>saved address</Text>
-                  </Text>
-                )
+                <Text style={{ fontFamily: fonts.semiBold, color: '#334155' }}>
+                  Delivery to your <Text style={{ fontFamily: fonts.extraBold, color: '#047857' }}>saved address</Text>
+                </Text>
               )}
             </Text>
           </View>
@@ -648,10 +642,20 @@ export default function CartScreen({ navigation }) {
             style={{
               height: 4,
               borderRadius: 2,
-              backgroundColor: '#047857',
+              backgroundColor: '#e2e8f0',
               width: '100%',
+              overflow: 'hidden',
             }}
-          />
+          >
+            <View
+              style={{
+                height: '100%',
+                borderRadius: 2,
+                backgroundColor: isFreeDelivery ? '#047857' : '#10b981',
+                width: `${Math.round(freeProgress * 100)}%`,
+              }}
+            />
+          </View>
         </Animated.View>
 
         {/* Cart Items List Card matching Image 1 & 2 */}
@@ -1113,7 +1117,7 @@ export default function CartScreen({ navigation }) {
                   Taxes & charges ({taxPercent}%)
                 </Text>
                 <Text style={{ fontFamily: fonts.bold, fontSize: 14.5, fontWeight: 'normal', color: '#0f172a' }}>
-                  ₹{(((Math.max(subtotal - discount, 0) * taxPercent) / 100)).toFixed(0)}
+                  ₹{(((subtotal * taxPercent) / 100)).toFixed(0)}
                 </Text>
               </View>
             )}

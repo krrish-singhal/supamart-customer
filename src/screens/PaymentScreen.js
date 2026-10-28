@@ -56,7 +56,7 @@ export default function PaymentScreen({ route, navigation }) {
   const { payload, idempotencyKey, amount, itemCount: paramItemCount } = route.params || {};
   const [activeIdempotencyKey, setActiveIdempotencyKey] = useState(() => idempotencyKey || Crypto.randomUUID());
   const insets = useSafeAreaInsets();
-  const { loadCart } = useCart();
+  const { loadCart, clearCart } = useCart();
   const { isOpen: storeOpen } = useStoreStatus();
 
   // Mode: If opened from Profile/Account or Cart 'Change' link without active order payload
@@ -174,8 +174,10 @@ export default function PaymentScreen({ route, navigation }) {
     let active = true;
     const interval = setInterval(async () => {
       if (!active || screenState !== 'WAITING_APPROVAL') return;
+      const orderIdToPoll = createdOrder?.id || createdOrder?.order?.id;
+      if (!orderIdToPoll || orderIdToPoll === 'undefined') return;
       try {
-        const res = await apiClient.get(`/orders/${createdOrder.id}`);
+        const res = await apiClient.get(`/orders/${orderIdToPoll}`, { __skipErrorToast: true });
         if (!active || !res?.data) return;
         const d = res.data;
         const isApproved =
@@ -261,11 +263,20 @@ export default function PaymentScreen({ route, navigation }) {
       const { data } = await apiClient.post('/orders', orderPayload, {
         headers: { 'X-Idempotency-Key': keyToSend },
       });
-      const placedOrderId = data.id || data.orderId;
-      setCreatedOrder({ ...data, id: placedOrderId });
+      const orderObj = data?.order || data;
+      const placedOrderId = orderObj?.id || orderObj?.orderId || data?.id || data?.orderId;
+      const fullOrder = { ...orderObj, id: placedOrderId };
+      setCreatedOrder(fullOrder);
 
       if (placedOrderId) {
-        await apiClient.patch(`/orders/${placedOrderId}/payment-claimed`);
+        try {
+          await apiClient.patch(`/orders/${placedOrderId}/payment-claimed`, {}, { __skipErrorToast: true });
+        } catch (_claimErr) {
+          console.warn('Payment-claimed patch warning:', _claimErr?.message);
+        }
+      }
+      if (typeof clearCart === 'function') {
+        clearCart().catch(() => {});
       }
       await loadCart(true, { force: true });
 
