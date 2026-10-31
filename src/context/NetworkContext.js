@@ -15,53 +15,53 @@ export function NetworkProvider({ children }) {
   const checkConnection = useCallback(async () => {
     try {
       const state = await NetInfo.fetch();
-      const connected = Boolean(state.isConnected && state.isInternetReachable !== false);
-
-      if (!connected) {
+      // True offline is when device has no network connection at all
+      if (state.isConnected === false) {
         setIsOffline(true);
         return false;
       }
 
-      // Quick ping test to verify actual internet access
+      // Quick ping test to verify actual internet access (allowing normal failover to cloud backend)
       try {
-        await apiClient.get('/health', { timeout: 6000, __skipErrorToast: true, __skipFailover: true });
+        await apiClient.get('/health', { timeout: 6000, __skipErrorToast: true });
         setIsOffline(false);
         return true;
       } catch (err) {
-        // If server ping fails with network error, consider offline
-        if (!err.response && (err.code === 'ECONNABORTED' || err.message?.includes('Network Error'))) {
+        // Only if device has explicitly no internet and server responded with network error
+        if (state.isInternetReachable === false && !err.response) {
           setIsOffline(true);
           return false;
         }
-        // If server returned 404 or other response, device IS connected to internet
+        // If device has network connection, don't falsely block UI with offline screen
         setIsOffline(false);
         return true;
       }
     } catch {
-      setIsOffline(true);
-      return false;
+      setIsOffline(false);
+      return true;
     }
   }, []);
 
   useEffect(() => {
-    // 0. Listen to API transport errors — verify connection before declaring offline
+    // 0. Listen to API transport errors — only declare offline if device is truly disconnected
     setNetworkErrorListener(async () => {
       try {
         const state = await NetInfo.fetch();
-        if (!state.isConnected) {
+        if (state.isConnected === false) {
           setIsOffline(true);
-        } else {
-          checkConnection();
         }
       } catch {
-        setIsOffline(true);
+        // Ignore
       }
     });
 
     // 1. NetInfo subscription
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const online = Boolean(state.isConnected && state.isInternetReachable !== false);
-      setIsOffline(!online);
+      if (state.isConnected === false) {
+        setIsOffline(true);
+      } else if (state.isConnected === true && state.isInternetReachable !== false) {
+        setIsOffline(false);
+      }
     });
 
     // 2. Web offline/online event listeners

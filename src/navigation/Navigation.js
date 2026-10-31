@@ -113,8 +113,12 @@ function CustomTabBar({ state, descriptors, navigation, tabs }) {
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
+        if (options?.tabBarItemStyle?.display === 'none' || options?.tabBarButton === null) {
+          return null;
+        }
+        const tab = tabs.find((t) => t.name === route.name) || tabs[index];
+        if (!tab) return null;
         const isFocused = state.index === index;
-        const tab = tabs[index];
 
         const onPress = () => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -242,6 +246,15 @@ function DeliveryTabs() {
       tabBar={(props) => <CustomTabBar {...props} tabs={DELIVERY_TABS} />}
     >
       <Tab.Screen name="DeliveryOrders" component={DeliveryOrdersScreen} />
+      <Tab.Screen
+        name="DeliveryMap"
+        component={DeliveryMapScreen}
+        options={{
+          tabBarStyle: { display: 'none' },
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+        }}
+      />
     </Tab.Navigator>
   );
 }
@@ -251,13 +264,15 @@ export default function Navigation() {
 
   if (loading) return null;
 
+  const isPartner = String(userProfile?.role || '').trim().toUpperCase() === 'PARTNER';
+
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
-        key={token ? (userProfile?.role === 'PARTNER' ? 'partner-session' : 'customer-session') : 'guest-session'}
+        key={token ? (isPartner ? 'partner-session' : 'customer-session') : 'guest-session'}
         screenOptions={{ headerShown: false }}
         initialRouteName={token
-          ? userProfile?.role === 'PARTNER'
+          ? isPartner
             ? 'DeliveryMain'
             : needsAddressPrompt
               ? 'LocationPrompt'
@@ -267,9 +282,10 @@ export default function Navigation() {
           : 'Welcome'}
       >
         {token ? (
-          userProfile?.role === 'PARTNER' ? (
+          isPartner ? (
             <>
               <Stack.Screen name="DeliveryMain" component={DeliveryTabs} />
+              <Stack.Screen name="DeliveryOrders" component={DeliveryOrdersScreen} />
               <Stack.Screen name="DeliveryMap" component={DeliveryMapScreen} />
             </>
           ) : (
@@ -278,6 +294,9 @@ export default function Navigation() {
               <Stack.Screen name="BuyAgain" component={BuyAgainScreen} />
               <Stack.Screen name="ShoppingLists" component={ShoppingListsScreen} />
               <Stack.Screen name="DeliveryLocation" component={DeliveryLocationScreen} />
+              <Stack.Screen name="DeliveryMain" component={DeliveryTabs} />
+              <Stack.Screen name="DeliveryOrders" component={DeliveryOrdersScreen} />
+              <Stack.Screen name="DeliveryMap" component={DeliveryMapScreen} />
               <Stack.Screen
                 name="Category"
                 component={CategoryScreen}

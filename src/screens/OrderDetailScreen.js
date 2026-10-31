@@ -7,8 +7,11 @@ import {
   Pressable,
   StatusBar,
   Modal,
+  StyleSheet,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { doc, onSnapshot } from '../services/reads';
 import {
@@ -17,6 +20,7 @@ import {
   MapPin,
   CreditCard,
   RotateCcw,
+  Check,
 } from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
@@ -24,6 +28,7 @@ import { db } from '../config/firebase';
 import apiClient from '../services/api';
 import { Skeleton } from '../components/ui';
 import { getProductImageSource } from '../utils/productImages';
+import { orderEstimate } from '../utils/orderEstimate';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { fonts } from '../theme/typography';
 
@@ -36,12 +41,14 @@ const CANCEL_REASONS = [
 ];
 
 export default function OrderDetailScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const { orderId, orderNo: initialOrderNo, order: passedOrder } = route.params || {};
 
   const [order, setOrder] = useState(passedOrder || null);
   const [loading, setLoading] = useState(!passedOrder);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReason, setSelectedReason] = useState('Ordered by mistake');
+  const [customReason, setCustomReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
   // Real-time Firestore snapshot for the order
@@ -61,9 +68,9 @@ export default function OrderDetailScreen({ route, navigation }) {
       return;
     }
 
-    // Direct API fallback for instantaneous reliable loading
+    // Direct API call for instantaneous initial loading
     apiClient
-      .get(`/orders/${orderId}`)
+      .get(`/orders/${orderId}`, { __skipErrorToast: true })
       .then(({ data }) => {
         if (data && isMounted) {
           setOrder((prev) => (prev ? { ...prev, ...data } : data));
@@ -72,11 +79,12 @@ export default function OrderDetailScreen({ route, navigation }) {
       })
       .catch(() => {});
 
+    // Single real-time listener via reads.js (15s poll interval, stops on unmount)
     const unsub = onSnapshot(
       doc(db, 'orders', orderId, { pollInterval: 15000 }),
       (snap) => {
         if (snap.exists() && isMounted) {
-          setOrder({ id: snap.id, ...snap.data() });
+          setOrder((prev) => ({ ...prev, id: snap.id, ...snap.data() }));
         }
         if (isMounted) setLoading(false);
       },
@@ -98,7 +106,7 @@ export default function OrderDetailScreen({ route, navigation }) {
   const itemCount = items.reduce((acc, it) => acc + (it.qty || 1), 0);
 
   const isCancelled = order?.status === 'CANCELLED';
-  const isDelivered = order?.status === 'DELIVERED';
+  const isDelivered = order?.status === 'DELIVERED' || order?.status === 'PENDING_CONFIRMATION';
   const canCancel = !isCancelled && !isDelivered;
 
   const savedAddress = order?.addressSnapshot || order?.address;
@@ -108,7 +116,11 @@ export default function OrderDetailScreen({ route, navigation }) {
     setCancelling(true);
     try {
       if (order?.id) {
-        await apiClient.patch(`/orders/${order.id}/cancel`, { reason: selectedReason });
+        const finalReason =
+          selectedReason === 'Other reason' && customReason.trim()
+            ? `Other: ${customReason.trim()}`
+            : selectedReason;
+        await apiClient.patch(`/orders/${order.id}/cancel`, { reason: finalReason });
       }
       Toast.show({ type: 'success', text1: 'Order cancelled successfully' });
       setShowCancelModal(false);
@@ -198,8 +210,45 @@ export default function OrderDetailScreen({ route, navigation }) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 14 }}
         >
+          {isDelivered && (
+            <View
+              style={{
+                backgroundColor: '#ecfdf5',
+                borderRadius: 18,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: '#a7f3d0',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: '#059669',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Check size={20} color="#ffffff" strokeWidth={3} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: fonts.extraBold, fontSize: 14.5, color: '#065f46' }}>
+                  Delivered
+                </Text>
+                <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: '#047857', marginTop: 2 }}>
+                  {order?.deliveredAt
+                    ? `Delivered on ${new Date(order.deliveredAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                    : 'Order delivered successfully. Enjoy!'}
+                </Text>
+              </View>
+            </View>
+          )}
           {isDelivered && <OrderRatings key={order.id} order={order} />}
-          {order.notes ? <View style={{ padding: 16, backgroundColor: '#f0fdf4', borderRadius: 16 }}><Text style={{ fontFamily: 'Inter-Bold' }}>Delivery instructions</Text><Text style={{ marginTop: 6 }}>{order.notes}</Text></View> : null}
+          {order.notes ? <View style={{ padding: 16, backgroundColor: '#f0fdf4', borderRadius: 16 }}><Text style={{ fontFamily: fonts.bold }}>Delivery instructions</Text><Text style={{ marginTop: 6, fontFamily: fonts.regular, color: '#334155' }}>{order.notes}</Text></View> : null}
           {/* AMBER LIVE TRACKING BANNER matching Image 4 */}
           {!isCancelled && !isDelivered && (
             <Animated.View entering={FadeInDown.duration(280)}>
@@ -242,9 +291,11 @@ export default function OrderDetailScreen({ route, navigation }) {
                       }}
                     >
                       {order?.status === 'OUT_FOR_DELIVERY'
-                        ? 'On the way · arriving in 9 mins'
-                        : (order?.deliveryPartner?.name || order?.deliveryBoyName)
-                        ? `Assigned to ${order?.deliveryPartner?.name || order?.deliveryBoyName}`
+                        ? (orderEstimate(order) && orderEstimate(order) !== 'Updating arrival time'
+                          ? `On the way · ${orderEstimate(order).replace('~', '')}`
+                          : 'On the way · arriving soon')
+                        : (order?.deliveryPartner?.name || order?.deliveryBoyName || order?.assignedPartnerId)
+                        ? `Partner Assigned · ${order?.deliveryPartner?.name || order?.deliveryBoyName || 'Partner'}`
                         : order?.status === 'PACKED'
                         ? 'Order packed · assigning delivery partner'
                         : 'Order confirmed · preparing your items'}
@@ -299,6 +350,13 @@ export default function OrderDetailScreen({ route, navigation }) {
                 <Text style={{ fontFamily: fonts.medium, fontSize: 12.5, fontWeight: '500', color: '#b91c1c', marginTop: 3 }}>
                   ₹{orderTotal} refund workflow initiated. Tap to view live status.
                 </Text>
+                {(order?.cancelReason || order?.cancellationReason) && (
+                  <View style={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 8, backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 8, alignSelf: 'flex-start' }}>
+                    <Text style={{ fontFamily: fonts.bold, fontSize: 11.5, color: '#991b1b' }}>
+                      Reason: <Text style={{ fontFamily: fonts.medium, fontWeight: '500', color: '#7f1d1d' }}>{order.cancelReason || order.cancellationReason}</Text>
+                    </Text>
+                  </View>
+                )}
               </View>
               <ChevronRight size={18} color="#991b1b" strokeWidth={2.6} />
             </Pressable>
@@ -683,12 +741,13 @@ export default function OrderDetailScreen({ route, navigation }) {
         </ScrollView>
       )}
 
-      {/* CANCEL ORDER BOTTOM SHEET / MODAL exactly matching Image 5 */}
+      {/* CANCEL ORDER BOTTOM SHEET / MODAL */}
       <Modal
         visible={showCancelModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowCancelModal(false)}
+        statusBarTranslucent
+        onRequestClose={() => !cancelling && setShowCancelModal(false)}
       >
         <View
           style={{
@@ -697,17 +756,40 @@ export default function OrderDetailScreen({ route, navigation }) {
             justifyContent: 'flex-end',
           }}
         >
+          {/* Backdrop dismiss touchable */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => !cancelling && setShowCancelModal(false)}
+          />
+
           <View
             style={{
               backgroundColor: '#ffffff',
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               paddingHorizontal: 20,
-              paddingTop: 24,
-              paddingBottom: 28,
+              paddingTop: 12,
+              paddingBottom: Math.max(insets.bottom, 20) + 16,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.12,
+              shadowRadius: 10,
+              elevation: 10,
             }}
           >
-            {/* Modal Title matching Image 5 */}
+            {/* Sheet Handle */}
+            <View
+              style={{
+                width: 44,
+                height: 4.5,
+                borderRadius: 2.5,
+                backgroundColor: '#cbd5e1',
+                alignSelf: 'center',
+                marginBottom: 16,
+              }}
+            />
+
+            {/* Modal Title matching Image 1 */}
             <Text
               style={{
                 fontFamily: fonts.extraBold,
@@ -721,18 +803,18 @@ export default function OrderDetailScreen({ route, navigation }) {
             </Text>
             <Text
               style={{
-                fontFamily: fonts.regular,
+                fontFamily: fonts.medium,
                 fontSize: 13.5,
                 fontWeight: '500',
                 color: '#64748b',
                 marginTop: 4,
-                marginBottom: 18,
+                marginBottom: 16,
               }}
             >
               Tell us why so we can do better.
             </Text>
 
-            {/* Reasons List with Radio Circles matching Image 5 */}
+            {/* Reasons List with Radio Circles matching Image 1 */}
             <View style={{ gap: 10, marginBottom: 14 }}>
               {CANCEL_REASONS.map((reason) => {
                 const isSelected = selectedReason === reason;
@@ -743,15 +825,15 @@ export default function OrderDetailScreen({ route, navigation }) {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      paddingVertical: 14,
+                      paddingVertical: 13,
                       paddingHorizontal: 16,
                       borderRadius: 14,
                       borderWidth: 1.5,
                       borderColor: isSelected ? '#047857' : '#e2e8f0',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
                     }}
                   >
-                    {/* Radio circle matching Image 5 */}
+                    {/* Radio circle matching Image 1 */}
                     <View
                       style={{
                         width: 20,
@@ -762,6 +844,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                         alignItems: 'center',
                         justifyContent: 'center',
                         marginRight: 14,
+                        backgroundColor: '#ffffff',
                       }}
                     >
                       {isSelected && (
@@ -778,10 +861,10 @@ export default function OrderDetailScreen({ route, navigation }) {
 
                     <Text
                       style={{
-                        fontFamily: fonts.bold,
+                        fontFamily: isSelected ? fonts.bold : fonts.medium,
                         fontSize: 14,
                         fontWeight: '700',
-                        color: '#0f172a',
+                        color: isSelected ? '#064e3b' : '#0f172a',
                       }}
                     >
                       {reason}
@@ -791,20 +874,67 @@ export default function OrderDetailScreen({ route, navigation }) {
               })}
             </View>
 
-            {/* Refund banner matching Image 5 */}
+            {/* Optional Custom Reason Input if 'Other reason' is selected */}
+            {selectedReason === 'Other reason' && (
+              <View
+                style={{
+                  marginBottom: 14,
+                  borderRadius: 14,
+                  borderWidth: 1.2,
+                  borderColor: '#cbd5e1',
+                  backgroundColor: '#f8fafc',
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                }}
+              >
+                <TextInput
+                  placeholder="Tell us what went wrong (optional)..."
+                  placeholderTextColor="#94a3b8"
+                  value={customReason}
+                  onChangeText={setCustomReason}
+                  maxLength={140}
+                  style={{
+                    fontFamily: fonts.medium,
+                    fontSize: 13.5,
+                    color: '#0f172a',
+                    minHeight: 44,
+                    textAlignVertical: 'top',
+                    padding: 0,
+                  }}
+                  multiline
+                />
+              </View>
+            )}
+
+            {/* Refund banner matching Image 1 */}
             <View
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#f0fdf4',
+                backgroundColor: '#ecfdf5',
                 borderRadius: 14,
                 padding: 13,
                 marginBottom: 20,
+                borderWidth: 1,
+                borderColor: '#a7f3d0',
               }}
             >
-              <RotateCcw size={16} color="#047857" strokeWidth={2.4} style={{ marginRight: 10 }} />
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: '#d1fae5',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 10,
+                }}
+              >
+                <RotateCcw size={15} color="#047857" strokeWidth={2.4} />
+              </View>
               <Text
                 style={{
+                  flex: 1,
                   fontFamily: fonts.regular,
                   fontSize: 13,
                   color: '#166534',
@@ -814,20 +944,22 @@ export default function OrderDetailScreen({ route, navigation }) {
               </Text>
             </View>
 
-            {/* Bottom buttons: Keep order & Cancel order matching Image 5 */}
+            {/* Bottom buttons: Keep order & Cancel order matching Image 1 with safe area protection */}
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <Pressable
                 onPress={() => setShowCancelModal(false)}
-                style={{
+                disabled={cancelling}
+                style={({ pressed }) => ({
                   flex: 1,
                   height: 50,
                   borderRadius: 16,
                   backgroundColor: '#ffffff',
                   borderWidth: 1.5,
-                  borderColor: '#e2e8f0',
+                  borderColor: '#cbd5e1',
                   alignItems: 'center',
                   justifyContent: 'center',
-                }}
+                  opacity: pressed ? 0.8 : 1,
+                })}
               >
                 <Text
                   style={{
@@ -844,21 +976,29 @@ export default function OrderDetailScreen({ route, navigation }) {
               <Pressable
                 onPress={handleCancelOrder}
                 disabled={cancelling}
-                style={{
+                style={({ pressed }) => ({
                   flex: 1,
                   height: 50,
                   borderRadius: 16,
-                  backgroundColor: '#ebdada',
+                  backgroundColor: cancelling ? '#fecaca' : '#fee2e2',
+                  borderWidth: 1.5,
+                  borderColor: '#fca5a5',
                   alignItems: 'center',
                   justifyContent: 'center',
-                }}
+                  flexDirection: 'row',
+                  gap: 8,
+                  opacity: pressed ? 0.8 : 1,
+                })}
               >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color="#b91c1c" />
+                ) : null}
                 <Text
                   style={{
                     fontFamily: fonts.bold,
                     fontSize: 15,
                     fontWeight: '800',
-                    color: '#6c3e3e',
+                    color: '#b91c1c',
                   }}
                 >
                   {cancelling ? 'Cancelling...' : 'Cancel order'}

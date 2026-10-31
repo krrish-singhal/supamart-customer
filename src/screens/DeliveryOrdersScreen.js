@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,7 @@ import { fonts } from '../theme/typography';
 import { db } from '../config/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { stopBackgroundTracking } from '../services/backgroundLocation';
+import { navigationRef } from '../navigation/navigationRef';
 
 const STATUS_THEME = {
   ORDER_PLACED: { bg: '#fef3c7', text: '#b45309', label: 'Placed' },
@@ -66,6 +67,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
   const { userProfile, setToken, setUserProfile } = useContext(AuthContext);
   const [partnerData, setPartnerData] = useState(null);
   const [orders, setOrders] = useState([]);
+  const liveOrdersRef = useRef(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingLoc, setUpdatingLoc] = useState(false);
@@ -74,6 +76,21 @@ export default function DeliveryOrdersScreen({ navigation }) {
   const [lastSyncedAt, setLastSyncedAt] = useState(Date.now());
   const [incomingOrder, setIncomingOrder] = useState(null);
   const [respondingToOrder, setRespondingToOrder] = useState(false);
+  const [storeOpen, setStoreOpen] = useState(true);
+
+  // Subscribe in real-time to store status
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(doc(db, 'config', 'global'), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          const open = data.isStoreOpen !== false && data.storeOpen !== false;
+          setStoreOpen(open);
+        }
+      });
+      return () => unsub();
+    } catch (_) {}
+  }, []);
 
   // 1. Real-time subscription to Delivery Partner Profile for Duty status, name, and lastSyncedAt
   useEffect(() => {
@@ -109,6 +126,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
       (snapshot) => {
         const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
         items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        liveOrdersRef.current = new Map(items.map((item) => [item.id, item]));
         setOrders(items);
         setLoading(false);
 
@@ -179,13 +197,6 @@ export default function DeliveryOrdersScreen({ navigation }) {
         await apiClient.patch(`/delivery-partners/${userProfile.id}/duty`, {
           isOnDuty: nextDuty,
         });
-
-        await updateDoc(doc(db, 'deliveryPartners', String(userProfile.id)), {
-          isOnDuty: nextDuty,
-          isActive: nextDuty,
-          dutyStatus: nextDuty ? 'ON_DUTY' : 'OFF_DUTY',
-          updatedAt: Date.now(),
-        });
       }
 
       if (!nextDuty) {
@@ -214,7 +225,25 @@ export default function DeliveryOrdersScreen({ navigation }) {
     try {
       const res = await apiClient.get('/orders');
       const items = res.data.items || [];
-      if (items.length) setOrders(items);
+      if (items.length) {
+        setOrders((previous) => {
+          const merged = new Map(previous.map((item) => [item.id, item]));
+          for (const item of items) {
+            const candidates = [item, merged.get(item.id), liveOrdersRef.current.get(item.id)].filter(Boolean);
+            const latest = candidates.reduce((current, candidate) =>
+              Number(candidate.updatedAt || 0) >= Number(current.updatedAt || 0) ? candidate : current
+            );
+            merged.set(item.id, latest);
+          }
+          for (const [id, liveOrder] of liveOrdersRef.current) {
+            const current = merged.get(id);
+            if (!current || Number(liveOrder.updatedAt || 0) >= Number(current.updatedAt || 0)) {
+              merged.set(id, liveOrder);
+            }
+          }
+          return [...merged.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        });
+      }
     } catch (err) {
       console.error('Fetch delivery orders error:', err);
     } finally {
@@ -225,13 +254,16 @@ export default function DeliveryOrdersScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      fetchOrders();
-    }, [])
+      // Only fetch from API if initial orders haven't loaded yet from Firestore snapshot
+      if (orders.length === 0) {
+        fetchOrders();
+      }
+    }, [orders.length])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    handleUpdateLocation(true);
+    handleUpdateLocation(true).catch(() => {});
     fetchOrders();
   };
 
@@ -243,53 +275,78 @@ export default function DeliveryOrdersScreen({ navigation }) {
     setUserProfile(null);
   };
 
-  // Accept incoming order
+  // Accept incoming order with instant optimistic response
   const handleAcceptIncomingOrder = async () => {
+    if (!storeOpen) {
+      Toast.show({
+        type: 'error',
+        text1: 'Shop is Closed',
+        text2: 'Shop is currently closed. Cannot accept new orders.',
+      });
+      return;
+    }
     if (!incomingOrder?.id) return;
+    const acceptedId = incomingOrder.id;
+    const acceptedNo = incomingOrder.orderNo || acceptedId.slice(-4);
+
+    // Optimistic UI update: instantly dismiss modal and mark accepted in local state
+    setIncomingOrder(null);
+    setOrders((prev) =>
+      prev.map((o) => (o.id === acceptedId ? { ...o, deliveryAcceptanceStatus: 'ACCEPTED' } : o))
+    );
     setRespondingToOrder(true);
     try {
-      await apiClient.patch(`/orders/${incomingOrder.id}/accept-assignment`);
+      await apiClient.patch(`/orders/${acceptedId}/accept-assignment`);
       Toast.show({
         type: 'success',
         text1: 'Order Accepted!',
-        text2: `Order #${incomingOrder.orderNo || incomingOrder.id.slice(-4)} added to active deliveries.`,
+        text2: `Order #${acceptedNo} added to active deliveries.`,
       });
-      setIncomingOrder(null);
     } catch (err) {
       console.error('Accept order error:', err);
-      Toast.show({ type: 'error', text1: 'Failed to accept order' });
+      const errMsg = err?.response?.data?.error || 'Failed to accept order';
+      Toast.show({ type: 'error', text1: errMsg });
+      // Revert if failed
+      setOrders((prev) =>
+        prev.map((o) => (o.id === acceptedId ? { ...o, deliveryAcceptanceStatus: 'PENDING' } : o))
+      );
     } finally {
       setRespondingToOrder(false);
     }
   };
 
-  // Reject incoming order
+  // Reject incoming order with instant optimistic response
   const handleRejectIncomingOrder = async () => {
     if (!incomingOrder?.id) return;
     const rejectingId = incomingOrder.id;
+
+    // Optimistic UI update: instantly dismiss modal and mark rejected in local state
+    setIncomingOrder(null);
+    setOrders((prev) =>
+      prev.map((o) => (o.id === rejectingId ? { ...o, deliveryAcceptanceStatus: 'REJECTED' } : o))
+    );
     setRespondingToOrder(true);
     try {
       await apiClient.patch(`/orders/${rejectingId}/reject-assignment`);
-      // Immediately reflect rejection in local state so it is excluded from active orders
-      setOrders((prev) =>
-        prev.map((o) => (o.id === rejectingId ? { ...o, deliveryAcceptanceStatus: 'REJECTED' } : o))
-      );
       Toast.show({
         type: 'info',
         text1: 'Order Rejected',
         text2: 'Order marked rejected. Admin will re-assign.',
       });
-      setIncomingOrder(null);
     } catch (err) {
       console.error('Reject order error:', err);
       Toast.show({ type: 'error', text1: 'Failed to reject order' });
+      // Revert if failed
+      setOrders((prev) =>
+        prev.map((o) => (o.id === rejectingId ? { ...o, deliveryAcceptanceStatus: 'PENDING' } : o))
+      );
     } finally {
       setRespondingToOrder(false);
     }
   };
 
-  // Open "View & Deliver": ensure location is synced, then navigate
-  const handleViewAndDeliver = async (orderItem) => {
+  // Open "View & Deliver": navigate INSTANTLY without freezing the UI for GPS
+  const handleViewAndDeliver = (orderItem) => {
     if (orderItem.deliveryAcceptanceStatus === 'REJECTED') {
       Toast.show({
         type: 'error',
@@ -298,19 +355,35 @@ export default function DeliveryOrdersScreen({ navigation }) {
       });
       return;
     }
+    // Sync location asynchronously in the background so navigation is 0ms instant!
     const fiveMinutes = 5 * 60 * 1000;
     if (Date.now() - (lastSyncedAt || 0) > fiveMinutes) {
-      await handleUpdateLocation(true);
+      handleUpdateLocation(true).catch(() => {});
     }
-    navigation.navigate('DeliveryMap', { order: orderItem });
+    const navParams = { order: orderItem };
+    const parentNav = navigation?.getParent?.();
+    if (parentNav?.navigate) {
+      try {
+        parentNav.navigate('DeliveryMap', navParams);
+        return;
+      } catch (_e) {}
+    }
+    try {
+      navigation.navigate('DeliveryMap', navParams);
+      return;
+    } catch (_e) {}
+    if (navigationRef?.isReady?.()) {
+      try {
+        navigationRef.navigate('DeliveryMap', navParams);
+      } catch (_e) {}
+    }
   };
 
   if (loading) return <Loader />;
 
-  // Orders are only completed when finalized as DELIVERED or CANCELLED.
-  // PENDING_CONFIRMATION remains active until customer confirms delivery!
+  // Orders are completed when finalized as DELIVERED, CANCELLED, or disputed.
   const isOrderCompleted = (status) =>
-    ['DELIVERED', 'CANCELLED'].includes(status);
+    ['DELIVERED', 'CANCELLED', 'DELIVERY_DISPUTED'].includes(status);
   const activeOrders = orders.filter(
     (o) => !isOrderCompleted(o.status) && o.deliveryAcceptanceStatus !== 'REJECTED'
   );
@@ -343,8 +416,9 @@ export default function DeliveryOrdersScreen({ navigation }) {
     const addressLine = addressParts.length > 0 ? addressParts.join(', ') : 'Delivery Address';
 
     return (
-      <View
-        style={{
+      <Pressable
+        onPress={() => handleViewAndDeliver(item)}
+        style={({ pressed }) => ({
           marginHorizontal: 16,
           marginBottom: 14,
           backgroundColor: '#ffffff',
@@ -357,7 +431,8 @@ export default function DeliveryOrdersScreen({ navigation }) {
           shadowOpacity: 0.06,
           shadowRadius: 5,
           elevation: 2,
-        }}
+          opacity: pressed ? 0.93 : 1,
+        })}
       >
         {/* Header row: Order # and Status pill */}
         <View
@@ -704,7 +779,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
             </Pressable>
           )}
         </View>
-      </View>
+      </Pressable>
     );
   };
 
@@ -1309,16 +1384,16 @@ export default function DeliveryOrdersScreen({ navigation }) {
 
               <Pressable
                 onPress={handleAcceptIncomingOrder}
-                disabled={respondingToOrder}
+                disabled={respondingToOrder || !storeOpen}
                 style={{
                   flex: 1.5,
                   height: 46,
                   borderRadius: 14,
-                  backgroundColor: '#059669',
+                  backgroundColor: !storeOpen ? '#94a3b8' : '#059669',
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  shadowColor: '#059669',
+                  shadowColor: !storeOpen ? 'transparent' : '#059669',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.25,
                   shadowRadius: 4,
@@ -1337,7 +1412,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
                         color: '#ffffff',
                       }}
                     >
-                      Accept Order
+                      {!storeOpen ? 'Shop is closed' : 'Accept Order'}
                     </Text>
                   </>
                 )}

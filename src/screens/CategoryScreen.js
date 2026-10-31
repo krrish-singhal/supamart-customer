@@ -13,6 +13,7 @@ import {
 } from '../components/icons';
 import { Image } from 'expo-image';
 import { collection, query, where, orderBy, onSnapshot } from '../services/reads';
+import { collection as firestoreCollection, onSnapshot as firestoreOnSnapshot, query as firestoreQuery, where as firestoreWhere } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import apiClient from '../services/api';
 import { Skeleton, ProductCard, CartBar, CART_BAR_SPACER } from '../components/ui';
@@ -28,7 +29,7 @@ import {
 } from '../utils/productFilters';
 import { getCategoryVisual } from '../utils/categoryImages';
 import { fonts } from '../theme/typography';
-import { isProductUnavailable } from '../utils/productAvailability';
+import { isProductUnavailable, isProductOffSale } from '../utils/productAvailability';
 
 const SORT_DROPDOWN_OPTIONS = [
   { key: 'price_asc', label: 'Price (Low To High)' },
@@ -200,42 +201,6 @@ export default function CategoryScreen({ route, navigation }) {
     };
   }, []);
 
-  // Pre-warm product cache and prefetch images for top categories in background
-  useEffect(() => {
-    if (!allCategories || allCategories.length === 0) return;
-    const topCats = allCategories.filter((c) => !c.parentId);
-
-    let cancelled = false;
-    topCats.forEach((cat, index) => {
-      if (categoryProductsCache.has(cat.id)) return;
-      setTimeout(() => {
-        if (cancelled) return;
-        apiClient
-          .get('/products', {
-            params: { categoryId: cat.id, limit: 100 },
-            __skipErrorToast: true,
-          })
-          .then((res) => {
-            if (cancelled) return;
-            const items = res.data?.items || [];
-            if (items.length > 0) {
-              categoryProductsCache.set(cat.id, items);
-              const imgUrls = items
-                .map((p) => p.imageUrl || p.image || p.images?.[0])
-                .filter((url) => typeof url === 'string' && url.startsWith('http'));
-              if (imgUrls.length > 0) {
-                Image.prefetch(imgUrls);
-              }
-            }
-          })
-          .catch(() => {});
-      }, 300 + index * 150);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [allCategories]);
 
   // Keep labels and filter options aligned with admin edits, including removals.
   useEffect(() => {
@@ -290,7 +255,20 @@ export default function CategoryScreen({ route, navigation }) {
       if (list.length > 0 || apiLoadFinished) {
         categoryProductsCache.set(currentCatId, list);
         setProducts((prev) => {
-          if (prev.length === list.length && prev.every((p, idx) => p.id === list[idx]?.id)) {
+          if (
+            prev.length === list.length &&
+            prev.every((p, idx) => {
+              const next = list[idx];
+              if (!next || p.id !== next.id) return false;
+              if (p.price !== next.price || p.offerPrice !== next.offerPrice) return false;
+              if (p.discountPercent !== next.discountPercent || p.showDiscountTag !== next.showDiscountTag) return false;
+              if (p.onSale !== next.onSale || p.isOnSale !== next.isOnSale) return false;
+              if (p.stock !== next.stock || p.availability !== next.availability) return false;
+              if (p.updatedAt !== next.updatedAt) return false;
+              if (JSON.stringify(p.variants) !== JSON.stringify(next.variants)) return false;
+              return true;
+            })
+          ) {
             return prev;
           }
           return list;
@@ -343,7 +321,6 @@ export default function CategoryScreen({ route, navigation }) {
 
     return () => {
       isCancelled = true;
-      unsubs.forEach((u) => u && typeof u === 'function' && u());
     };
   }, [currentCatId, productCategoryIdsKey]);
 
@@ -370,9 +347,12 @@ export default function CategoryScreen({ route, navigation }) {
   }, []);
 
   const visibleProducts = useMemo(() => {
+    const activeProducts = (products || []).filter(
+      (p) => p && !isProductOffSale(p)
+    );
     let list = activeSubCategory
-      ? products.filter((p) => p.categoryId === activeSubCategory)
-      : products;
+      ? activeProducts.filter((p) => p.categoryId === activeSubCategory)
+      : activeProducts;
 
     if (quickFilter === 'inStock') {
       list = list.filter((p) => !isOutOfStock(p));
@@ -835,7 +815,7 @@ export default function CategoryScreen({ route, navigation }) {
             <EmptyState icon="search" message="No products match your selection" />
           ) : (
             <FlatList
-              key={`cat-grid-${currentCatId}-${columns}`}
+              key={`cat-grid-${currentCatId}-${activeSubCategory || 'all'}-${columns}`}
               data={visibleProducts}
               keyExtractor={(item, index) => (item?.id ? String(item.id) : `cat-prod-${index}`)}
               extraData={items}

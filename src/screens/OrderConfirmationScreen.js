@@ -17,6 +17,8 @@ import { getProductImageSource } from '../utils/productImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { fonts } from '../theme/typography';
 import apiClient from '../services/api';
+import { db } from '../config/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function OrderConfirmationScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -37,6 +39,7 @@ export default function OrderConfirmationScreen({ route, navigation }) {
   const [resolvedOrderNo, setResolvedOrderNo] = useState(
     orderNo && orderNo !== '—' && orderNo !== 'undefined' ? orderNo : null
   );
+  const [liveOrder, setLiveOrder] = useState(null);
 
   useEffect(() => {
     if (!resolvedOrderId) {
@@ -51,6 +54,26 @@ export default function OrderConfirmationScreen({ route, navigation }) {
         })
         .catch(() => {});
     }
+  }, [resolvedOrderId]);
+
+  // Real-time Firestore listener for status updates
+  useEffect(() => {
+    if (!resolvedOrderId || resolvedOrderId === 'undefined') return;
+    const orderDocRef = doc(db, 'orders', resolvedOrderId);
+    const unsub = onSnapshot(
+      orderDocRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = { id: snap.id, ...snap.data() };
+          setLiveOrder(data);
+          if (data.orderNo) setResolvedOrderNo(data.orderNo);
+        }
+      },
+      (err) => {
+        console.warn('OrderConfirmation live listener error:', err?.message || err);
+      }
+    );
+    return () => unsub();
   }, [resolvedOrderId]);
 
   const [deliveryInstructions, setDeliveryInstructions] = useState(null);
@@ -91,6 +114,14 @@ export default function OrderConfirmationScreen({ route, navigation }) {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backHandler.remove();
   }, [navigation]);
+
+  const currentStatus = (liveOrder?.status || 'PLACED').toUpperCase();
+  const isConfirmed = Boolean(currentStatus);
+  const isPackingActive = currentStatus === 'ORDER_ACCEPTED' || currentStatus === 'ACCEPTED' || currentStatus === 'PACKING';
+  const isPackingDone = currentStatus === 'PACKED' || currentStatus === 'READY_FOR_DELIVERY' || currentStatus === 'OUT_FOR_DELIVERY' || currentStatus === 'DELIVERED';
+  const isOnTheWayActive = currentStatus === 'OUT_FOR_DELIVERY';
+  const isOnTheWayDone = currentStatus === 'DELIVERED';
+  const isDelivered = currentStatus === 'DELIVERED' || currentStatus === 'PENDING_CONFIRMATION';
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f4f6f4' }}>
@@ -535,49 +566,116 @@ export default function OrderConfirmationScreen({ route, navigation }) {
                   </View>
 
                   {/* Line 1 */}
-                  <View style={{ flex: 1, height: 2.5, backgroundColor: '#047857' }} />
+                  <View style={{ flex: 1, height: 2.5, backgroundColor: (isPackingActive || isPackingDone) ? '#047857' : '#e2e8f0' }} />
 
-                  {/* Step 2: Packing (Hollow green ring) */}
-                  <View
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 11,
-                      backgroundColor: '#ffffff',
-                      borderWidth: 2.5,
-                      borderColor: '#047857',
-                    }}
-                  />
+                  {/* Step 2: Packing */}
+                  {isPackingDone ? (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#047857',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={12} color="#ffffff" strokeWidth={3.5} />
+                    </View>
+                  ) : isPackingActive ? (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#ffffff',
+                        borderWidth: 2.5,
+                        borderColor: '#047857',
+                      }}
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#ffffff',
+                        borderWidth: 2,
+                        borderColor: '#cbd5e1',
+                      }}
+                    />
+                  )}
 
                   {/* Line 2 */}
-                  <View style={{ flex: 1, height: 2.5, backgroundColor: '#e2e8f0' }} />
+                  <View style={{ flex: 1, height: 2.5, backgroundColor: (isOnTheWayActive || isOnTheWayDone) ? '#047857' : '#e2e8f0' }} />
 
-                  {/* Step 3: On the way (Hollow gray ring) */}
-                  <View
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 11,
-                      backgroundColor: '#ffffff',
-                      borderWidth: 2,
-                      borderColor: '#cbd5e1',
-                    }}
-                  />
+                  {/* Step 3: On the way */}
+                  {isOnTheWayDone ? (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#047857',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={12} color="#ffffff" strokeWidth={3.5} />
+                    </View>
+                  ) : isOnTheWayActive ? (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#ffffff',
+                        borderWidth: 2.5,
+                        borderColor: '#047857',
+                      }}
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#ffffff',
+                        borderWidth: 2,
+                        borderColor: '#cbd5e1',
+                      }}
+                    />
+                  )}
 
                   {/* Line 3 */}
-                  <View style={{ flex: 1, height: 2.5, backgroundColor: '#e2e8f0' }} />
+                  <View style={{ flex: 1, height: 2.5, backgroundColor: isDelivered ? '#047857' : '#e2e8f0' }} />
 
-                  {/* Step 4: Delivered (Hollow gray ring) */}
-                  <View
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 11,
-                      backgroundColor: '#ffffff',
-                      borderWidth: 2,
-                      borderColor: '#cbd5e1',
-                    }}
-                  />
+                  {/* Step 4: Delivered */}
+                  {isDelivered ? (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#047857',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={12} color="#ffffff" strokeWidth={3.5} />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#ffffff',
+                        borderWidth: 2,
+                        borderColor: '#cbd5e1',
+                      }}
+                    />
+                  )}
                 </View>
 
                 {/* Step Labels matching Image 2 */}
@@ -607,7 +705,7 @@ export default function OrderConfirmationScreen({ route, navigation }) {
                       fontFamily: fonts.bold,
                       fontSize: 11.5,
                       fontWeight: '800',
-                      color: '#0f172a',
+                      color: (isPackingActive || isPackingDone) ? '#0f172a' : '#64748b',
                       textAlign: 'center',
                     }}
                   >
@@ -616,10 +714,10 @@ export default function OrderConfirmationScreen({ route, navigation }) {
                   <Text
                     style={{
                       width: 64,
-                      fontFamily: fonts.medium,
+                      fontFamily: fonts.bold,
                       fontSize: 11.5,
-                      fontWeight: '600',
-                      color: '#64748b',
+                      fontWeight: (isOnTheWayActive || isOnTheWayDone) ? '800' : '600',
+                      color: (isOnTheWayActive || isOnTheWayDone) ? '#0f172a' : '#64748b',
                       textAlign: 'center',
                     }}
                   >
@@ -628,10 +726,10 @@ export default function OrderConfirmationScreen({ route, navigation }) {
                   <Text
                     style={{
                       width: 64,
-                      fontFamily: fonts.medium,
+                      fontFamily: fonts.bold,
                       fontSize: 11.5,
-                      fontWeight: '600',
-                      color: '#64748b',
+                      fontWeight: isDelivered ? '800' : '600',
+                      color: isDelivered ? '#0f172a' : '#64748b',
                       textAlign: 'center',
                     }}
                   >

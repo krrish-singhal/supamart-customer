@@ -38,7 +38,7 @@ import BrandBadge from '../components/BrandBadge';
 import { Skeleton } from '../components/ui';
 import MSClubModal from '../components/MSClubModal';
 import { fonts } from '../theme/typography';
-import { isProductUnavailable } from '../utils/productAvailability';
+import { isProductOnSale, isProductUnavailable } from '../utils/productAvailability';
 import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
@@ -162,6 +162,7 @@ export default function HomeScreen({ navigation }) {
   const { unreadCount } = useNotifications();
 
   const [products, setProducts] = useState([]);
+  const liveCatalogReadyRef = useRef(false);
   const [allCategories, setAllCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryProductsMap, setCategoryProductsMap] = useState({});
@@ -238,6 +239,7 @@ export default function HomeScreen({ navigation }) {
       } catch (_e) {}
     };
   }, []);
+
 
   // Ensure active banner index remains bounded when banners list updates in real time
   useEffect(() => {
@@ -327,10 +329,19 @@ export default function HomeScreen({ navigation }) {
   const loadData = useCallback(async () => {
     try {
       const [prodRes, catRes] = await Promise.allSettled([
-        apiClient.get('/products', {
-          params: { limit: 40 },
-          __skipErrorToast: true,
-        }),
+        (async () => {
+          let cursor = null;
+          const allProducts = [];
+          do {
+            const { data } = await apiClient.get('/products', {
+              params: { limit: 100, ...(cursor ? { cursor } : {}) },
+              __skipErrorToast: true,
+            });
+            allProducts.push(...(data?.items || []));
+            cursor = data?.cursor || null;
+          } while (cursor);
+          return { data: { items: allProducts } };
+        })(),
         apiClient.get('/categories', { __skipErrorToast: true }),
       ]);
 
@@ -372,6 +383,14 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Refresh the public catalog while Home is visible so admin price and sale changes
+  // reach shoppers promptly even when this screen stays mounted in navigation.
+  useEffect(() => {
+    if (!isFocused) return;
+    const refreshCatalog = setInterval(loadData, 15000);
+    return () => clearInterval(refreshCatalog);
+  }, [isFocused, loadData]);
 
   useEffect(() => {
     if (!userProfile?.id) {
@@ -472,7 +491,10 @@ export default function HomeScreen({ navigation }) {
 
   // Filter products by selected admin category (including any child subcategories)
   const filteredProducts = useMemo(() => {
-    if (activeCategory === 'all') return products;
+    const activeProducts = (products || []).filter(
+      (p) => p && p.availability !== 'UNAVAILABLE'
+    );
+    if (activeCategory === 'all') return activeProducts;
 
     const targetCategoryIds = new Set([activeCategory]);
     const categoryQueue = [activeCategory];
@@ -487,29 +509,39 @@ export default function HomeScreen({ navigation }) {
           }
         });
     }
-    return products.filter((product) => targetCategoryIds.has(product.categoryId));
+    return activeProducts.filter((product) => targetCategoryIds.has(product.categoryId));
   }, [products, activeCategory, allCategories]);
 
   const displayProducts = useMemo(() => {
-    if (activeCategory === 'all') return products;
-    if (categoryProductsMap[activeCategory] && categoryProductsMap[activeCategory].length > 0) {
-      return categoryProductsMap[activeCategory];
+    let prods;
+    if (activeCategory === 'all') {
+      prods = products;
+    } else if (categoryProductsMap[activeCategory] && categoryProductsMap[activeCategory].length > 0) {
+      prods = categoryProductsMap[activeCategory];
+    } else {
+      prods = filteredProducts;
     }
-    return filteredProducts;
+    return (prods || []).filter(
+      (p) => p && p.availability !== 'UNAVAILABLE'
+    );
   }, [activeCategory, products, categoryProductsMap, filteredProducts]);
 
   const bestPriceProducts = useMemo(() => products.flatMap((product) =>
     (product.variants || []).flatMap((variant) => {
+      const showTag = variant?.showDiscountTag !== false && product?.showDiscountTag !== false && variant?.discountPercent !== 0 && product?.discountPercent !== 0;
       if (
-        product.onSale === false ||
-        product.isOnSale === false ||
+        !isProductOnSale(product) ||
         product.availability === 'UNAVAILABLE' ||
         variant.offerPrice == null ||
-        variant.discountPercent === 0
+        !showTag
       ) return [];
       const mrp = Number(variant.price ?? variant.mrp ?? 0);
       const price = Number(variant.offerPrice);
       if (!(mrp > 0 && price > 0 && price < mrp) || isProductUnavailable(product, variant)) return [];
+      const customPercent = typeof variant?.discountPercent === 'number' && variant.discountPercent > 0
+        ? variant.discountPercent
+        : (typeof product?.discountPercent === 'number' && product.discountPercent > 0 ? product.discountPercent : null);
+      const discount = customPercent != null ? customPercent : Math.round(((mrp - price) / mrp) * 100);
       return [{
         id: `${product.id}-${variant.id}`,
         product,
@@ -518,10 +550,10 @@ export default function HomeScreen({ navigation }) {
         packSize: variant.label || product.unit || '1 item',
         price,
         mrp,
-        discount: Math.round(((mrp - price) / mrp) * 100),
+        discount,
       }];
     })
-  ).sort((a, b) => b.discount - a.discount).slice(0, 4), [products]);
+  ).sort((a, b) => b.discount - a.discount), [products]);
 
   const cartItemCount = cartItems.reduce((sum, item) => sum + (item.qty || 1), 0);
   const firstCartItem = cartItems[0];
@@ -575,7 +607,11 @@ export default function HomeScreen({ navigation }) {
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0A7C47', marginRight: 6, flexShrink: 0 }} />
                 <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: activeOrder ? '#0A7C47' : '#475569', fontWeight: activeOrder ? '700' : '500' }}>
                   {activeOrder
-                    ? `MS Traders · ${estimate && estimate !== 'Updating arrival time' ? `Arriving in ${estimate.replace('~', '')}` : 'Arriving soon'}`
+                    ? `MS Traders · ${activeOrder.status === 'OUT_FOR_DELIVERY'
+                      ? estimate && estimate !== 'Updating arrival time'
+                        ? `Arriving in ${estimate.replace('~', '')}`
+                        : 'Updating arrival time'
+                      : estimate || 'Order being prepared'}`
                     : storeOpen
                     ? 'Open until 11 PM · Deliver to'
                     : 'Closed · Opens at 10 AM'}
@@ -710,87 +746,6 @@ export default function HomeScreen({ navigation }) {
           </Pressable>
         </Animated.View>
 
-        {/* Active Order Live Tracking Banner */}
-        {activeOrder && (
-          <Animated.View entering={FadeInDown.duration(300)} style={{ paddingHorizontal: 16, marginTop: 8, marginBottom: 2 }}>
-            <Pressable
-              onPress={() => navigation.navigate('OrderTracking', { orderId: activeOrder.id || activeOrder.orderId })}
-              style={{
-                backgroundColor: activeOrder.delayReason ? '#fffbeb' : '#f0fdf4',
-                borderWidth: 1.5,
-                borderColor: activeOrder.delayReason ? '#f59e0b' : '#86efac',
-                borderRadius: 16,
-                padding: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.04,
-                shadowRadius: 6,
-                elevation: 2,
-              }}
-            >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: activeOrder.delayReason ? '#fef3c7' : '#dcfce7',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12,
-                }}
-              >
-                <Truck size={20} color={activeOrder.delayReason ? '#d97706' : '#15803d'} strokeWidth={2.2} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ fontFamily: fonts.bold, fontSize: 13.5, color: activeOrder.delayReason ? '#92400e' : '#14532d' }}>
-                    {activeOrder.delayReason
-                      ? `Delivery Delayed · #${activeOrder.orderNo || activeOrder.orderId?.slice(-6) || ''}`
-                      : `Order #${activeOrder.orderNo || activeOrder.orderId?.slice(-6) || ''} in progress`}
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: activeOrder.delayReason ? '#fde68a' : '#bbf7d0',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 10,
-                    }}
-                  >
-                    <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: activeOrder.delayReason ? '#b45309' : '#166534' }}>
-                      {activeOrder.delayReason
-                        ? activeOrder.deliveryDelay?.newEstimatedTime || 'Updated ETA'
-                        : estimate && estimate !== 'Updating arrival time'
-                        ? `ETA: ${estimate.replace('~', '')}`
-                        : 'On the way'}
-                    </Text>
-                  </View>
-                </View>
-                <Text numberOfLines={1} style={{ fontFamily: fonts.regular, fontSize: 12, color: activeOrder.delayReason ? '#78350f' : '#166534', marginTop: 3 }}>
-                  {activeOrder.delayReason
-                    ? `Reason: ${activeOrder.delayReason}`
-                    : (activeOrder.deliveryPartner?.name || activeOrder.deliveryBoyName)
-                    ? `Rider assigned: ${activeOrder.deliveryPartner?.name || activeOrder.deliveryBoyName}`
-                    : activeOrder.status === 'OUT_FOR_DELIVERY'
-                    ? 'Out for delivery with delivery partner'
-                    : activeOrder.status === 'PACKING' || activeOrder.status === 'PACKED'
-                    ? 'Items packed and being dispatched'
-                    : activeOrder.status === 'ORDER_ACCEPTED'
-                    ? 'Order accepted and being prepared'
-                    : 'Order confirmed and being prepared'}
-                  {activeOrder.items?.length ? ` · ${activeOrder.items.length} item${activeOrder.items.length > 1 ? 's' : ''}` : ''}
-                </Text>
-              </View>
-              <View style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: activeOrder.delayReason ? '#d97706' : '#15803d', marginRight: 2 }}>
-                  Track
-                </Text>
-                <ChevronRight size={16} color={activeOrder.delayReason ? '#d97706' : '#15803d'} strokeWidth={2.4} />
-              </View>
-            </Pressable>
-          </Animated.View>
-        )}
       </View>
 
       {/* BODY CONTENT SCROLLVIEW */}
@@ -1481,7 +1436,7 @@ export default function HomeScreen({ navigation }) {
                   }}
                 >
                   {/* Discount is calculated only from this saved variant's MRP and offer price. */}
-                  {item.product?.onSale !== false && item.product?.isOnSale !== false && item.product?.availability !== 'UNAVAILABLE' && item.discount > 0 && <View
+                  {item.product?.availability !== 'UNAVAILABLE' && item.discount > 0 && <View
                     style={{
                       position: 'absolute',
                       top: 8,

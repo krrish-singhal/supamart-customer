@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { doc, onSnapshot } from '../services/reads';
+import { doc, onSnapshot } from 'firebase/firestore';
 import KeylessMap from '../components/maps/KeylessMap';
 import {
   ChevronLeft,
@@ -52,7 +52,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
 
   const mapRef = useRef(null);
   const [estimateNow, setEstimateNow] = useState(Date.now());
-  useEffect(() => { const timer = setInterval(() => setEstimateNow(Date.now()), 15000); return () => clearInterval(timer); }, []);
+  useEffect(() => { const timer = setInterval(() => setEstimateNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
 
   // 1. Auto-recover order from /orders/mine if orderId is missing or undefined
   useEffect(() => {
@@ -77,6 +77,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
           if (matched?.id) {
             setResolvedOrderId(matched.id);
             setOrder((prev) => (prev ? { ...prev, ...matched } : matched));
+            setEstimateNow(Date.now());
             setLoading(false);
           } else {
             setLoading(false);
@@ -92,16 +93,18 @@ export default function OrderTrackingScreen({ route, navigation }) {
     }
   }, [resolvedOrderId, incomingNo]);
 
-  // 2. Real-time Firestore listener for the Order document (15s refresh; stops on terminal states)
+  // 2. Real-time Firestore listener for the Order document (stops on terminal states)
   useEffect(() => {
     if (!resolvedOrderId || resolvedOrderId === 'undefined') return;
     if (order?.status === 'DELIVERED' || order?.status === 'CANCELLED') return;
+    const orderDocRef = doc(db, 'orders', resolvedOrderId);
     const unsubscribe = onSnapshot(
-      doc(db, 'orders', resolvedOrderId, { pollInterval: 15000 }),
+      orderDocRef,
       (snap) => {
         if (snap.exists()) {
           const data = snap.data();
           setOrder((prev) => (prev ? { ...prev, ...data } : { id: snap.id, ...data }));
+          setEstimateNow(Date.now());
           setLoading(false);
         }
       },
@@ -110,10 +113,34 @@ export default function OrderTrackingScreen({ route, navigation }) {
         setLoading(false);
       }
     );
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, [resolvedOrderId, order?.status]);
 
-  // 3. Real-time Firestore listener for the Assigned Delivery Partner document (15s refresh)
+  // 2b. High-frequency API sync for non-Firebase Auth / JWT sessions
+  useEffect(() => {
+    if (!resolvedOrderId || resolvedOrderId === 'undefined') return;
+    if (order?.status === 'DELIVERED' || order?.status === 'CANCELLED') return;
+    let isMounted = true;
+    const fetchLatest = async () => {
+      try {
+        const { data } = await apiClient.get(`/orders/${resolvedOrderId}`, { __skipErrorToast: true });
+        if (isMounted && data) {
+          setOrder((prev) => (prev ? { ...prev, ...data } : data));
+          setEstimateNow(Date.now());
+          setLoading(false);
+        }
+      } catch (_) {}
+    };
+    const timer = setInterval(fetchLatest, 4000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [resolvedOrderId, order?.status]);
+
+  // 3. Real-time Firestore listener for the Assigned Delivery Partner document
   useEffect(() => {
     if (order?.status === 'DELIVERED' || order?.status === 'CANCELLED') {
       return;
@@ -124,8 +151,9 @@ export default function OrderTrackingScreen({ route, navigation }) {
       return;
     }
 
+    const partnerDocRef = doc(db, 'deliveryPartners', String(partnerId));
     const unsubscribe = onSnapshot(
-      doc(db, 'deliveryPartners', String(partnerId), { pollInterval: 15000 }),
+      partnerDocRef,
       (snap) => {
         if (snap.exists()) {
           setPartnerDoc({ id: snap.id, ...snap.data() });
@@ -135,7 +163,9 @@ export default function OrderTrackingScreen({ route, navigation }) {
         console.warn('Delivery partner listener error:', err.message);
       }
     );
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, [order?.assignedPartnerId, order?.deliveryBoyId, order?.deliveryPartner?.id, order?.status]);
 
   /**
@@ -225,18 +255,28 @@ export default function OrderTrackingScreen({ route, navigation }) {
   const riderCoord = useMemo(() => {
     if (!isPartnerAssigned) return null;
     if (hasPartnerCoords) {
-      return { latitude: partnerLat, longitude: partnerLng };
+      return {
+        latitude: partnerLat,
+        longitude: partnerLng,
+        updatedAt: Number(pLoc?.updatedAt ?? docLoc?.updatedAt) || 0,
+      };
     }
     return null;
-  }, [isPartnerAssigned, hasPartnerCoords, partnerLat, partnerLng]);
+  }, [isPartnerAssigned, hasPartnerCoords, partnerLat, partnerLng, pLoc?.updatedAt, docLoc?.updatedAt]);
 
   // Dynamic road routing via OSRM with seamless fallback to straight lines
   const [roadRoutePoints, setRoadRoutePoints] = useState(null);
   const [roadDurationSeconds, setRoadDurationSeconds] = useState(null);
   const [roadDistanceMeters, setRoadDistanceMeters] = useState(null);
+  const lastRouteRequestAtRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    if (Date.now() - lastRouteRequestAtRef.current < 15000) return undefined;
+    lastRouteRequestAtRef.current = Date.now();
+    setRoadRoutePoints(null);
+    setRoadDurationSeconds(null);
+    setRoadDistanceMeters(null);
     const fetchRoute = async () => {
       try {
         const waypoints = [];
@@ -458,31 +498,38 @@ export default function OrderTrackingScreen({ route, navigation }) {
   const isStep2Done = isOutForDelivery || isDelivered || order?.status === 'PACKED' || order?.status === 'READY_FOR_DELIVERY';
   const isStep2Active = isAccepted && !isStep2Done;
 
+  const isPartnerAccepted = Boolean(
+    isPartnerAssigned &&
+    (order?.deliveryAcceptanceStatus === 'ACCEPTED' || isOutForDelivery) &&
+    order?.deliveryAcceptanceStatus !== 'REJECTED'
+  );
+
   // Real-time dynamic ETA calculation (Hooks must be unconditional!)
   const displayEstimatedTime = useMemo(() => {
     if (isDelivered) return 'Delivered';
     if (isCancelled) return 'Cancelled';
-    if (order?.deliveryDelay?.newEstimatedTime) {
-      const timeStr = String(order.deliveryDelay.newEstimatedTime).trim();
-      return timeStr.startsWith('+') ? timeStr.slice(1) : timeStr;
+    if (isOutForDelivery) {
+      if (!isPartnerAssigned || order?.deliveryAcceptanceStatus === 'REJECTED') {
+        return 'Assigning partner';
+      }
+      const dynamicEst = orderEstimate(order, estimateNow, riderCoord);
+      return dynamicEst || 'Updating arrival time';
     }
-    // If out for delivery and real road route travel time exists
-    if (isOutForDelivery && roadDurationSeconds) {
-      const mins = Math.max(2, Math.ceil(roadDurationSeconds / 60));
-      return roadDistanceMeters && roadDistanceMeters < 200 ? 'Arriving now' : `~${mins} mins`;
+    if (isPartnerAssigned) {
+      return 'Partner Assigned';
     }
-    const dynamicEst = orderEstimate(order, estimateNow, riderCoord);
-    return dynamicEst || 'Confirm delivery';
-  }, [isDelivered, isCancelled, order, isOutForDelivery, roadDurationSeconds, roadDistanceMeters, estimateNow, riderCoord]);
+    return 'Assigning partner';
+  }, [isDelivered, isCancelled, isPartnerAssigned, isOutForDelivery, order, estimateNow, riderCoord]);
 
   const statusBadge = useMemo(() => {
     if (isCancelled) return { label: 'CANCELLED', bg: '#fee2e2', text: '#dc2626' };
     if (isDelivered) return { label: 'COMPLETED', bg: '#ecfdf5', text: '#059669' };
     if (order?.delayReason || order?.deliveryDelay) return { label: 'DELAYED', bg: '#fef3c7', text: '#b45309' };
     if (isOutForDelivery) return { label: 'ON THE WAY', bg: '#ecfdf5', text: '#059669' };
+    if (isPartnerAssigned) return { label: 'PARTNER ASSIGNED', bg: '#eff6ff', text: '#1d4ed8' };
     if (isAccepted) return { label: 'PREPARING', bg: '#ecfdf5', text: '#059669' };
-    return { label: 'ON TIME', bg: '#ecfdf5', text: '#059669' };
-  }, [isCancelled, isDelivered, order?.delayReason, order?.deliveryDelay, isOutForDelivery, isAccepted]);
+    return { label: 'ASSIGNING RIDER', bg: '#fef3c7', text: '#b45309' };
+  }, [isCancelled, isDelivered, order?.delayReason, order?.deliveryDelay, isOutForDelivery, isAccepted, isPartnerAssigned]);
 
   const itemCount = order?.items?.length || 0;
   const orderTotal = Math.round(order?.total || order?.totalAmount || 0);
@@ -624,10 +671,19 @@ export default function OrderTrackingScreen({ route, navigation }) {
               <View>
                 {!isDelivered && !isCancelled && (
                   <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 2 }}>
-                    {order?.delayReason ? 'Updated ETA' : isOutForDelivery ? 'Estimated Arrival' : 'Arriving in'}
+                    {isOutForDelivery
+                      ? (order?.delayReason ? 'Updated ETA' : 'Estimated Arrival')
+                      : 'Order Status'}
                   </Text>
                 )}
-                <Text style={{ fontSize: 30, fontWeight: '900', color: '#0f172a', letterSpacing: -0.5 }}>
+                <Text
+                  style={{
+                    fontSize: !isOutForDelivery ? 22 : 30,
+                    fontWeight: '900',
+                    color: '#0f172a',
+                    letterSpacing: -0.5,
+                  }}
+                >
                   {displayEstimatedTime}
                 </Text>
               </View>
@@ -674,9 +730,9 @@ export default function OrderTrackingScreen({ route, navigation }) {
                 <Text style={{ fontSize: 12.5, color: '#78350f', lineHeight: 18 }}>
                   Reason: <Text style={{ fontWeight: '700' }}>{order.delayReason}</Text>
                 </Text>
-                {order?.deliveryDelay?.newEstimatedTime ? (
+                {order?.deliveryDelay?.totalDelayMinutes || order?.deliveryDelayMinutes ? (
                   <Text style={{ fontSize: 12, fontWeight: '700', color: '#059669', marginTop: 4 }}>
-                    Expected Delivery: {order.deliveryDelay.newEstimatedTime}
+                    Added delay: +{Number(order.deliveryDelay?.totalDelayMinutes ?? order.deliveryDelayMinutes)} mins total
                   </Text>
                 ) : null}
               </View>

@@ -10,6 +10,7 @@ import EmptyState from '../components/EmptyState';
 import ProductDetailModal from '../components/ProductDetailModal';
 import { useFavorites } from '../context/FavoritesContext';
 import { useCart } from '../context/CartContext';
+import { isProductOffSale } from '../utils/productAvailability';
 
 // Firestore 'in' queries cap out at 10 values — chunk the favorite id list.
 function chunk(arr, size) {
@@ -40,9 +41,9 @@ export default function FavoritesScreen({ navigation }) {
         chunks.map((ids) => getDocs(query(collection(db, 'products'), where(documentId(), 'in', ids))))
       );
       const items = results.flatMap((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      // Preserve most-recently-favorited-first order.
+      // Preserve most-recently-favorited-first order, excluding off-sale items.
       const byId = new Map(items.map((p) => [p.id, p]));
-      setProducts(favoriteIds.map((id) => byId.get(id)).filter(Boolean).reverse());
+      setProducts(favoriteIds.map((id) => byId.get(id)).filter(Boolean).filter((p) => !isProductOffSale(p)).reverse());
     } finally {
       setLoading(false);
     }

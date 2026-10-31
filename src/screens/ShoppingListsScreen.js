@@ -562,10 +562,6 @@ export default function ShoppingListsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       loadData(true);
-      const interval = setInterval(() => {
-        loadData(false);
-      }, 5000);
-      return () => clearInterval(interval);
     }, [loadData])
   );
 

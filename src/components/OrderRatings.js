@@ -85,14 +85,18 @@ export default function OrderRatings({ order, onDismiss, inModal = false }) {
     if (!orderRating || busy) return;
     setBusy(true);
     try {
+      const validProductRatings = Object.entries(productRatings)
+        .filter(([_, rating]) => Number(rating) >= 1 && Number(rating) <= 5)
+        .map(([productId, rating]) => ({
+          productId: String(productId),
+          rating: Number(rating),
+        }));
+
       await apiClient.patch(`/orders/${order.id || order.orderNo}/ratings`, {
-        orderRating,
-        review,
-        productRatings: Object.entries(productRatings).map(([productId, rating]) => ({
-          productId,
-          rating,
-        })),
-        deliveryFeedback,
+        orderRating: Number(orderRating),
+        review: review ? String(review).trim() : '',
+        productRatings: validProductRatings,
+        deliveryFeedback: deliveryFeedback === 'up' || deliveryFeedback === 'down' ? deliveryFeedback : null,
       });
       Toast.show({ type: 'success', text1: 'Thanks! Your ratings have been saved.' });
       setDismissed(true);

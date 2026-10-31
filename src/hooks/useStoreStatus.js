@@ -13,5 +13,5 @@ export default function useStoreStatus() {
     const listener = AppState.addEventListener('change', state => { if (state === 'active') tick(); });
     return () => { clearTimeout(timer); listener.remove(); };
   }, [offset]);
-  return storeStatus(now + offset);
+  return storeStatus(now + offset, config);
 }

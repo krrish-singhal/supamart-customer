@@ -17,8 +17,8 @@ export function NotificationsProvider({ children }) {
   const mountedAtRef = useRef(Date.now());
 
   useEffect(() => {
-    setupSystemNotifications();
-  }, []);
+    if (token && uid) setupSystemNotifications();
+  }, [token, uid]);
 
   const dismissDelayAlert = useCallback(() => {
     setActiveDelayAlert(null);
@@ -36,7 +36,7 @@ export function NotificationsProvider({ children }) {
     let isFirstSnapshot = true;
 
     const q = query(
-      collection(db, 'users', uid, 'notifications', { pollInterval: 90000 }),
+      collection(db, 'users', uid, 'notifications', { pollInterval: 12000 }),
       orderBy('createdAt', 'desc'),
       limit(15)
     );

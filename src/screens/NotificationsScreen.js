@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   ChevronLeft,
   CheckCircle2,
+  Check,
   Package,
   Truck,
   XCircle,
@@ -146,7 +147,49 @@ function getNotifConfig(item) {
     };
   }
 
-  // 6. Admin / Support Reply
+  // 5b. Redelivery Arranged
+  if (
+    type === 'ISSUE_REDELIVER' ||
+    item.data?.resolutionType === 'REDELIVER' ||
+    title.includes('redelivery') ||
+    title.includes('redeliver') ||
+    body.includes('redelivery') ||
+    body.includes('redeliver')
+  ) {
+    return {
+      Icon: Truck,
+      iconColor: '#2563eb',
+      iconBg: '#eff6ff',
+      iconBorder: '#bfdbfe',
+      badgeText: 'REDELIVERY',
+      badgeBg: '#eff6ff',
+      badgeColor: '#1d4ed8',
+      actionText: 'Track replacement',
+    };
+  }
+
+  // 6. Issue Resolved or Updated
+  if (
+    type === 'ISSUE' ||
+    type === 'ISSUE_RESOLVED' ||
+    title.includes('issue resolved') ||
+    title.includes('issue update') ||
+    (title.includes('issue') && (title.includes('resolved') || body.includes('resolved')))
+  ) {
+    const isResolved = title.includes('resolved') || body.includes('resolved');
+    return {
+      Icon: isResolved ? CheckCircle2 : Bell,
+      iconColor: isResolved ? '#059669' : '#0A7C47',
+      iconBg: isResolved ? '#ecfdf5' : '#e6f4ea',
+      iconBorder: isResolved ? '#a7f3d0' : '#a7f3d0',
+      badgeText: isResolved ? 'RESOLVED' : 'SUPPORT',
+      badgeBg: isResolved ? '#ecfdf5' : '#ecfdf5',
+      badgeColor: isResolved ? '#059669' : '#0A7C47',
+      actionText: 'View details',
+    };
+  }
+
+  // 6b. Admin / Support Reply
   if (
     type === 'ISSUE_REPLY' ||
     type === 'SUPPORT_REPLY' ||
@@ -294,42 +337,68 @@ export default function NotificationsScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread' | 'orders'
   const [refreshing, setRefreshing] = useState(false);
 
+  const isOrderNotification = useCallback((n) => {
+    const type = n.data?.type;
+    const title = (n.title || '').toLowerCase();
+    const body = (n.body || '').toLowerCase();
+
+    // Redelivery is always an order update!
+    if (
+      type === 'ISSUE_REDELIVER' ||
+      n.data?.resolutionType === 'REDELIVER' ||
+      title.includes('redelivery') ||
+      title.includes('redeliver') ||
+      body.includes('redelivery') ||
+      body.includes('redeliver')
+    ) {
+      return true;
+    }
+
+    // Exclude Support/Issues/Broadcasts/Promotions from "Orders" tab
+    if (
+      type === 'ISSUE' ||
+      type === 'ISSUE_RESOLVED' ||
+      type === 'ISSUE_REPLY' ||
+      type === 'SUPPORT_REPLY' ||
+      type === 'BROADCAST' ||
+      type === 'RESTOCK' ||
+      type === 'LOW_STOCK' ||
+      type === 'FREE_DELIVERY' ||
+      title.includes('issue') ||
+      title.includes('reply from')
+    ) {
+      return false;
+    }
+    return Boolean(
+      type === 'ORDER_STATUS' ||
+      type === 'DELIVERY_DELAY' ||
+      type === 'PAYMENT_APPROVED' ||
+      type === 'PAYMENT_REJECTED' ||
+      type === 'PARTNER_ASSIGNED' ||
+      type === 'CONFIRM_DELIVERY' ||
+      type === 'REFUND' ||
+      n.data?.status ||
+      (n.data?.orderId && !title.includes('issue')) ||
+      title.includes('order') ||
+      title.includes('delivery partner assigned') ||
+      title.includes('out for delivery')
+    );
+  }, []);
+
   const totalCount = notifications.length;
   const ordersCount = useMemo(() => {
-    return notifications.filter(
-      (n) =>
-        n.data?.type === 'ORDER_STATUS' ||
-        n.data?.type === 'DELIVERY_DELAY' ||
-        n.data?.type === 'PAYMENT_APPROVED' ||
-        n.data?.type === 'PAYMENT_REJECTED' ||
-        n.data?.orderId ||
-        n.data?.status ||
-        n.title?.toLowerCase().includes('order') ||
-        n.title?.toLowerCase().includes('delivery') ||
-        n.title?.toLowerCase().includes('payment')
-    ).length;
-  }, [notifications]);
+    return notifications.filter(isOrderNotification).length;
+  }, [notifications, isOrderNotification]);
 
   const filteredNotifications = useMemo(() => {
     if (activeTab === 'unread') {
       return notifications.filter((n) => !n.read);
     }
     if (activeTab === 'orders') {
-      return notifications.filter(
-        (n) =>
-          n.data?.type === 'ORDER_STATUS' ||
-          n.data?.type === 'DELIVERY_DELAY' ||
-          n.data?.type === 'PAYMENT_APPROVED' ||
-          n.data?.type === 'PAYMENT_REJECTED' ||
-          n.data?.orderId ||
-          n.data?.status ||
-          n.title?.toLowerCase().includes('order') ||
-          n.title?.toLowerCase().includes('delivery') ||
-          n.title?.toLowerCase().includes('payment')
-      );
+      return notifications.filter(isOrderNotification);
     }
     return notifications;
-  }, [notifications, activeTab]);
+  }, [notifications, activeTab, isOrderNotification]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -348,7 +417,23 @@ export default function NotificationsScreen({ navigation }) {
     if (!item.read && typeof markAsRead === 'function') {
       markAsRead(item.id);
     }
-    if ((item.data?.type === 'RESTOCK' || item.data?.type === 'LOW_STOCK') && item.data?.productId) {
+    const title = (item.title || '').toLowerCase();
+    const body = (item.body || '').toLowerCase();
+    const isRedelivery =
+      item.data?.type === 'ISSUE_REDELIVER' ||
+      item.data?.resolutionType === 'REDELIVER' ||
+      title.includes('redelivery') ||
+      title.includes('redeliver') ||
+      body.includes('redelivery');
+
+    if (isRedelivery) {
+      navigation.navigate('RefundStatus', {
+        orderId: item.data?.orderId,
+        orderNo: item.data?.orderNo,
+        refundId: item.data?.refundId,
+        isRedelivery: true,
+      });
+    } else if ((item.data?.type === 'RESTOCK' || item.data?.type === 'LOW_STOCK') && item.data?.productId) {
       navigation.navigate('ProductDetail', { id: String(item.data.productId) });
     } else if (item.data?.productId) {
       navigation.navigate('ProductDetail', { id: String(item.data.productId) });
@@ -362,7 +447,12 @@ export default function NotificationsScreen({ navigation }) {
     } else if (item.data?.type === 'PAYMENT_REJECTED' && item.data?.orderId) {
       navigation.navigate('OrderDetail', { orderId: item.data.orderId });
     } else if (item.data?.type === 'ISSUE_REPLY') {
-      if (item.data?.orderId) {
+      if (item.data?.orderId && item.data?.refundId) {
+        navigation.navigate('RefundStatus', {
+          orderId: item.data.orderId,
+          refundId: item.data.refundId,
+        });
+      } else if (item.data?.orderId) {
         navigation.navigate('OrderDetail', { orderId: item.data.orderId, orderNo: item.data?.orderNo });
       } else {
         navigation.navigate('Orders');
@@ -417,32 +507,35 @@ export default function NotificationsScreen({ navigation }) {
           </View>
         </View>
 
-        {unreadCount > 0 && (
-          <Pressable
-            onPress={markAllRead}
-            hitSlop={8}
+        <Pressable
+          onPress={unreadCount > 0 ? markAllRead : null}
+          disabled={unreadCount === 0}
+          hitSlop={8}
+          style={{
+            backgroundColor: unreadCount > 0 ? '#ecfdf5' : '#f8fafc',
+            borderRadius: 16,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderWidth: 1,
+            borderColor: unreadCount > 0 ? '#a7f3d0' : '#e2e8f0',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+          }}
+          accessibilityLabel="Mark all as read"
+        >
+          {unreadCount === 0 && <Check size={13} color="#64748b" strokeWidth={2.5} />}
+          <Text
             style={{
-              backgroundColor: '#ecfdf5',
-              borderRadius: 16,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderWidth: 1,
-              borderColor: '#a7f3d0',
+              fontFamily: fonts.bold,
+              fontWeight: 'normal',
+              fontSize: 11.5,
+              color: unreadCount > 0 ? '#047857' : '#64748b',
             }}
-            accessibilityLabel="Mark all as read"
           >
-            <Text
-              style={{
-                fontFamily: fonts.bold,
-                fontWeight: 'normal',
-                fontSize: 11.5,
-                color: '#047857',
-              }}
-            >
-              Mark all read
-            </Text>
-          </Pressable>
-        )}
+            {unreadCount > 0 ? 'Mark all read' : 'All read'}
+          </Text>
+        </Pressable>
       </View>
 
       {/* Segmented Filter Tabs matching OrdersScreen */}
@@ -638,7 +731,7 @@ export default function NotificationsScreen({ navigation }) {
               )}
 
               {/* Bottom Action Buttons matching OrdersScreen */}
-              {hasOrder ? (
+              {hasOrder && config.actionText && config.actionText !== 'View details' && config.actionText !== 'View order' ? (
                 <View
                   style={{
                     flexDirection: 'row',
@@ -677,7 +770,23 @@ export default function NotificationsScreen({ navigation }) {
                       if (!item.read && typeof markAsRead === 'function') {
                         markAsRead(item.id);
                       }
-                      if (item.data?.type === 'REFUND' || item.data?.refundId) {
+                      const title = (item.title || '').toLowerCase();
+                      const body = (item.body || '').toLowerCase();
+                      const isRedelivery =
+                        item.data?.type === 'ISSUE_REDELIVER' ||
+                        item.data?.resolutionType === 'REDELIVER' ||
+                        title.includes('redelivery') ||
+                        title.includes('redeliver') ||
+                        body.includes('redelivery');
+
+                      if (isRedelivery) {
+                        navigation.navigate('RefundStatus', {
+                          orderId: item.data?.orderId,
+                          orderNo: item.data?.orderNo,
+                          refundId: item.data?.refundId,
+                          isRedelivery: true,
+                        });
+                      } else if (item.data?.type === 'REFUND' || item.data?.refundId) {
                         navigation.navigate('RefundStatus', {
                           orderId: item.data?.orderId,
                           refundId: item.data?.refundId,
@@ -719,9 +828,6 @@ export default function NotificationsScreen({ navigation }) {
               ) : config.actionText ? (
                 <View
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
                     marginTop: 16,
                   }}
                 >
@@ -729,7 +835,6 @@ export default function NotificationsScreen({ navigation }) {
                     onPress={() => handleItemPress(item)}
                     style={({ pressed }) => [
                       {
-                        flex: 1,
                         height: 44,
                         borderRadius: 12,
                         backgroundColor: '#0A7C47',

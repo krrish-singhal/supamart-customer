@@ -1,5 +1,7 @@
 import { formatDeliveryAddress } from '../utils/addressForm';
 import { useConfig } from '../context/ConfigContext';
+import useStoreStatus from '../hooks/useStoreStatus';
+import Toast from 'react-native-toast-message';
 import React, { useEffect, useState, useCallback, useContext, useRef } from 'react';
 import {
   View,
@@ -37,6 +39,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getProductImageSource } from '../utils/productImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { getCategoryVisual } from '../utils/categoryImages';
+import { isProductOffSale } from '../utils/productAvailability';
 import { fonts } from '../theme/typography';
 
 function getPaymentLogo(app) {
@@ -76,6 +79,7 @@ export default function CartScreen({ navigation }) {
   const rawProductsRef = useRef([]);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const { config: deliveryConfig, refreshConfig } = useConfig();
+  const { isOpen: storeOpen } = useStoreStatus();
   const taxPercent = deliveryConfig?.taxPercent;
   const [popularProducts, setPopularProducts] = useState([]);
   const [emptyCategories, setEmptyCategories] = useState([]);
@@ -83,6 +87,11 @@ export default function CartScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      loadCart(true, { force: true });
+      const interval = setInterval(() => {
+        loadCart(true);
+      }, 15000);
+
       AsyncStorage.getItem('@supamart_default_payment_method')
         .then((data) => {
           if (data) {
@@ -93,7 +102,9 @@ export default function CartScreen({ navigation }) {
           }
         })
         .catch(() => {});
-    }, [])
+
+      return () => clearInterval(interval);
+    }, [loadCart])
   );
 
   // Fetch categories and popular products for empty state (one-time fetch on mount)
@@ -109,7 +120,11 @@ export default function CartScreen({ navigation }) {
         setEmptyCategories(topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 8));
       }
       if (popSnap.status === 'fulfilled') {
-        setPopularProducts(popSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setPopularProducts(
+          popSnap.value.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((p) => !isProductOffSale(p))
+        );
       }
     }).catch(() => {});
     return () => {
@@ -147,7 +162,8 @@ export default function CartScreen({ navigation }) {
         }
         if (isMounted) {
           const inCartIds = new Set(items.map((i) => i.productId));
-          const unadded = (rawProductsRef.current || []).filter((p) => !inCartIds.has(p.id));
+          const unadded = (rawProductsRef.current || [])
+            .filter((p) => !inCartIds.has(p.id) && !isProductOffSale(p));
           setRecommendations(unadded.slice(0, 8));
           setLoadingRecs(false);
         }
@@ -1255,20 +1271,57 @@ export default function CartScreen({ navigation }) {
           </Pressable>
         </View>
 
+        {/* Store Closed Warning Banner */}
+        {!storeOpen && (
+          <View
+            style={{
+              backgroundColor: '#fef2f2',
+              borderColor: '#fecaca',
+              borderWidth: 1,
+              borderRadius: 12,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              marginBottom: 10,
+              alignItems: 'center',
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: fonts.semiBold,
+                fontSize: 12,
+                color: '#b91c1c',
+                textAlign: 'center',
+              }}
+            >
+              Store is currently closed for orders. You can keep items in your cart and order once we open.
+            </Text>
+          </View>
+        )}
+
         {/* Place Order Primary Green Button */}
         <Pressable
-          onPress={() => navigation.navigate('Checkout')}
+          onPress={() => {
+            if (!storeOpen) {
+              Toast.show({
+                type: 'info',
+                text1: 'Store is closed for orders',
+                text2: 'You can keep items in your cart and order once we open.',
+              });
+              return;
+            }
+            navigation.navigate('Checkout');
+          }}
           style={{
-            backgroundColor: '#047857',
+            backgroundColor: storeOpen ? '#047857' : '#94a3b8',
             borderRadius: 14,
             height: 52,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: 20,
-            shadowColor: '#047857',
+            shadowColor: storeOpen ? '#047857' : '#64748b',
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.25,
+            shadowOpacity: storeOpen ? 0.25 : 0.1,
             shadowRadius: 8,
             elevation: 3,
           }}
@@ -1284,7 +1337,7 @@ export default function CartScreen({ navigation }) {
 
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ fontFamily: fonts.bold, fontSize: 16, fontWeight: 'normal', color: '#ffffff', marginRight: 6 }}>
-              Place order
+              {storeOpen ? 'Place order' : 'Store closed'}
             </Text>
             <ArrowRight size={18} color="#ffffff" strokeWidth={2.6} />
           </View>

@@ -6,10 +6,19 @@ import { AuthContext } from './AuthContext';
 import { isProductUnavailable } from '../utils/productAvailability';
 
 const CartContext = createContext();
+const normalizeVariantId = (variantId) => variantId || 'default';
 
 export function CartProvider({ children }) {
   const { token } = useContext(AuthContext);
   const [items, setItems] = useState([]);
+  const itemsRef = useRef([]);
+  const cartRevisionRef = useRef(0);
+  const cartSyncQueueRef = useRef(Promise.resolve());
+  const cartSyncPendingRef = useRef(null);
+  const cartSyncRunningRef = useRef(false);
+  const cartHydrationTokenRef = useRef(token);
+  const cartHydratedRef = useRef(false);
+  const cartHydrationPromiseRef = useRef(null);
   const [subtotal, setSubtotal] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [total, setTotal] = useState(0);
@@ -18,6 +27,12 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const lastLoadedAtRef = useRef(0);
   const SILENT_REFRESH_THROTTLE_MS = 15_000;
+
+  const commitItems = (nextItems, { localChange = false } = {}) => {
+    itemsRef.current = nextItems;
+    if (localChange) cartRevisionRef.current += 1;
+    setItems(nextItems);
+  };
 
   const computeTotals = (cartItems, customDetails = undefined, customDiscount = undefined) => {
     const sub = cartItems.reduce((acc, i) => acc + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
@@ -46,14 +61,26 @@ export function CartProvider({ children }) {
   };
 
   const loadCart = useCallback(async (silent = false, { force = false } = {}) => {
+    // Drain pending writes before reading. Otherwise a refresh can see an older
+    // server snapshot and replace the newer optimistic cart after fast taps.
+    if (token) {
+      let queueAtStart;
+      do {
+        queueAtStart = cartSyncQueueRef.current;
+        await queueAtStart;
+      } while (queueAtStart !== cartSyncQueueRef.current);
+    }
+    const startingRevision = cartRevisionRef.current;
     // 1. If not logged in, restore from local cache instantly
     if (!token) {
       try {
         const local = await AsyncStorage.getItem('localCart');
         if (local) {
           const parsed = JSON.parse(local);
-          setItems(parsed);
-          computeTotals(parsed);
+          if (startingRevision === cartRevisionRef.current) {
+            commitItems(parsed);
+            computeTotals(parsed);
+          }
         }
       } catch {
         // ignore
@@ -67,6 +94,7 @@ export function CartProvider({ children }) {
     if (!silent) setLoading(true);
     try {
       const { data } = await apiClient.get('/cart', { __skipErrorToast: true });
+      if (startingRevision !== cartRevisionRef.current) return;
       lastLoadedAtRef.current = Date.now();
       const serverItems = data.items || [];
       const srvDiscount = data.discount ?? 0;
@@ -74,7 +102,7 @@ export function CartProvider({ children }) {
       const srvCouponCode = data.couponCode ?? null;
       const srvCouponDetails = data.couponDetails ?? null;
 
-      setItems(serverItems);
+      commitItems(serverItems);
       setDiscount(srvDiscount);
       setTotal(srvTotal);
       setCouponCode(srvCouponCode);
@@ -94,8 +122,10 @@ export function CartProvider({ children }) {
         const local = await AsyncStorage.getItem('localCart');
         if (local) {
           const parsed = JSON.parse(local);
-          setItems(parsed);
-          computeTotals(parsed);
+          if (startingRevision === cartRevisionRef.current) {
+            commitItems(parsed);
+            computeTotals(parsed);
+          }
         }
       } catch {
         // ignore
@@ -105,52 +135,85 @@ export function CartProvider({ children }) {
     }
   }, [token]);
 
-  useEffect(() => {
-    loadCart();
-  }, [token, loadCart]);
-
-  const putCart = async (newItems) => {
-    // Always persist to local cache first so user never loses items
-    try {
-      await AsyncStorage.setItem('localCart', JSON.stringify(newItems));
-    } catch {
-      // ignore
+  const ensureCartHydrated = useCallback(() => {
+    if (cartHydrationTokenRef.current !== token) {
+      cartHydrationTokenRef.current = token;
+      cartHydratedRef.current = false;
+      cartHydrationPromiseRef.current = null;
     }
-
-    // If not authenticated, do not make backend request (prevents 401 error toast)
-    if (!token) return;
-
-    try {
-      await apiClient.put(
-        '/cart',
-        {
-          items: newItems.map(({ productId, variantId, qty }) => ({
-            productId,
-            variantId: variantId || 'default',
-            qty,
-          })),
-        },
-        { __skipErrorToast: true }
+    if (cartHydratedRef.current) return Promise.resolve();
+    if (!cartHydrationPromiseRef.current) {
+      cartHydrationPromiseRef.current = loadCart();
+      cartHydrationPromiseRef.current.then(
+        () => { if (cartHydrationTokenRef.current === token) cartHydratedRef.current = true; },
+        () => { if (cartHydrationTokenRef.current === token) cartHydratedRef.current = true; }
       );
-    } catch (err) {
-      // Silent catch on session/network hiccup — local cart remains intact
-      console.warn('Backend cart sync note:', err.message);
-      if (err.response?.status === 409) {
-        try {
-          const { data } = await apiClient.get('/cart', { __skipErrorToast: true });
-          const serverItems = data.items || [];
-          setItems(serverItems);
-          computeTotals(serverItems);
-          await AsyncStorage.setItem('localCart', JSON.stringify(serverItems));
-        } catch {
-          // Keep the local cache if the follow-up refresh is also unavailable.
-        }
-        Toast.show({ type: 'error', text1: 'Item is out of stock or unavailable' });
-      }
     }
+    return cartHydrationPromiseRef.current;
+  }, [loadCart, token]);
+
+  useEffect(() => {
+    ensureCartHydrated();
+  }, [ensureCartHydrated]);
+
+  const putCart = (newItems, { clearCoupon = false } = {}) => {
+    const snapshot = newItems.map((item) => ({ ...item }));
+    const revision = cartRevisionRef.current;
+    // Keep only the newest unsent snapshot. The local cart applies every tap
+    // immediately, while one in flight request plus one latest snapshot keeps
+    // fast multi item taps from flooding and reordering full cart writes.
+    cartSyncPendingRef.current = {
+      snapshot,
+      revision,
+      clearCoupon: clearCoupon || cartSyncPendingRef.current?.clearCoupon || false,
+    };
+    if (!cartSyncRunningRef.current) {
+      cartSyncRunningRef.current = true;
+      cartSyncQueueRef.current = (async () => {
+        while (cartSyncPendingRef.current) {
+          const pending = cartSyncPendingRef.current;
+          cartSyncPendingRef.current = null;
+          try {
+            await AsyncStorage.setItem('localCart', JSON.stringify(pending.snapshot));
+          } catch {}
+          if (!token) continue;
+          try {
+            await apiClient.put(
+              '/cart',
+              { items: pending.snapshot.map(({ productId, variantId, qty }) => ({ productId, variantId: variantId || 'default', qty })) },
+              { __skipErrorToast: true }
+            );
+            if (pending.clearCoupon) {
+              await apiClient.patch('/cart/coupon', { code: null }, { __skipErrorToast: true });
+            }
+          } catch (err) {
+            console.warn('Backend cart sync note:', err.message);
+            if (err.response?.status === 409) {
+              if (pending.revision === cartRevisionRef.current && !cartSyncPendingRef.current) {
+                try {
+                  const { data } = await apiClient.get('/cart', { __skipErrorToast: true });
+                  if (pending.revision !== cartRevisionRef.current || cartSyncPendingRef.current) continue;
+                  const serverItems = data.items || [];
+                  commitItems(serverItems);
+                  computeTotals(serverItems);
+                  await AsyncStorage.setItem('localCart', JSON.stringify(serverItems));
+                } catch {}
+              }
+              if (pending.revision === cartRevisionRef.current && !cartSyncPendingRef.current) {
+                Toast.show({ type: 'error', text1: 'Item is out of stock or unavailable' });
+              }
+            }
+          }
+        }
+      })().finally(() => {
+        cartSyncRunningRef.current = false;
+      });
+    }
+    return cartSyncQueueRef.current;
   };
 
   const addItem = async (product, variant) => {
+    await ensureCartHydrated();
     if (isProductUnavailable(product, variant)) {
       Toast.show({ type: 'error', text1: 'This item is out of stock' });
       return;
@@ -159,19 +222,25 @@ export function CartProvider({ children }) {
     const variantId = variant?.id || 'default';
     const price = variant?.offerPrice ?? variant?.price ?? product?.price ?? 0;
 
-    const existingIdx = items.findIndex(
-      (i) => i.productId === productId && i.variantId === variantId
+    const currentItems = itemsRef.current;
+    const existingIdx = currentItems.findIndex(
+      (i) => i.productId === productId && normalizeVariantId(i.variantId) === variantId
     );
+    const currentQty = existingIdx >= 0 ? Number(currentItems[existingIdx].qty) || 0 : 0;
+    if (variant?.stock != null && currentQty >= Number(variant.stock)) {
+      Toast.show({ type: 'error', text1: 'This item is out of stock' });
+      return;
+    }
 
     let newItems;
     if (existingIdx >= 0) {
-      newItems = items.map((i, idx) =>
+      newItems = currentItems.map((i, idx) =>
         idx === existingIdx ? { ...i, qty: i.qty + 1 } : i
       );
       Toast.show({ type: 'success', text1: 'Quantity updated' });
     } else {
       newItems = [
-        ...items,
+        ...currentItems,
         {
           productId,
           variantId,
@@ -189,13 +258,14 @@ export function CartProvider({ children }) {
       Toast.show({ type: 'success', text1: 'Added to cart' });
     }
 
-    setItems(newItems);
+    commitItems(newItems, { localChange: true });
     computeTotals(newItems);
     await putCart(newItems);
   };
 
   const addItems = async (entries) => {
-    const next = items.map(item => ({ ...item }));
+    await ensureCartHydrated();
+    const next = itemsRef.current.map(item => ({ ...item }));
     let added = 0;
     for (const { product, variant, qty = 1 } of entries) {
       if (!product?.id || !variant?.id || isProductUnavailable(product, variant)) continue;
@@ -208,7 +278,7 @@ export function CartProvider({ children }) {
       added += count;
     }
     if (added > 0) {
-      setItems(next);
+      commitItems(next, { localChange: true });
       computeTotals(next);
       await putCart(next);
     }
@@ -236,17 +306,18 @@ export function CartProvider({ children }) {
       });
       return;
     }
-    if (token) {
-      await loadCart(true, { force: true });
-    }
+    // Totals are already recalculated locally from the active coupon details.
+    // A server refresh here could race with a newer write and restore stale data.
   };
 
   const removeItem = async (productId, variantId) => {
-    const newItems = items.filter(
-      (i) => !(i.productId === productId && i.variantId === variantId)
+    await ensureCartHydrated();
+    const normalizedVariantId = normalizeVariantId(variantId);
+    const newItems = itemsRef.current.filter(
+      (i) => !(i.productId === productId && normalizeVariantId(i.variantId) === normalizedVariantId)
     );
 
-    setItems(newItems);
+    commitItems(newItems, { localChange: true });
     computeTotals(newItems);
     Toast.show({ type: 'success', text1: 'Removed from cart' });
     await putCart(newItems);
@@ -254,8 +325,11 @@ export function CartProvider({ children }) {
   };
 
   const updateQty = async (productId, variantId, delta) => {
-    const item = items.find(
-      (i) => i.productId === productId && i.variantId === variantId
+    await ensureCartHydrated();
+    const normalizedVariantId = normalizeVariantId(variantId);
+    const currentItems = itemsRef.current;
+    const item = currentItems.find(
+      (i) => i.productId === productId && normalizeVariantId(i.variantId) === normalizedVariantId
     );
     if (!item) return;
     if (delta > 0 && (
@@ -269,13 +343,13 @@ export function CartProvider({ children }) {
     }
     if (item.qty + delta <= 0) return removeItem(productId, variantId);
 
-    const newItems = items.map((i) =>
-      i.productId === productId && i.variantId === variantId
+    const newItems = currentItems.map((i) =>
+      i.productId === productId && normalizeVariantId(i.variantId) === normalizedVariantId
         ? { ...i, qty: i.qty + delta }
         : i
     );
 
-    setItems(newItems);
+    commitItems(newItems, { localChange: true });
     computeTotals(newItems);
     Toast.show({ type: 'success', text1: 'Quantity updated' });
     await putCart(newItems);
@@ -283,19 +357,14 @@ export function CartProvider({ children }) {
   };
 
   const clearCart = async () => {
-    const prevItems = [...items];
-    setItems([]);
+    await ensureCartHydrated();
+    commitItems([], { localChange: true });
     setSubtotal(0);
     setDiscount(0);
     setTotal(0);
     setCouponCode(null);
     setCouponDetails(null);
-    try {
-      await apiClient.delete('/cart');
-    } catch {
-      setItems(prevItems);
-      computeTotals(prevItems);
-    }
+    await putCart([], { clearCoupon: true });
   };
 
   const applyCoupon = async (code) => {
@@ -312,6 +381,10 @@ export function CartProvider({ children }) {
         subtotal,
         items,
       });
+
+      if (valData?.minValue && subtotal < valData.minValue) {
+        throw new Error(`Minimum order value for ${cleanCode} is ₹${valData.minValue}`);
+      }
 
       const disc = valData.evaluatedDiscount || 0;
 
@@ -362,8 +435,9 @@ export function CartProvider({ children }) {
 
   const getQty = useCallback(
     (productId, variantId) => {
+      const normalizedVariantId = normalizeVariantId(variantId);
       const item = items.find(
-        (i) => i.productId === productId && i.variantId === variantId
+        (i) => i.productId === productId && normalizeVariantId(i.variantId) === normalizedVariantId
       );
       return item?.qty ?? 0;
     },

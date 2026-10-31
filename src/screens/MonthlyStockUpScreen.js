@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { collection as firestoreCollection, onSnapshot as firestoreOnSnapshot, query as firestoreQuery, where as firestoreWhere } from 'firebase/firestore';
 import {
   ChevronLeft,
   Search,
@@ -17,12 +18,12 @@ import {
   ShoppingBag,
 } from '../components/icons';
 import apiClient from '../services/api';
-import { collection, onSnapshot, query, where } from '../services/reads';
 import { db } from '../config/firebase';
 import { useCart } from '../context/CartContext';
 import { Skeleton, ProductCard } from '../components/ui';
 import ProductDetailModal from '../components/ProductDetailModal';
 import { getProductImageSource } from '../utils/productImages';
+import { isProductOffSale } from '../utils/productAvailability';
 
 export default function MonthlyStockUpScreen({ navigation }) {
   const { items: cartItems, addItem, updateQty, getQty, subtotal, itemCount } = useCart();
@@ -37,47 +38,35 @@ export default function MonthlyStockUpScreen({ navigation }) {
 
   useEffect(() => {
     let cancelled = false;
-    const baseProducts = new Map();
-    const liveProducts = new Map();
-    let apiLoaded = false;
-    let apiSucceeded = false;
-    let firstSnapshotLoaded = false;
-    let snapshotFailed = false;
 
-    const publishProducts = () => {
-      if (cancelled || !apiLoaded || (!apiSucceeded && !firstSnapshotLoaded)) return;
-      const merged = new Map(baseProducts);
-      liveProducts.forEach((product, id) => {
-        if (product === null) merged.delete(id);
-        else merged.set(id, product);
-      });
-      setProducts(Array.from(merged.values()));
-      setLoading(false);
-    };
-
-    const loadAllPages = async () => {
+    // 1. Fast initial fetch via API
+    const loadFromApi = async () => {
       try {
         let cursor = null;
+        const all = [];
         do {
           const { data } = await apiClient.get('/products', {
             params: { limit: 50, monthlyStockUp: true, ...(cursor ? { cursor } : {}) },
             __skipErrorToast: true,
           });
           if (cancelled) return;
-          (data?.items || []).forEach((product) => baseProducts.set(product.id, product));
+          (data?.items || []).forEach((p) => all.push(p));
           cursor = data?.cursor || null;
         } while (cursor);
-        apiSucceeded = true;
+
+        if (!cancelled) {
+          setProducts(all.filter((p) => !isProductOffSale(p)));
+          setLoading(false);
+        }
       } catch (err) {
         console.warn('Monthly stock-up API load error:', err?.message || err);
-      } finally {
-        if (cancelled) return;
-        setProducts(Array.from(baseProducts.values()));
-        setLoading(false);
       }
     };
-    loadAllPages();
-    return () => { cancelled = true; };
+    loadFromApi();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
 
@@ -170,7 +159,7 @@ export default function MonthlyStockUpScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         key={`stock-up-grid-${columns}`}
         numColumns={columns}
-        extraData={itemCount}
+        extraData={cartItems}
         columnWrapperStyle={columns > 1 ? {
           gap: 12,
           justifyContent: 'flex-start',

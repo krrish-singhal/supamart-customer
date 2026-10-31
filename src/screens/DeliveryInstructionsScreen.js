@@ -461,10 +461,12 @@ export default function DeliveryInstructionsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Save for future orders Checkbox matching Image 2 */}
+        {/* Save for future orders Card */}
         <Pressable
           onPress={() => setSaveForFuture(!saveForFuture)}
-          style={styles.futureCheckboxRow}
+          style={styles.futureCheckboxCard}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: saveForFuture }}
         >
           <View
             style={[
@@ -472,15 +474,20 @@ export default function DeliveryInstructionsScreen({ navigation, route }) {
               saveForFuture && styles.checkboxBoxChecked,
             ]}
           >
-            {saveForFuture && <Check size={13} color="#ffffff" strokeWidth={3} />}
+            {saveForFuture && <Check size={14} color="#ffffff" strokeWidth={3} />}
           </View>
-          <Text style={styles.futureCheckboxText}>
-            Save for future orders to <Text style={{ fontFamily: fonts.bold }}>{addressLabel}</Text>
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.futureCardTitle}>
+              Save for future orders
+            </Text>
+            <Text style={styles.futureCardSubtitle}>
+              Apply automatically to orders for <Text style={{ fontFamily: fonts.bold, color: '#047857' }}>{addressLabel}</Text>
+            </Text>
+          </View>
         </Pressable>
       </ScrollView>
 
-      {/* Bottom Sticky Action Button with Maximum Visibility */}
+      {/* Bottom Sticky Action Button with Maximum Visibility & Safe Area Protection */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Pressable
           onPress={handleSave}
@@ -495,16 +502,12 @@ export default function DeliveryInstructionsScreen({ navigation, route }) {
             pressed && styles.saveButtonPressed,
           ]}
         >
-          <View style={styles.saveButtonInner}>
-            <View style={styles.saveButtonIconCircle}>
-              <Check size={16} color="#047857" strokeWidth={3} />
-            </View>
-            <Text style={styles.saveButtonText}>
-              {totalSelectedCount > 0
-                ? `Save ${totalSelectedCount} Instruction${totalSelectedCount > 1 ? 's' : ''}`
-                : 'Save Instructions'}
-            </Text>
-          </View>
+          <Check size={20} color="#ffffff" strokeWidth={2.8} />
+          <Text style={styles.saveButtonText}>
+            {totalSelectedCount > 0
+              ? `Save ${totalSelectedCount} Instruction${totalSelectedCount > 1 ? 's' : ''}`
+              : 'Save Instructions'}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -749,8 +752,8 @@ const styles = StyleSheet.create({
   },
   partnerBanner: {
     backgroundColor: '#ecfdf5',
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: '#a7f3d0',
@@ -758,55 +761,70 @@ const styles = StyleSheet.create({
   partnerBannerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   partnerBannerTitle: {
     fontFamily: fonts.bold,
     fontSize: 11,
     color: '#047857',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   partnerBannerContent: {
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 13.5,
     color: '#166534',
-    lineHeight: 18,
+    lineHeight: 19,
   },
-  futureCheckboxRow: {
+  futureCheckboxCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 14,
     marginBottom: 16,
-    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   checkboxBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 1.5,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.8,
     borderColor: '#cbd5e1',
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   checkboxBoxChecked: {
     backgroundColor: '#047857',
     borderColor: '#047857',
   },
-  futureCheckboxText: {
-    fontFamily: fonts.medium,
-    fontSize: 13.5,
+  futureCardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 14,
     color: '#0f172a',
+  },
+  futureCardSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
   },
   bottomBar: {
     paddingHorizontal: 16,
     paddingTop: 12,
     backgroundColor: '#ffffff',
-    borderTopWidth: 1.5,
+    borderTopWidth: 1,
     borderColor: '#e2e8f0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 8,
   },
@@ -814,35 +832,21 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 52,
     borderRadius: 16,
-    backgroundColor: '#0A7C47',
-    borderWidth: 1.5,
-    borderColor: '#065f35',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0A7C47',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  saveButtonPressed: {
-    backgroundColor: '#08673a',
-    opacity: 0.92,
-    transform: [{ scale: 0.99 }],
-  },
-  saveButtonInner: {
+    backgroundColor: '#047857',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    shadowColor: '#047857',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  saveButtonIconCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
+  saveButtonPressed: {
+    backgroundColor: '#036348',
+    opacity: 0.95,
+    transform: [{ scale: 0.99 }],
   },
   saveButtonText: {
     fontFamily: fonts.bold,

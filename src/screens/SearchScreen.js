@@ -32,7 +32,7 @@ import { useCart } from '../context/CartContext';
 import { getCategoryVisual } from '../utils/categoryImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { getProductImageSource } from '../utils/productImages';
-import { isProductUnavailable } from '../utils/productAvailability';
+import { isProductOnSale, isProductUnavailable, isProductOffSale } from '../utils/productAvailability';
 import { compareProductsDeterministic } from '../utils/productFilters';
 
 const RECENT_SEARCHES_KEY = '@supamart_recent_searches';
@@ -226,7 +226,7 @@ export default function SearchScreen({ navigation, route }) {
 
   // Filter and sort calculation matching Images 2 & 3
   const processedResults = useMemo(() => {
-    let list = [...results];
+    let list = results.filter((item) => item && !isProductOffSale(item));
 
     // Filter by price
     if (filters.prices.length > 0) {
@@ -767,9 +767,15 @@ export default function SearchScreen({ navigation, route }) {
           }}
           renderItem={({ item }) => {
             const variant = item.variants?.[0];
-            const price = variant?.offerPrice ?? variant?.price ?? item.price ?? 0;
+            const price = isProductOnSale(item) ? (variant?.offerPrice ?? variant?.price ?? item.price ?? 0) : (variant?.price ?? item.price ?? 0);
             const mrp = variant?.price ?? item.price ?? 0;
-            const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+            const showTag = isProductOnSale(item) && variant?.showDiscountTag !== false && item?.showDiscountTag !== false && variant?.discountPercent !== 0 && item?.discountPercent !== 0;
+            const customPercent = typeof variant?.discountPercent === 'number' && variant.discountPercent > 0
+              ? variant.discountPercent
+              : (typeof item?.discountPercent === 'number' && item.discountPercent > 0 ? item.discountPercent : null);
+            const discount = (showTag && mrp > price)
+              ? (customPercent != null ? customPercent : Math.round(((mrp - price) / mrp) * 100))
+              : 0;
             const packSize = variant?.label || item.unit || 'Standard pack';
             const qty = getQty(item.id, variant?.id);
             const isOutOfStock = item.isOutOfStock || isProductUnavailable(item, variant);
@@ -944,9 +950,15 @@ export default function SearchScreen({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           renderItem={({ item, index }) => {
             const variant = item.variants?.[0];
-            const price = variant?.offerPrice ?? variant?.price ?? item.price ?? 0;
+            const price = isProductOnSale(item) ? (variant?.offerPrice ?? variant?.price ?? item.price ?? 0) : (variant?.price ?? item.price ?? 0);
             const mrp = variant?.price ?? item.price ?? 0;
-            const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+            const showTag = isProductOnSale(item) && variant?.showDiscountTag !== false && item?.showDiscountTag !== false && variant?.discountPercent !== 0 && item?.discountPercent !== 0;
+            const customPercent = typeof variant?.discountPercent === 'number' && variant.discountPercent > 0
+              ? variant.discountPercent
+              : (typeof item?.discountPercent === 'number' && item.discountPercent > 0 ? item.discountPercent : null);
+            const discount = (showTag && mrp > price)
+              ? (customPercent != null ? customPercent : Math.round(((mrp - price) / mrp) * 100))
+              : 0;
             const packSize = variant?.label || item.unit || 'Standard pack';
             const qty = getQty(item.id, variant?.id);
             const isOutOfStock = item.isOutOfStock || isProductUnavailable(item, variant);

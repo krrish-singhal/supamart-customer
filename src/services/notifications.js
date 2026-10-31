@@ -50,11 +50,8 @@ export async function setupSystemNotifications() {
   const notif = getNotifications();
   if (!notif) return;
 
-  if (isInitialized) return;
-  isInitialized = true;
-
   try {
-    if (Platform.OS === 'android' && notif.setNotificationChannelAsync) {
+    if (!isInitialized && Platform.OS === 'android' && notif.setNotificationChannelAsync) {
       await notif.setNotificationChannelAsync('order_updates', {
         name: 'Order Updates',
         description: 'Real-time order tracking, status, and delivery delay alerts',
@@ -68,7 +65,7 @@ export async function setupSystemNotifications() {
       }).catch(() => null);
     }
 
-    if (notif.getPermissionsAsync && notif.requestPermissionsAsync) {
+    if (!isInitialized && notif.getPermissionsAsync && notif.requestPermissionsAsync) {
       const { status: existingStatus } = await notif.getPermissionsAsync().catch(() => ({ status: 'undetermined' }));
       let finalStatus = existingStatus;
       if (existingStatus !== 'granted') {
@@ -80,6 +77,7 @@ export async function setupSystemNotifications() {
         return;
       }
     }
+    isInitialized = true;
 
     // Try fetching push token for backend FCM sync in production builds
     // Wrapped in strict try/catch so missing google-services.json will NEVER crash production
@@ -88,9 +86,11 @@ export async function setupSystemNotifications() {
         const tokenObj = await notif.getDevicePushTokenAsync().catch(() => null);
         const pushToken = tokenObj?.data;
         if (pushToken && typeof pushToken === 'string') {
-          apiClient.post('/auth/fcm-token', { token: pushToken }).catch(() => {});
+          await apiClient.post('/auth/fcm-token', { token: pushToken });
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn('Could not register customer push token:', err?.message || err);
+      }
     }
   } catch (_err) {
     // Fail-safe: ensure setup error never bubbles up or crashes the app

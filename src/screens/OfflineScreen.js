@@ -5,7 +5,7 @@ import {
   Pressable,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff } from '../components/icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
@@ -14,6 +14,7 @@ import { useNetwork } from '../context/NetworkContext';
 import { navigationRef } from '../navigation/navigationRef';
 
 export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
+  const insets = useSafeAreaInsets();
   const [checking, setChecking] = useState(false);
   const { checkConnection } = useNetwork();
 
@@ -114,7 +115,7 @@ export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
       </View>
 
       {/* BOTTOM BUTTONS matching Image 1 */}
-      <View style={{ paddingHorizontal: 20, paddingBottom: 28, gap: 12 }}>
+      <View style={{ paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 20) + 12, gap: 12 }}>
         <Pressable
           onPress={handleRetry}
           disabled={checking}

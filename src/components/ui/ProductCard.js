@@ -5,7 +5,7 @@ import { Plus, Minus, ShoppingBag, Star } from '../icons';
 import FavoriteButton from './FavoriteButton';
 import { getProductImageSource } from '../../utils/productImages';
 import { fonts } from '../../theme/typography';
-import { isProductUnavailable } from '../../utils/productAvailability';
+import { isProductOnSale, isProductUnavailable } from '../../utils/productAvailability';
 
 
 
@@ -124,34 +124,42 @@ function AddToCartControl({ outOfStock, qty, onAdd, onIncrement, onDecrement, fu
 // layout="grid" — compact card for horizontal carousels (150px fixed)
 // layout="list" — full-width row for lists
 function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, style, layout = 'grid', cardWidth }) {
-  const variant = item.variants?.[0];
-  const mrp = Number(variant?.mrp ?? variant?.price ?? item.mrp ?? item.price ?? 0);
-  const rawOffer = variant?.offerPrice != null ? variant.offerPrice : item.offerPrice;
+  const { fontScale } = useWindowDimensions();
+  const variant = item?.variants?.[0];
+  const mrp = Number(variant?.mrp ?? variant?.price ?? item?.mrp ?? item?.price ?? 0);
+  const rawOffer = variant?.offerPrice != null ? variant.offerPrice : item?.offerPrice;
   const offerPrice = (rawOffer != null && rawOffer !== '' && !isNaN(Number(rawOffer)) && Number(rawOffer) > 0)
     ? Number(rawOffer)
     : null;
-  const isProductOnSale = item.onSale !== false && item.isOnSale !== false && item.availability !== 'UNAVAILABLE';
-  const effectiveOfferPrice = isProductOnSale ? offerPrice : null;
-  const sellingPrice = effectiveOfferPrice != null ? effectiveOfferPrice : Number(variant?.sellingPrice ?? variant?.price ?? item.price ?? mrp);
-  const hasDiscount = isProductOnSale && mrp > 0 && effectiveOfferPrice != null && effectiveOfferPrice < mrp && (variant?.discountPercent !== 0);
-  const discount = hasDiscount ? Math.round(((mrp - effectiveOfferPrice) / mrp) * 100) : 0;
+  const isProductAvailable = item && item.availability !== 'UNAVAILABLE';
+  if (!isProductAvailable) return null;
+
+  const effectiveOfferPrice = isProductOnSale(item) ? offerPrice : null;
+  const sellingPrice = effectiveOfferPrice != null
+    ? effectiveOfferPrice
+    : Number(!isProductOnSale(item)
+      ? (variant?.price ?? item.price ?? mrp)
+      : (variant?.sellingPrice ?? variant?.price ?? item.price ?? mrp));
+  const showTag = variant?.showDiscountTag !== false && item?.showDiscountTag !== false && variant?.discountPercent !== 0 && item?.discountPercent !== 0;
+  const hasDiscount = showTag && mrp > 0 && effectiveOfferPrice != null && effectiveOfferPrice < mrp;
+  const customPercent = typeof variant?.discountPercent === 'number' && variant.discountPercent > 0
+    ? variant.discountPercent
+    : (typeof item?.discountPercent === 'number' && item.discountPercent > 0 ? item.discountPercent : null);
+  const discount = hasDiscount ? (customPercent != null ? customPercent : Math.round(((mrp - effectiveOfferPrice) / mrp) * 100)) : 0;
   const strikeMrp = hasDiscount ? mrp : null;
 
   const stockStatus = getStockStatus(item, variant);
   const outOfStock = stockStatus.label === 'Out of Stock';
   const imageSource = getProductImageSource(item);
   const unitLabel = variant?.label || item?.unit || '1 Unit';
-  const { fontScale } = useWindowDimensions();
 
   // Compact category card: square image, aligned details, price and cart control.
   if (layout === 'categoryGrid') {
     const shortNote = getProductShortNote(item);
 
     return (
-      <Pressable
-        onPress={onPress}
-        accessibilityLabel={item.name}
-        style={({ pressed }) => [
+      <View
+        style={[
           {
             width: cardWidth ?? style?.width ?? '48%',
             maxWidth: cardWidth ?? style?.maxWidth ?? '48%',
@@ -160,12 +168,17 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             backgroundColor: 'transparent',
             marginBottom: 26,
             overflow: 'hidden',
-            opacity: outOfStock ? 0.78 : (pressed ? 0.94 : 1),
+            opacity: outOfStock ? 0.78 : 1,
           },
           style,
         ]}
       >
-        {/* Top Image area with discount tag, veg icon, and ETA pill matching Screenshots 3 & 4 */}
+        <Pressable
+          onPress={onPress}
+          accessibilityLabel={item.name}
+          style={({ pressed }) => [{ opacity: pressed ? 0.94 : 1 }]}
+        >
+          {/* Top Image area with discount tag, veg icon, and ETA pill matching Screenshots 3 & 4 */}
         <View
           style={{
             width: '100%',
@@ -340,9 +353,11 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
           >
             {shortNote}
           </Text>
+        </View>
+      </Pressable>
 
-          {/* Bottom Row: Price & Action Control matching HomeScreen & mockups */}
-          <View
+      {/* Bottom Row: Price & Action Control matching HomeScreen & mockups */}
+      <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -463,8 +478,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
             )}
           </View>
         </View>
-      </Pressable>
-    );
+      );
   }
 
   // --- Full-width row (layout="list") ---
@@ -602,6 +616,18 @@ export default React.memo(ProductCard, (prev, next) => {
     prev.item?.images?.[0] === next.item?.images?.[0] &&
     prev.item?.imageUrl === next.item?.imageUrl &&
     prev.item?.availability === next.item?.availability &&
+    prev.item?.discountPercent === next.item?.discountPercent &&
+    prev.item?.showDiscountTag === next.item?.showDiscountTag &&
+    prev.item?.onSale === next.item?.onSale &&
+    prev.item?.isOnSale === next.item?.isOnSale &&
+    prev.item?.stock === next.item?.stock &&
+    prev.item?.updatedAt === next.item?.updatedAt &&
+    prev.item?.variants?.[0]?.id === next.item?.variants?.[0]?.id &&
+    prev.item?.variants?.[0]?.price === next.item?.variants?.[0]?.price &&
+    prev.item?.variants?.[0]?.offerPrice === next.item?.variants?.[0]?.offerPrice &&
+    prev.item?.variants?.[0]?.discountPercent === next.item?.variants?.[0]?.discountPercent &&
+    prev.item?.variants?.[0]?.showDiscountTag === next.item?.variants?.[0]?.showDiscountTag &&
+    prev.item?.variants?.[0]?.stock === next.item?.variants?.[0]?.stock &&
     prev.qty === next.qty &&
     prev.cardWidth === next.cardWidth &&
     prev.layout === next.layout

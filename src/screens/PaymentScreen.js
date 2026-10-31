@@ -56,7 +56,7 @@ export default function PaymentScreen({ route, navigation }) {
   const { payload, idempotencyKey, amount, itemCount: paramItemCount } = route.params || {};
   const [activeIdempotencyKey, setActiveIdempotencyKey] = useState(() => idempotencyKey || Crypto.randomUUID());
   const insets = useSafeAreaInsets();
-  const { loadCart, clearCart } = useCart();
+  const { items: cartItems, loadCart, clearCart, removeItem } = useCart();
   const { isOpen: storeOpen } = useStoreStatus();
 
   // Mode: If opened from Profile/Account or Cart 'Change' link without active order payload
@@ -136,13 +136,14 @@ export default function PaymentScreen({ route, navigation }) {
     }
   }, [screenState, navigation]);
 
-  // Real-time listener for the order's payment status
+  // Real-time listener for the order's payment status while waiting for approval
   useEffect(() => {
-    if (!createdOrder?.id) return;
+    const orderIdToPoll = createdOrder?.id || createdOrder?.order?.id;
+    if (!orderIdToPoll || orderIdToPoll === 'undefined' || screenState !== 'WAITING_APPROVAL') return;
 
-    // 1. Fast polling snapshot via reads.js (1200ms for near-instant real-time responsiveness)
+    // Single unified polling listener via reads.js (4000ms poll interval while actively waiting for store verification)
     const unsub = onSnapshot(
-      doc(db, 'orders', createdOrder.id, { pollInterval: 1200 }),
+      doc(db, 'orders', orderIdToPoll, { pollInterval: 4000 }),
       (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
@@ -170,44 +171,10 @@ export default function PaymentScreen({ route, navigation }) {
       }
     );
 
-    // 2. Active direct API check fallback every 1.2s while waiting for approval
-    let active = true;
-    const interval = setInterval(async () => {
-      if (!active || screenState !== 'WAITING_APPROVAL') return;
-      const orderIdToPoll = createdOrder?.id || createdOrder?.order?.id;
-      if (!orderIdToPoll || orderIdToPoll === 'undefined') return;
-      try {
-        const res = await apiClient.get(`/orders/${orderIdToPoll}`, { __skipErrorToast: true });
-        if (!active || !res?.data) return;
-        const d = res.data;
-        const isApproved =
-          d.paymentStatus === 'PAID' ||
-          d.status === 'ORDER_ACCEPTED' ||
-          d.status === 'PACKING' ||
-          d.status === 'OUT_FOR_DELIVERY' ||
-          d.status === 'DELIVERED';
-
-        if (isApproved) {
-          setScreenState('SUCCESS');
-          loadCart(true, { force: true }).catch(() => {});
-        } else if (
-          d.paymentStatus === 'FAILED' ||
-          (d.status === 'CANCELLED' && d.paymentStatus !== 'PAID')
-        ) {
-          setFailureReason(d.paymentRejectionReason || 'Declined by store');
-          setScreenState('FAILED');
-        }
-      } catch (e) {
-        // quiet ignore polling network hiccups
-      }
-    }, 1200);
-
     return () => {
       unsub();
-      active = false;
-      clearInterval(interval);
     };
-  }, [createdOrder?.id, screenState, loadCart]);
+  }, [createdOrder?.id, createdOrder?.order?.id, screenState, loadCart]);
 
   // Track AppState quietly on return without firing premature automated requests or confusing popups
   useEffect(() => {
@@ -250,8 +217,10 @@ export default function PaymentScreen({ route, navigation }) {
 
       // 2. Otherwise submit order with active idempotency key
       const keyToSend = activeIdempotencyKey || Crypto.randomUUID();
+      const currentCartItems = (cartItems.length > 0) ? cartItems : (payload?.cartItems || []);
       const orderPayload = {
         ...payload,
+        cartItems: currentCartItems,
         paymentDetails: {
           method: selectedMethod,
           ...(selectedMethod === 'UPI_ID' && trimmedUpi ? { customerUpiId: trimmedUpi } : {}),
@@ -285,11 +254,49 @@ export default function PaymentScreen({ route, navigation }) {
       setScreenState('WAITING_APPROVAL');
     } catch (err) {
       console.error('Order placement error:', err);
-      Toast.show({
-        type: 'error',
-        text1: err.response?.data?.error || 'Could not place order',
-        text2: 'Please try again or choose another payment method.',
-      });
+      const errData = err.response?.data;
+      const errCode = errData?.code;
+      const errMsg = errData?.error || err.message || 'Could not place order';
+      const outOfStockItem = errData?.outOfStockItem;
+
+      if (
+        errCode === 'OUT_OF_STOCK' ||
+        errCode === 'INSUFFICIENT_STOCK' ||
+        errCode === 'PRODUCT_UNAVAILABLE' ||
+        /out of stock|not available/i.test(errMsg)
+      ) {
+        let removedName = outOfStockItem?.name;
+        if (outOfStockItem?.productId && typeof removeItem === 'function') {
+          await removeItem(outOfStockItem.productId, outOfStockItem.variantId);
+        } else {
+          const matchedItem = cartItems.find((i) => i.name && errMsg.toLowerCase().includes(i.name.toLowerCase()));
+          if (matchedItem && typeof removeItem === 'function') {
+            removedName = matchedItem.name;
+            await removeItem(matchedItem.productId, matchedItem.variantId);
+          }
+        }
+        await loadCart(true, { force: true });
+
+        setConfirmModalVisible(false);
+        Toast.show({
+          type: 'error',
+          text1: removedName ? `${removedName} is out of stock` : 'An item is out of stock',
+          text2: 'It was removed from your cart. You can proceed with the remaining items.',
+          visibilityTime: 4500,
+        });
+
+        if (cartItems.length <= 1) {
+          setTimeout(() => {
+            navigation.navigate('Main', { screen: 'Cart' });
+          }, 1200);
+        }
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: errMsg,
+          text2: 'Please try again or choose another payment method.',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -1673,9 +1680,12 @@ export default function PaymentScreen({ route, navigation }) {
                         </Text>
                       )}
                       {isUpiIdValid && (
-                        <Text style={{ fontSize: 11.5, fontFamily: fonts.medium, color: '#059669', marginTop: 4 }}>
-                          ✓ Valid UPI ID entered
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          <Check size={13} color="#059669" strokeWidth={2.5} />
+                          <Text style={{ fontSize: 11.5, fontFamily: fonts.medium, color: '#059669' }}>
+                            Valid UPI ID entered
+                          </Text>
+                        </View>
                       )}
                     </View>
 

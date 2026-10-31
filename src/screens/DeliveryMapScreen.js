@@ -43,6 +43,7 @@ import { fonts } from '../theme/typography';
 import { db } from '../config/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import BrandBadge from '../components/BrandBadge';
+import { navigationRef } from '../navigation/navigationRef';
 
 const DELAY_PRESET_REASONS = [
   'Heavy Traffic Congestion',
@@ -58,6 +59,29 @@ export default function DeliveryMapScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const initialOrder = route?.params?.order || null;
   const { userProfile } = useContext(AuthContext);
+
+  const handleGoBack = useCallback(() => {
+    if (navigation?.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+    const parentNav = navigation?.getParent?.();
+    if (parentNav?.navigate) {
+      try {
+        parentNav.navigate('DeliveryMain');
+        return;
+      } catch (_e) {}
+    }
+    try {
+      navigation.navigate('DeliveryOrders');
+      return;
+    } catch (_e) {}
+    if (navigationRef?.isReady?.()) {
+      try {
+        navigationRef.navigate('DeliveryMain');
+      } catch (_e) {}
+    }
+  }, [navigation]);
 
   const [order, setOrder] = useState(initialOrder);
   const [updating, setUpdating] = useState(false);
@@ -114,29 +138,44 @@ export default function DeliveryMapScreen({ route, navigation }) {
 
         if (!isMounted) return;
 
-        // Start foreground watcher for in-app map movement
+        // Start foreground watcher with distance & time throttling to keep UI lightweight
         try {
+          let lastPatchTime = 0;
+          let lastLat = 0;
+          let lastLng = 0;
+
           locationSubscription = await Location.watchPositionAsync(
             {
-              accuracy: Location.Accuracy.High,
-              distanceInterval: 8,
-              timeInterval: 10000,
+              accuracy: Location.Accuracy.Balanced,
+              distanceInterval: 15,
+              timeInterval: 8000,
             },
             (loc) => {
               if (!isMounted || !loc?.coords) return;
-              const newLoc = {
-                latitude: loc.coords.latitude,
-                longitude: loc.coords.longitude,
-              };
+              const { latitude, longitude, speed } = loc.coords;
+
+              // Filter micro-jitter (<0.0001 deg roughly 11m) so map doesn't jitter/re-render needlessly
+              const dLat = Math.abs(latitude - lastLat);
+              const dLng = Math.abs(longitude - lastLng);
+              if (dLat < 0.0001 && dLng < 0.0001 && lastLat !== 0) {
+                return;
+              }
+              lastLat = latitude;
+              lastLng = longitude;
+
+              const newLoc = { latitude, longitude };
               setPartnerLocation(newLoc);
 
-              if (userProfile?.id) {
+              const now = Date.now();
+              if (userProfile?.id && now - lastPatchTime >= 8000) {
+                lastPatchTime = now;
                 apiClient
                   .patch(`/delivery-partners/${userProfile.id}/location`, {
-                    lat: newLoc.latitude,
-                    lng: newLoc.longitude,
+                    lat: latitude,
+                    lng: longitude,
+                    speed: speed ?? 0,
                   })
-                  .catch((e) => console.log('Location sync:', e?.message));
+                  .catch(() => {});
               }
             }
           );
@@ -185,8 +224,13 @@ export default function DeliveryMapScreen({ route, navigation }) {
   }, [order?.id, order?.status, order?.orderNo, userProfile?.id]);
 
   const updateOrderStatus = async (newStatus, successMessage) => {
-    if (!order?.id) return;
+    if (!order?.id || updating) return;
     setUpdating(true);
+
+    // Instant optimistic update so buttons respond immediately with zero lag
+    const previousOrder = order;
+    setOrder((prev) => ({ ...prev, status: newStatus }));
+
     try {
       const res = await apiClient.patch(`/orders/${order.id}/status`, { status: newStatus });
       const updatedOrder = res.data.order || { ...order, status: newStatus };
@@ -208,48 +252,46 @@ export default function DeliveryMapScreen({ route, navigation }) {
         console.warn('[DeliveryMapScreen] status background tracking error:', bgErr?.message);
       }
 
-      setConfirmModal({
-        visible: true,
-        title: 'Success',
-        message: successMessage,
-        isAlert: true,
-        onConfirm: () => {
-          if (newStatus === 'DELIVERED' || newStatus === 'PENDING_CONFIRMATION') {
-            navigation.goBack();
-          }
-        },
+      Toast.show({
+        type: 'success',
+        text1: 'Status Updated',
+        text2: successMessage,
       });
+
+      // Automatically return without requiring the driver to dismiss extra dialogs
+      if (newStatus === 'DELIVERED' || newStatus === 'PENDING_CONFIRMATION') {
+        setTimeout(() => {
+          handleGoBack();
+        }, 500);
+      }
     } catch (err) {
       console.error('Update status error:', err);
-      setConfirmModal({
-        visible: true,
-        title: 'Error',
-        message: 'Failed to update order status.',
-        isAlert: true,
-        onConfirm: null,
+      // Revert optimistic update on failure
+      setOrder(previousOrder);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to update order',
+        text2: err?.response?.data?.error || err.message,
       });
     } finally {
       setUpdating(false);
     }
   };
 
+  // Instant 1-tap operation to start delivery
   const handlePickUp = () => {
-    setConfirmModal({
-      visible: true,
-      title: 'Start Delivery',
-      message: 'Confirm you have collected this order and are heading to the customer?',
-      isAlert: false,
-      onConfirm: () => updateOrderStatus('OUT_FOR_DELIVERY', 'Order is now Out for Delivery! Live tracking enabled.'),
-    });
+    updateOrderStatus('OUT_FOR_DELIVERY', 'Order is now Out for Delivery! Live tracking enabled.');
   };
 
+  // 1-step confirmation to mark order delivered
   const handleDeliver = () => {
+    const orderNum = order?.orderNo || order?.id?.slice(-4) || '';
     setConfirmModal({
       visible: true,
-      title: 'Confirm Delivery',
-      message: 'Have you reached the customer and handed over this order? The customer will receive a verification prompt to confirm and rate.',
+      title: 'Confirm Handover',
+      message: `Have you handed over Order #${orderNum} to the customer?`,
       isAlert: false,
-      onConfirm: () => updateOrderStatus('PENDING_CONFIRMATION', 'Order delivery recorded! Awaiting customer confirmation.'),
+      onConfirm: () => updateOrderStatus('PENDING_CONFIRMATION', 'Delivery recorded! Awaiting customer confirmation.'),
     });
   };
 
@@ -307,9 +349,13 @@ export default function DeliveryMapScreen({ route, navigation }) {
       setDelayModalVisible(false);
 
       Toast.show({
-        type: 'success',
+        type: updated.emailStatus === 'PENDING' || updated.emailQueued ? 'success' : updated.emailSent === false ? 'warning' : 'success',
         text1: 'Time Updated',
-        text2: 'Delivery time updated & customer notified.',
+        text2: updated.emailStatus === 'PENDING' || updated.emailQueued
+          ? 'The customer was notified in the app. Email is queued for immediate delivery.'
+          : updated.emailSent === false
+            ? 'The customer was notified in the app, but email delivery failed.'
+            : 'Delivery time updated and customer notified.',
       });
     } catch (err) {
       console.error('Submit delay error:', err);
@@ -425,7 +471,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
           Could not load the requested delivery details.
         </Text>
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={handleGoBack}
           style={{ backgroundColor: '#059669', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 }}
         >
           <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: '#ffffff' }}>Back to Deliveries</Text>
@@ -502,7 +548,7 @@ export default function DeliveryMapScreen({ route, navigation }) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Pressable
-            onPress={() => navigation.goBack()}
+            onPress={handleGoBack}
             hitSlop={10}
             style={{
               width: 44,
@@ -824,7 +870,8 @@ export default function DeliveryMapScreen({ route, navigation }) {
           <Pressable
             onPress={handlePickUp}
             disabled={updating}
-            style={{
+            hitSlop={8}
+            style={({ pressed }) => ({
               height: 52,
               borderRadius: 16,
               backgroundColor: '#047857',
@@ -836,19 +883,24 @@ export default function DeliveryMapScreen({ route, navigation }) {
               shadowOpacity: 0.25,
               shadowRadius: 8,
               elevation: 4,
-              opacity: updating ? 0.6 : 1,
-            }}
+              opacity: updating ? 0.75 : pressed ? 0.88 : 1,
+            })}
           >
-            <Truck size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            {updating ? (
+              <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+            ) : (
+              <Truck size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            )}
             <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: '#ffffff' }}>
-              {updating ? 'Updating...' : 'Start Delivery & Pick Up'}
+              {updating ? 'Starting Delivery...' : 'Start Delivery & Pick Up'}
             </Text>
           </Pressable>
         ) : (
           <Pressable
             onPress={order.status === 'OUT_FOR_DELIVERY' ? handleDeliver : null}
             disabled={updating || order.status === 'DELIVERED' || order.status === 'PENDING_CONFIRMATION'}
-            style={{
+            hitSlop={8}
+            style={({ pressed }) => ({
               height: 52,
               borderRadius: 16,
               backgroundColor:
@@ -865,17 +917,19 @@ export default function DeliveryMapScreen({ route, navigation }) {
               shadowOpacity: 0.15,
               shadowRadius: 6,
               elevation: 4,
-              opacity: updating ? 0.6 : 1,
-            }}
+              opacity: updating ? 0.75 : pressed ? 0.88 : 1,
+            })}
           >
-            {order.status === 'PENDING_CONFIRMATION' ? (
+            {updating ? (
+              <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+            ) : order.status === 'PENDING_CONFIRMATION' ? (
               <Clock size={20} color="#ffffff" style={{ marginRight: 8 }} />
             ) : (
               <CheckCircle size={20} color="#ffffff" style={{ marginRight: 8 }} />
             )}
             <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: '#ffffff' }}>
               {updating
-                ? 'Updating...'
+                ? 'Recording Delivery...'
                 : order.status === 'DELIVERED'
                 ? 'Delivered (Confirmed)'
                 : order.status === 'PENDING_CONFIRMATION'

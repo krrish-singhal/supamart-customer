@@ -75,6 +75,7 @@ export default function CheckoutScreen({ navigation, route }) {
     updateQty,
     removeCoupon,
     applyCoupon,
+    loadCart,
   } = useCart();
 
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -123,6 +124,9 @@ export default function CheckoutScreen({ navigation, route }) {
   useFocusEffect(
     useCallback(() => {
       loadData();
+      if (typeof loadCart === 'function') {
+        loadCart(true, { force: true });
+      }
       AsyncStorage.getItem('@supamart_default_payment_method').then((val) => {
         if (val) {
           try {

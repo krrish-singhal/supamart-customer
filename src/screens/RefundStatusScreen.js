@@ -23,6 +23,7 @@ import {
   ShoppingBag,
   Camera,
   RotateCcw,
+  Truck,
 } from '../components/icons';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -129,9 +130,10 @@ export default function RefundStatusScreen({ route, navigation }) {
 
     // Listen in real-time to refunds matching this orderId
     const currentUid = auth?.currentUser?.uid || selectedOrder.userId;
+    const refundsCollection = collection(db, 'refunds', { pollInterval: 3000 });
     const q = currentUid
-      ? query(collection(db, 'refunds'), where('userId', '==', currentUid), where('orderId', '==', selectedOrder.id))
-      : query(collection(db, 'refunds'), where('orderId', '==', selectedOrder.id));
+      ? query(refundsCollection, where('userId', '==', currentUid), where('orderId', '==', selectedOrder.id))
+      : query(refundsCollection, where('orderId', '==', selectedOrder.id));
 
     unsub = onSnapshot(
       q,
@@ -328,6 +330,11 @@ export default function RefundStatusScreen({ route, navigation }) {
   const refundStatus = refund?.status || 'PENDING_APPROVAL';
   const isRejected = refundStatus === 'REJECTED';
   const isGranted = refundStatus === 'REFUND_GRANTED';
+  const isRedeliver =
+    refundStatus === 'RESOLVED_REDELIVER' ||
+    refund?.resolutionType === 'REDELIVER' ||
+    selectedOrder?.resolutionType === 'REDELIVER' ||
+    Boolean(route.params?.isRedelivery);
 
   const orderItems = selectedOrder?.items || [
     { name: 'Toor Dal (Unpolished)', unit: '1 kg', qty: 1, price: 158 },
@@ -537,7 +544,9 @@ export default function RefundStatusScreen({ route, navigation }) {
                         <View
                           style={{
                             backgroundColor:
-                              existingRefund.status === 'REFUND_GRANTED'
+                              existingRefund.status === 'RESOLVED_REDELIVER' || existingRefund.resolutionType === 'REDELIVER'
+                                ? '#eff6ff'
+                                : existingRefund.status === 'REFUND_GRANTED'
                                 ? '#dcfce7'
                                 : existingRefund.status === 'REJECTED'
                                 ? '#fee2e2'
@@ -552,7 +561,9 @@ export default function RefundStatusScreen({ route, navigation }) {
                               fontSize: 11.5,
                               fontWeight: '900',
                               color:
-                                existingRefund.status === 'REFUND_GRANTED'
+                                existingRefund.status === 'RESOLVED_REDELIVER' || existingRefund.resolutionType === 'REDELIVER'
+                                  ? '#1d4ed8'
+                                  : existingRefund.status === 'REFUND_GRANTED'
                                   ? '#15803d'
                                   : existingRefund.status === 'REJECTED'
                                   ? '#b91c1c'
@@ -560,7 +571,9 @@ export default function RefundStatusScreen({ route, navigation }) {
                               letterSpacing: 0.5,
                             }}
                           >
-                            {existingRefund.status === 'REFUND_GRANTED'
+                            {existingRefund.status === 'RESOLVED_REDELIVER' || existingRefund.resolutionType === 'REDELIVER'
+                              ? 'REDELIVERY SCHEDULED'
+                              : existingRefund.status === 'REFUND_GRANTED'
                               ? `REFUND GRANTED · ₹${existingRefund.totalRefund}`
                               : existingRefund.status === 'REJECTED'
                               ? 'REFUND REJECTED'
@@ -1207,11 +1220,20 @@ export default function RefundStatusScreen({ route, navigation }) {
           }}
         >
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748b', marginBottom: 6 }}>
-            Refund for order #{displayOrderNo}
+            {isRedeliver ? `Replacement for order #${displayOrderNo}` : `Refund for order #${displayOrderNo}`}
           </Text>
-          <Text style={{ fontSize: 34, fontWeight: '900', color: '#0f172a', marginBottom: 12 }}>
-            ₹{totalRefund}
-          </Text>
+          {isRedeliver ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Truck size={30} color="#2563eb" strokeWidth={2.4} />
+              <Text style={{ fontSize: 26, fontWeight: '900', color: '#1e3a8a' }}>
+                Redelivery
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ fontSize: 34, fontWeight: '900', color: '#0f172a', marginBottom: 12 }}>
+              ₹{totalRefund}
+            </Text>
+          )}
 
           {/* REAL-TIME STATUS BADGE */}
           {isRejected ? (
@@ -1226,6 +1248,20 @@ export default function RefundStatusScreen({ route, navigation }) {
             >
               <Text style={{ color: '#b91c1c', fontSize: 12.5, fontWeight: '900', letterSpacing: 0.6 }}>
                 REFUND REJECTED
+              </Text>
+            </View>
+          ) : isRedeliver ? (
+            <View
+              style={{
+                backgroundColor: '#eff6ff',
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 12,
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ color: '#1d4ed8', fontSize: 12.5, fontWeight: '900', letterSpacing: 0.6 }}>
+                REDELIVERY SCHEDULED
               </Text>
             </View>
           ) : isGranted ? (
@@ -1261,11 +1297,94 @@ export default function RefundStatusScreen({ route, navigation }) {
           <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748b', textAlign: 'center' }}>
             {isRejected
               ? 'Case reviewed and rejected by shop admin'
+              : isRedeliver
+              ? 'Shop owner has arranged replacement items for your order'
               : isGranted
               ? 'Money refunded manually by shop owner via UPI'
               : 'Expected in your account upon shop owner approval'}
           </Text>
         </Animated.View>
+
+        {/* REDELIVERY IN-PROGRESS CARD */}
+        {isRedeliver && (
+          <Animated.View
+            entering={FadeInDown.duration(300)}
+            style={{
+              backgroundColor: '#eff6ff',
+              borderRadius: 20,
+              padding: 18,
+              borderWidth: 1.5,
+              borderColor: '#bfdbfe',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+              <Truck size={20} color="#1d4ed8" strokeWidth={2.4} />
+              <Text style={{ fontSize: 15.5, fontWeight: '900', color: '#1e3a8a' }}>
+                Replacement Redelivery Confirmed
+              </Text>
+            </View>
+
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#1e40af', marginBottom: 6 }}>
+              Shop arrangement note:
+            </Text>
+            <View
+              style={{
+                backgroundColor: '#ffffff',
+                padding: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#dbeafe',
+                marginBottom: 14,
+              }}
+            >
+              <Text style={{ fontSize: 13.5, color: '#1e293b', fontWeight: '600', lineHeight: 20 }}>
+                {refund?.adminMessage || refund?.resolutionNotes || 'We have arranged a replacement redelivery for your reported item(s). Our delivery partner is bringing the replacement shortly.'}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={handleCall}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#ffffff',
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#bfdbfe',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <Phone size={16} color="#1d4ed8" strokeWidth={2.2} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1d4ed8' }}>
+                  Call Shop
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleWhatsApp}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#2563eb',
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <MessageSquare size={16} color="#ffffff" strokeWidth={2.2} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#ffffff' }}>
+                  WhatsApp
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        )}
 
         {/* REJECTION CARD WITH REASON & CONTACT BUTTONS */}
         {isRejected && (
@@ -1369,6 +1488,41 @@ export default function RefundStatusScreen({ route, navigation }) {
           </Animated.View>
         )}
 
+        {/* SHOP OWNER RESOLUTION / MESSAGE CARD (for non-redelivery) */}
+        {!isRedeliver && (refund?.resolutionNotes || refund?.adminMessage || refund?.lastReply || (refund?.replies && refund.replies.length > 0)) && (
+          <Animated.View
+            entering={FadeInDown.duration(300)}
+            style={{
+              backgroundColor: '#ecfdf5',
+              borderRadius: 20,
+              padding: 18,
+              borderWidth: 1.5,
+              borderColor: '#a7f3d0',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+              <MessageSquare size={18} color="#047857" strokeWidth={2.4} />
+              <Text style={{ fontSize: 15.5, fontWeight: '900', color: '#065f46' }}>
+                Shop Response & Update
+              </Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: '#ffffff',
+                padding: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#d1fae5',
+              }}
+            >
+              <Text style={{ fontSize: 13.5, color: '#1e293b', fontWeight: '600', lineHeight: 20 }}>
+                {refund.resolutionNotes || refund.adminMessage || refund.lastReply || refund.replies[refund.replies.length - 1]?.text}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+
         {/* 4-STEP REAL-TIME TIMELINE CARD */}
         <Animated.View
           entering={FadeInDown.duration(320)}
@@ -1385,194 +1539,305 @@ export default function RefundStatusScreen({ route, navigation }) {
             elevation: 2,
           }}
         >
-          {/* STEP 1: Order placed / Issue identified */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <View style={{ alignItems: 'center', marginRight: 14 }}>
-              <View
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 13,
-                  backgroundColor: '#047857',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Check size={16} color="#ffffff" strokeWidth={3} />
-              </View>
-              <View style={{ width: 2.5, height: 42, backgroundColor: '#047857' }} />
-            </View>
-            <View style={{ flex: 1, paddingTop: 2 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
-                Refund request initiated
-              </Text>
-              <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
-                Items submitted for verification
-              </Text>
-            </View>
-          </View>
-
-          {/* STEP 2: Under Review */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <View style={{ alignItems: 'center', marginRight: 14 }}>
-              <View
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 13,
-                  backgroundColor: '#047857',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Check size={16} color="#ffffff" strokeWidth={3} />
-              </View>
-              <View
-                style={{
-                  width: 2.5,
-                  height: 42,
-                  backgroundColor: isRejected ? '#ef4444' : isGranted ? '#047857' : '#047857',
-                }}
-              />
-            </View>
-            <View style={{ flex: 1, paddingTop: 2 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
-                Case assigned to shop admin
-              </Text>
-              <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
-                Proof and details verified
-              </Text>
-            </View>
-          </View>
-
-          {/* STEP 3: Admin approval (MANUAL REAL-TIME) */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <View style={{ alignItems: 'center', marginRight: 14 }}>
-              {isRejected ? (
-                <View
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 13,
-                    backgroundColor: '#ef4444',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <X size={16} color="#ffffff" strokeWidth={3} />
-                </View>
-              ) : isGranted ? (
-                <View
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 13,
-                    backgroundColor: '#047857',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Check size={16} color="#ffffff" strokeWidth={3} />
-                </View>
-              ) : (
-                <View
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 13,
-                    borderWidth: 2.5,
-                    borderColor: '#047857',
-                    backgroundColor: '#ffffff',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+          {isRedeliver ? (
+            <>
+              {/* STEP 1: Issue Reported */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
                   <View
                     style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      backgroundColor: '#047857',
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: '#2563eb',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Check size={16} color="#ffffff" strokeWidth={3} />
+                  </View>
+                  <View style={{ width: 2.5, height: 42, backgroundColor: '#2563eb' }} />
+                </View>
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+                    Issue reported & verified
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    Reported items confirmed with shop
+                  </Text>
+                </View>
+              </View>
+
+              {/* STEP 2: Redelivery Arranged */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
+                  <View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: '#2563eb',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Check size={16} color="#ffffff" strokeWidth={3} />
+                  </View>
+                  <View style={{ width: 2.5, height: 42, backgroundColor: '#2563eb' }} />
+                </View>
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+                    Replacement redelivery scheduled
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    Shop arranged replacement products
+                  </Text>
+                </View>
+              </View>
+
+              {/* STEP 3: Out for delivery */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
+                  <View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: '#2563eb',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Truck size={14} color="#ffffff" strokeWidth={2.4} />
+                  </View>
+                  <View style={{ width: 2.5, height: 42, backgroundColor: '#e2e8f0' }} />
+                </View>
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+                    Out for delivery / in transit
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    Delivery partner bringing replacement items
+                  </Text>
+                </View>
+              </View>
+
+              {/* STEP 4: Handover */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
+                  <View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      borderWidth: 2,
+                      borderColor: '#cbd5e1',
+                      backgroundColor: '#ffffff',
                     }}
                   />
                 </View>
-              )}
-              <View
-                style={{
-                  width: 2.5,
-                  height: 42,
-                  backgroundColor: isGranted ? '#047857' : '#e2e8f0',
-                }}
-              />
-            </View>
-            <View style={{ flex: 1, paddingTop: 2 }}>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: '800',
-                  color: isRejected ? '#b91c1c' : '#0f172a',
-                }}
-              >
-                Admin approval
-              </Text>
-              <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
-                {isRejected
-                  ? 'Request rejected by shop admin'
-                  : isGranted
-                  ? 'Approved by shop owner'
-                  : 'Shop owner reviewing case in real-time'}
-              </Text>
-            </View>
-          </View>
-
-          {/* STEP 4: Money received (MANUAL) */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <View style={{ alignItems: 'center', marginRight: 14 }}>
-              {isGranted ? (
-                <View
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 13,
-                    backgroundColor: '#047857',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Check size={16} color="#ffffff" strokeWidth={3} />
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#64748b' }}>
+                    Replacement handed over
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    Delivery completed at your doorstep
+                  </Text>
                 </View>
-              ) : (
-                <View
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 13,
-                    borderWidth: 2,
-                    borderColor: '#cbd5e1',
-                    backgroundColor: '#ffffff',
-                  }}
-                />
-              )}
-            </View>
-            <View style={{ flex: 1, paddingTop: 2 }}>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: '800',
-                  color: isGranted ? '#0f172a' : '#64748b',
-                }}
-              >
-                Money received
-              </Text>
-              <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
-                {isGranted
-                  ? 'Refund granted & sent manually via UPI'
-                  : isRejected
-                  ? 'Case closed'
-                  : 'Awaiting shop owner transfer'}
-              </Text>
-            </View>
-          </View>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* STEP 1: Order placed / Issue identified */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
+                  <View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: '#047857',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Check size={16} color="#ffffff" strokeWidth={3} />
+                  </View>
+                  <View style={{ width: 2.5, height: 42, backgroundColor: '#047857' }} />
+                </View>
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+                    Refund request initiated
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    Items submitted for verification
+                  </Text>
+                </View>
+              </View>
+
+              {/* STEP 2: Under Review */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
+                  <View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: '#047857',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Check size={16} color="#ffffff" strokeWidth={3} />
+                  </View>
+                  <View
+                    style={{
+                      width: 2.5,
+                      height: 42,
+                      backgroundColor: isRejected ? '#ef4444' : isGranted ? '#047857' : '#047857',
+                    }}
+                  />
+                </View>
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+                    Case assigned to shop admin
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    Proof and details verified
+                  </Text>
+                </View>
+              </View>
+
+              {/* STEP 3: Admin approval (MANUAL REAL-TIME) */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
+                  {isRejected ? (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#ef4444',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <X size={16} color="#ffffff" strokeWidth={3} />
+                    </View>
+                  ) : isGranted ? (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#047857',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={16} color="#ffffff" strokeWidth={3} />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        borderWidth: 2.5,
+                        borderColor: '#047857',
+                        backgroundColor: '#ffffff',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: '#047857',
+                        }}
+                      />
+                    </View>
+                  )}
+                  <View
+                    style={{
+                      width: 2.5,
+                      height: 42,
+                      backgroundColor: isGranted ? '#047857' : '#e2e8f0',
+                    }}
+                  />
+                </View>
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '800',
+                      color: isRejected ? '#b91c1c' : '#0f172a',
+                    }}
+                  >
+                    Admin approval
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    {isRejected
+                      ? 'Request rejected by shop admin'
+                      : isGranted
+                      ? 'Approved by shop owner'
+                      : 'Shop owner reviewing case in real-time'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* STEP 4: Money received (MANUAL) */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', marginRight: 14 }}>
+                  {isGranted ? (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#047857',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={16} color="#ffffff" strokeWidth={3} />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        borderWidth: 2,
+                        borderColor: '#cbd5e1',
+                        backgroundColor: '#ffffff',
+                      }}
+                    />
+                  )}
+                </View>
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '800',
+                      color: isGranted ? '#0f172a' : '#64748b',
+                    }}
+                  >
+                    Money received
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: '#64748b', fontWeight: '500', marginTop: 2 }}>
+                    {isGranted
+                      ? 'Refund granted & sent manually via UPI'
+                      : isRejected
+                      ? 'Case closed'
+                      : 'Awaiting shop owner transfer'}
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
         </Animated.View>
 
         {/* REFUND BREAKDOWN CARD */}
@@ -1592,7 +1857,7 @@ export default function RefundStatusScreen({ route, navigation }) {
           }}
         >
           <Text style={{ fontSize: 16, fontWeight: '900', color: '#0f172a', marginBottom: 14 }}>
-            Refund breakdown
+            {isRedeliver ? 'Items being replaced' : 'Refund breakdown'}
           </Text>
 
           <View style={{ gap: 14 }}>
@@ -1661,9 +1926,9 @@ export default function RefundStatusScreen({ route, navigation }) {
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ fontSize: 15.5, fontWeight: '900', color: '#0f172a' }}>
-              Total refund
+              {isRedeliver ? 'Replacement items value' : 'Total refund'}
             </Text>
-            <Text style={{ fontSize: 18, fontWeight: '900', color: '#047857' }}>
+            <Text style={{ fontSize: 18, fontWeight: '900', color: isRedeliver ? '#1d4ed8' : '#047857' }}>
               ₹{totalRefund}
             </Text>
           </View>
@@ -1688,10 +1953,10 @@ export default function RefundStatusScreen({ route, navigation }) {
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ fontSize: 13.5, fontWeight: '600', color: '#64748b' }}>
-              Refund to
+              {isRedeliver ? 'Resolution' : 'Refund to'}
             </Text>
             <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>
-              {refund?.refundTo || 'UPI app'}
+              {isRedeliver ? 'Free doorstep redelivery' : refund?.refundTo || 'UPI app'}
             </Text>
           </View>
 
@@ -1704,13 +1969,20 @@ export default function RefundStatusScreen({ route, navigation }) {
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 13.5, fontWeight: '600', color: '#64748b' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Text style={{ fontSize: 13.5, fontWeight: '600', color: '#64748b', marginTop: 2 }}>
               Reason
             </Text>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>
-              {refund?.reason || refund?.issueType || 'Refund requested'}
-            </Text>
+            <View style={{ alignItems: 'flex-end', flex: 1, marginLeft: 16 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a', textAlign: 'right' }}>
+                {refund?.reason || refund?.issueType || 'Refund requested'}
+              </Text>
+              {Boolean(refund?.description) && (
+                <Text style={{ fontSize: 12.5, color: '#64748b', marginTop: 3, textAlign: 'right' }}>
+                  {refund.description}
+                </Text>
+              )}
+            </View>
           </View>
         </Animated.View>
       </ScrollView>

@@ -2,7 +2,7 @@ import './src/theme/fontSetup';
 import './global.css';
 import './src/services/backgroundLocation';
 import React, { useEffect, useState } from 'react';
-import { Platform, AppState, View, StyleSheet, LogBox } from 'react-native';
+import { Platform, AppState, View, StyleSheet, LogBox, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { stopBackgroundTracking } from './src/services/backgroundLocation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -66,11 +66,14 @@ function AppContent() {
       <FreeDeliveryNotification />
       <DeliveryDelayNotification />
       <ShopClosedNotification />
-      {isOffline && !offlineDismissed && (
-        <View style={[StyleSheet.absoluteFillObject, { zIndex: 999999, backgroundColor: '#ffffff' }]}>
-          <OfflineScreen onRetry={checkConnection} onGoHome={handleGoHome} />
-        </View>
-      )}
+      <Modal
+        visible={Boolean(isOffline && !offlineDismissed)}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleGoHome}
+      >
+        <OfflineScreen onRetry={checkConnection} onGoHome={handleGoHome} />
+      </Modal>
     </>
   );
 }

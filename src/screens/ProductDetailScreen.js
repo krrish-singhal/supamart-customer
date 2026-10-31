@@ -35,12 +35,21 @@ import { useCart } from '../context/CartContext';
 import { getProductImageSource } from '../utils/productImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { fonts } from '../theme/typography';
-import { isProductUnavailable } from '../utils/productAvailability';
+import { isProductOnSale, isProductUnavailable } from '../utils/productAvailability';
+import { doc as firestoreDoc, onSnapshot as firestoreOnSnapshot } from 'firebase/firestore';
 import apiClient from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 
 
-function getDiscountPercent(variant) {
+function getDiscountPercent(variant, product = null) {
+  if (
+    variant?.discountPercent === 0 ||
+    variant?.showDiscountTag === false ||
+    product?.showDiscountTag === false ||
+    product?.discountPercent === 0
+  ) return 0;
+  if (typeof variant?.discountPercent === 'number' && variant.discountPercent > 0) return variant.discountPercent;
+  if (typeof product?.discountPercent === 'number' && product.discountPercent > 0) return product.discountPercent;
   if (!variant?.price || variant.offerPrice == null || variant.offerPrice >= variant.price) return 0;
   return Math.round(((variant.price - variant.offerPrice) / variant.price) * 100);
 }
@@ -74,6 +83,12 @@ export default function ProductDetailScreen({ route, navigation }) {
   const { id } = route.params;
   const insets = useSafeAreaInsets();
   const [currentId, setCurrentId] = useState(id);
+
+  useEffect(() => {
+    if (route.params?.id && route.params.id !== currentId) {
+      setCurrentId(route.params.id);
+    }
+  }, [route.params?.id]);
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -116,8 +131,8 @@ export default function ProductDetailScreen({ route, navigation }) {
         if (!isCancelled) setLoading(false);
       }
     };
-    const unsub = onSnapshot(
-      doc(db, 'products', currentId),
+    const unsub = firestoreOnSnapshot(
+      firestoreDoc(db, 'products', currentId),
       (snap) => {
         if (snap.exists()) {
           const data = { id: snap.id, ...snap.data() };
@@ -143,32 +158,52 @@ export default function ProductDetailScreen({ route, navigation }) {
   // Fetch recommendations for "You may also need" section (Image 3)
   useEffect(() => {
     if (!recommendationProductId) return;
+    let isCancelled = false;
     const fetchRecs = async () => {
       try {
-        const recQuery = recommendationCategoryId
-          ? query(collection(db, 'products'), where('categoryId', '==', recommendationCategoryId), limit(8))
-          : query(collection(db, 'products'), limit(8));
-        const snap = await getDocs(recQuery);
-        let items = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((p) => p.id !== recommendationProductId && !isProductUnavailable(p));
+        let items = [];
+        try {
+          const { data } = await apiClient.get('/products', {
+            params: {
+              ...(recommendationCategoryId ? { categoryId: recommendationCategoryId } : {}),
+              limit: 8,
+            },
+            __skipErrorToast: true,
+          });
+          items = (data?.items || [])
+            .filter((p) => p.id !== recommendationProductId && !isProductUnavailable(p));
+        } catch {
+          const recQuery = recommendationCategoryId
+            ? query(collection(db, 'products'), where('categoryId', '==', recommendationCategoryId), limit(8))
+            : query(collection(db, 'products'), limit(8));
+          const snap = await getDocs(recQuery);
+          items = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((p) => p.id !== recommendationProductId && !isProductUnavailable(p));
+        }
+
         if (items.length < 4 && recommendationCategoryId) {
           try {
-            const fallbackSnap = await getDocs(query(collection(db, 'products'), limit(8)));
-            const fallbackItems = fallbackSnap.docs
-              .map((d) => ({ id: d.id, ...d.data() }))
+            const { data: fallbackData } = await apiClient.get('/products', {
+              params: { limit: 8 },
+              __skipErrorToast: true,
+            });
+            const fallbackItems = (fallbackData?.items || [])
               .filter((p) => p.id !== recommendationProductId && !isProductUnavailable(p) && !items.some((i) => i.id === p.id));
             items = [...items, ...fallbackItems];
           } catch {
             // Keep items found so far
           }
         }
-        setRecommendations(items.slice(0, 4));
+        if (!isCancelled) setRecommendations(items.slice(0, 4));
       } catch {
         // Fallback
       }
     };
     fetchRecs();
+    return () => {
+      isCancelled = true;
+    };
   }, [recommendationProductId, recommendationCategoryId]);
 
 
@@ -187,11 +222,12 @@ export default function ProductDetailScreen({ route, navigation }) {
   }, [product]);
 
   const currentVariant = selectedVariant || (variants.length > 1 ? variants[1] : variants[0]);
+  const isProductAvailable = product?.availability !== 'UNAVAILABLE';
   const currentVariantUnavailable = !currentVariant || isProductUnavailable(product, currentVariant);
-  const isProductOnSale = product?.onSale !== false && product?.isOnSale !== false && product?.availability !== 'UNAVAILABLE';
-  const price = isProductOnSale && currentVariant?.offerPrice != null ? currentVariant.offerPrice : (currentVariant?.price ?? 0);
+  const hasSaleDiscount = isProductOnSale(product) && currentVariant?.showDiscountTag !== false && product?.showDiscountTag !== false;
+  const price = hasSaleDiscount && currentVariant?.offerPrice != null ? currentVariant.offerPrice : (currentVariant?.price ?? 0);
   const mrp = currentVariant?.price ?? 0;
-  const discount = isProductOnSale ? getDiscountPercent(currentVariant) : 0;
+  const discount = hasSaleDiscount ? getDiscountPercent(currentVariant, product) : 0;
   const currentQty = product ? getQty(product.id, currentVariant?.id) : 0;
   const productTags = useMemo(() => getProductTags(product), [product]);
 
@@ -799,7 +835,7 @@ export default function ProductDetailScreen({ route, navigation }) {
             {variants.map((v) => {
               const isSelected = currentVariant?.id === v.id;
               const vPrice = v.offerPrice ?? v.price ?? 0;
-              const vDiscount = getDiscountPercent(v);
+              const vDiscount = getDiscountPercent(v, product);
 
               return (
                 <Pressable
@@ -1047,7 +1083,7 @@ export default function ProductDetailScreen({ route, navigation }) {
               backgroundColor: '#f8fafc',
             }}
           >
-            <Text style={{ fontFamily: 'Inter-Bold', fontSize: 13, color: '#64748b' }}>Out of stock</Text>
+            <Text style={{ fontFamily: 'Inter-Bold', fontSize: 13, color: '#64748b' }}>{!isProductAvailable ? 'Unavailable' : 'Out of stock'}</Text>
           </View>
         ) : currentQty === 0 ? (
           <Animated.View style={addAnimatedStyle}>

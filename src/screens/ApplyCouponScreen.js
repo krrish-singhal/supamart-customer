@@ -342,11 +342,12 @@ export default function ApplyCouponScreen({ navigation }) {
       const tag = o.tag || preset?.tag || (o.kind === 'PERCENT' ? `${o.value}%` : 'SAVE');
       const tagColor = o.tagColor || preset?.color || (o.kind === 'PERCENT' ? '#0a7c47' : '#0284c7');
 
+      const isPercent = o.kind === 'PERCENT';
       const headline =
         o.title ||
-        (o.kind === 'PERCENT'
-          ? `Extra ${o.value}% off (up to ₹${o.maxDiscount || '—'})`
-          : `Save ₹${o.value} on your order`);
+        (isPercent
+          ? `Extra ${o.value}% off${o.maxDiscount ? ` (up to ₹${o.maxDiscount})` : ''}`
+          : `Flat ₹${o.value} off`);
 
       const terms =
         o.description ||
@@ -389,6 +390,17 @@ export default function ApplyCouponScreen({ navigation }) {
         return;
       }
 
+      const matchingOffer = formattedOffers.find((o) => (o.code || '').toUpperCase() === code);
+      if (matchingOffer && matchingOffer.minOrder > 0 && displayCartAmount < matchingOffer.minOrder) {
+        const diff = Math.max(0, matchingOffer.minOrder - displayCartAmount);
+        Toast.show({
+          type: 'error',
+          text1: 'Coupon conditions not met',
+          text2: `Valid on orders above ₹${matchingOffer.minOrder}. Add ₹${diff} more to unlock.`,
+        });
+        return;
+      }
+
       setApplyingCode(code);
       try {
         await applyCoupon(code);
@@ -401,7 +413,7 @@ export default function ApplyCouponScreen({ navigation }) {
         setApplyingCode(null);
       }
     },
-    [inputCode, applyCoupon]
+    [inputCode, applyCoupon, formattedOffers, displayCartAmount]
   );
 
   const isInputApplying = applyingCode === inputCode.trim().toUpperCase();

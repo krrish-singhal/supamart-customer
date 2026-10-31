@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { auth } from './firebase';
 
+const FALLBACK_API_URL = 'https://supamart-backend-353k.onrender.com/api';
+
 function resolvePrimaryApiUrl() {
   // 1. Web environment: use current window hostname (localhost or LAN IP)
   if (Platform.OS === 'web') {
@@ -32,7 +34,11 @@ function resolvePrimaryApiUrl() {
         host.includes('ngrok') ||
         host.includes('loca.lt');
 
-      if (host && !isTunnel && host !== 'localhost' && host !== '127.0.0.1') {
+      if (isTunnel) {
+        return FALLBACK_API_URL;
+      }
+
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
         return `http://${host}:5000/api`;
       }
     }
@@ -52,24 +58,73 @@ function resolvePrimaryApiUrl() {
   return 'http://10.28.41.35:5000/api';
 }
 
+function isLocalUrl(url) {
+  if (!url) return false;
+  return (
+    url.includes('localhost') ||
+    url.includes('127.0.0.1') ||
+    url.includes('10.0.2.2') ||
+    /^https?:\/\/(?:10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/.test(url)
+  );
+}
+
 const PRIMARY_API_URL = resolvePrimaryApiUrl();
-const FALLBACK_API_URL = 'https://supamart-backend-353k.onrender.com/api';
 
 let activeBaseURL = PRIMARY_API_URL;
 let hasLoggedFailover = false;
+let hasCheckedPersistedBaseUrl = false;
+let hasProbedLocal = false;
+
+function silentlyProbeLocalBackend() {
+  if (hasProbedLocal || activeBaseURL === PRIMARY_API_URL || PRIMARY_API_URL === FALLBACK_API_URL) return;
+  hasProbedLocal = true;
+  const probeClient = create({ baseURL: PRIMARY_API_URL, timeout: 2000 });
+  probeClient
+    .get('/health', { __skipFailover: true, __skipErrorToast: true })
+    .then(async (res) => {
+      if (res.status === 200) {
+        activeBaseURL = PRIMARY_API_URL;
+        apiClient.defaults.baseURL = PRIMARY_API_URL;
+        await AsyncStorage.setItem('lastWorkingApiUrl', PRIMARY_API_URL);
+        console.log('Local backend reachable — automatically switched to:', PRIMARY_API_URL);
+      }
+    })
+    .catch(() => {});
+}
 
 console.log('Primary API_URL is:', PRIMARY_API_URL, '| Fallback is:', FALLBACK_API_URL);
 
-// 20s timeout to prevent premature aborts during cold starts or cellular hops
+// Standard client with dynamic timeouts: fast failover for LAN, generous for cloud cold starts
 const apiClient = create({
   baseURL: activeBaseURL,
-  timeout: 20000,
+  timeout: 25000,
 });
 
 apiClient.interceptors.request.use(async (config) => {
+  // Check once on startup for a saved working URL to avoid unnecessary failover delay
+  if (!hasCheckedPersistedBaseUrl) {
+    hasCheckedPersistedBaseUrl = true;
+    try {
+      const savedBase = await AsyncStorage.getItem('lastWorkingApiUrl');
+      if (savedBase && (savedBase === PRIMARY_API_URL || savedBase === FALLBACK_API_URL)) {
+        activeBaseURL = savedBase;
+        apiClient.defaults.baseURL = savedBase;
+      }
+    } catch (_) {}
+  }
+
   // Always use currently active working baseURL
   if (!config.baseURL || config.baseURL === PRIMARY_API_URL || config.baseURL === FALLBACK_API_URL) {
     config.baseURL = activeBaseURL;
+  }
+
+  // Fast timeout for local development URLs (3.5s) so unreachable local LAN doesn't freeze the app
+  if (!config.timeout) {
+    config.timeout = isLocalUrl(config.baseURL) ? 3500 : 25000;
+  }
+
+  if (activeBaseURL === FALLBACK_API_URL) {
+    silentlyProbeLocalBackend();
   }
 
   // A just-completed Firebase sign-in supplies its token before authMode is saved.
@@ -94,6 +149,9 @@ export function setNetworkErrorListener(listener) {
 
 apiClient.interceptors.response.use(
   (response) => {
+    if (activeBaseURL) {
+      AsyncStorage.setItem('lastWorkingApiUrl', activeBaseURL).catch(() => {});
+    }
     return response;
   },
   async (error) => {
@@ -120,7 +178,9 @@ apiClient.interceptors.response.use(
       }
       activeBaseURL = FALLBACK_API_URL;
       apiClient.defaults.baseURL = FALLBACK_API_URL;
+      AsyncStorage.setItem('lastWorkingApiUrl', FALLBACK_API_URL).catch(() => {});
       config.baseURL = FALLBACK_API_URL;
+      config.timeout = 25000;
       try {
         return await apiClient(config);
       } catch (fallbackError) {

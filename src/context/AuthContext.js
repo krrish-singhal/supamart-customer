@@ -6,7 +6,8 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import apiClient from '../services/api';
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { stopBackgroundTracking } from '../services/backgroundLocation';
 
 export const AuthContext = createContext();
@@ -24,21 +25,20 @@ const FIREBASE_NATIVE_MARKER = 'firebase-native';
 // correct way to wait for it.
 function waitForFirebaseAuthRestore() {
   return new Promise((resolve) => {
+    if (auth.currentUser) {
+      resolve(auth.currentUser);
+      return;
+    }
+    const timer = setTimeout(() => {
+      unsub();
+      resolve(auth.currentUser || null);
+    }, 4000);
     const unsub = onAuthStateChanged(auth, (u) => {
+      clearTimeout(timer);
       unsub();
       resolve(u);
     });
   });
-}
-
-// Bound legacy session restoration so a slow backend cannot block startup forever.
-const FAST_PATH_RESTORE_TIMEOUT_MS = 15000;
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((resolve) => setTimeout(() => resolve('__timeout__'), ms)),
-  ]);
 }
 
 export function AuthProvider({ children }) {
@@ -55,30 +55,79 @@ export function AuthProvider({ children }) {
       const authMode = await AsyncStorage.getItem('authMode');
 
       if (authMode === 'firebase') {
-        // Fast path restore: read straight from Firebase Auth's own local persistence +
-        // our authenticated backend. Bounded by
-        // FAST_PATH_RESTORE_TIMEOUT_MS so this can never hang the app on the loading
-        // spinner indefinitely (see that constant's comment for why this exists).
-        const result = await withTimeout(
-          (async () => {
-            const fbUser = await waitForFirebaseAuthRestore();
-            if (!fbUser) return null;
-            const { data } = await apiClient.get('/auth/me', { __skipErrorToast: true });
-            return data;
-          })(),
-          FAST_PATH_RESTORE_TIMEOUT_MS
-        );
+        // Optimistic restore: unblock the UI immediately if we have a cached profile,
+        // exactly like legacy token mode does, so slow backend/failover never hangs startup.
+        const storedProfile = await AsyncStorage.getItem('userProfile');
+        let hasCachedProfile = false;
+        if (storedProfile) {
+          try {
+            setUserProfile(JSON.parse(storedProfile));
+            setToken(FIREBASE_NATIVE_MARKER);
+            setLoading(false); // Unblock UI immediately
+            hasCachedProfile = true;
+          } catch (_e) {}
+        }
 
-        if (result === '__timeout__') {
-          console.error(`Firebase session restore timed out after ${FAST_PATH_RESTORE_TIMEOUT_MS}ms — showing login instead of hanging.`);
-        } else if (result) {
-          setToken(FIREBASE_NATIVE_MARKER);
-          setUserProfile(result);
+        // Confirm the session in Firebase Auth's local persistence
+        const fbUser = await waitForFirebaseAuthRestore();
+        if (!fbUser) {
+          // Firebase Auth confirms there is NO active local session (user signed out)
+          setToken(null);
+          setUserProfile(null);
+          await AsyncStorage.removeItem('userProfile');
+          await AsyncStorage.removeItem('authMode');
+          setLoading(false);
           return;
         }
-        // No session, no profile, or a timeout — clear the stale flag rather than getting
-        // stuck on it next launch too; falls through to "no session" (shows login).
-        await AsyncStorage.removeItem('authMode');
+
+        // Session is valid in Firebase Auth
+        setToken(FIREBASE_NATIVE_MARKER);
+
+        // If we didn't have a cached profile, supply an optimistic profile and unblock UI
+        if (!hasCachedProfile) {
+          let detectedRole = 'CUSTOMER';
+          try {
+            const partnerSnap = await getDoc(doc(db, 'deliveryPartners', fbUser.uid));
+            if (partnerSnap.exists()) {
+              detectedRole = 'PARTNER';
+            }
+          } catch (_e) {}
+          const optimistic = {
+            id: fbUser.uid,
+            uid: fbUser.uid,
+            email: fbUser.email || '',
+            name: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+            role: detectedRole,
+          };
+          setUserProfile(optimistic);
+          setLoading(false);
+        }
+
+        // Verify/refresh profile from backend in background without blocking startup or timing out
+        apiClient
+          .get('/auth/me', { __skipErrorToast: true })
+          .then((res) => {
+            if (res.data) {
+              setUserProfile(res.data);
+              AsyncStorage.setItem('userProfile', JSON.stringify(res.data));
+            }
+          })
+          .catch((err) => {
+            // ONLY invalidate session if the backend explicitly rejected authentication with 401
+            if (err.response?.status === 401) {
+              setToken(null);
+              setUserProfile(null);
+              AsyncStorage.removeItem('userToken');
+              AsyncStorage.removeItem('userProfile');
+              AsyncStorage.removeItem('authMode');
+              firebaseSignOut(auth).catch(() => {});
+            }
+            // If offline, network error, or backend failover/cold-start:
+            // KEEP the user logged in with their cached profile!
+          })
+          .finally(() => {
+            setLoading(false);
+          });
         return;
       }
 
@@ -169,15 +218,36 @@ export function AuthProvider({ children }) {
     // their profile through the API rather than opening a Firestore stream.
     if (email && password) {
       try {
-        const profile = await withTimeout((async () => {
-          const credential = await signInWithEmailAndPassword(auth, email, password);
-          const idToken = await credential.user.getIdToken();
-          const { data } = await apiClient.get('/auth/me', {
-            headers: { Authorization: `Bearer ${idToken}` }, __skipErrorToast: true,
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const idToken = await credential.user.getIdToken();
+        let profile = null;
+        try {
+          const res = await apiClient.get('/auth/me', {
+            headers: { Authorization: `Bearer ${idToken}` },
+            __skipErrorToast: true,
+            timeout: 25000,
           });
-          return data;
-        })(), FAST_PATH_RESTORE_TIMEOUT_MS);
-        if (profile && profile !== '__timeout__') {
+          profile = res?.data || null;
+        } catch (_err) {}
+
+        if (!profile || profile.role !== 'PARTNER') {
+          try {
+            const partnerSnap = await getDoc(doc(db, 'deliveryPartners', credential.user.uid));
+            if (partnerSnap.exists()) {
+              const partnerData = partnerSnap.data();
+              profile = {
+                id: credential.user.uid,
+                uid: credential.user.uid,
+                name: partnerData.name || credential.user.displayName || 'Delivery Partner',
+                email: partnerData.email || credential.user.email || '',
+                mobile: partnerData.phone || partnerData.mobile || '',
+                role: 'PARTNER',
+                ...partnerData,
+              };
+            }
+          } catch (_e) {}
+        }
+        if (profile) {
           await AsyncStorage.setItem('authMode', 'firebase');
           await AsyncStorage.removeItem('userToken');
           await AsyncStorage.setItem('userProfile', JSON.stringify(profile));

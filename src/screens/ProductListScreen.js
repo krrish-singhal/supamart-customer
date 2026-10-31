@@ -10,7 +10,7 @@ import ProductFilterModal from '../components/ProductFilterModal';
 import ProductDetailModal from '../components/ProductDetailModal';
 import { useCart } from '../context/CartContext';
 import { applyProductFilters, sortProducts, countActiveFilters, EMPTY_FILTERS } from '../utils/productFilters';
-import { isProductUnavailable } from '../utils/productAvailability';
+import { isProductUnavailable, isProductOffSale } from '../utils/productAvailability';
 
 const SORT_DROPDOWN_OPTIONS = [
   { key: 'price_asc', label: 'Price: Low to High' },
@@ -90,7 +90,9 @@ export default function ProductListScreen({ navigation, route }) {
   }, []);
 
   const visibleItems = useMemo(() => {
-    let list = items;
+    let list = (items || []).filter(
+      (p) => p && !isProductOffSale(p)
+    );
     if (selectedCategory) {
       list = list.filter((p) => p.categoryId === selectedCategory);
     }

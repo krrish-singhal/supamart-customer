@@ -21,6 +21,7 @@ import apiClient from '../services/api';
 import Toast from 'react-native-toast-message';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { getProductImageSource } from '../utils/productImages';
+import { isProductOffSale } from '../utils/productAvailability';
 import { fonts } from '../theme/typography';
 
 const CATEGORY_GRADIENTS = [
@@ -65,7 +66,7 @@ function formatOrderDateTime(createdAt) {
 }
 
 function renderStatusBadge(status) {
-  if (status === 'DELIVERED') {
+  if (status === 'DELIVERED' || status === 'PENDING_CONFIRMATION') {
     return (
       <View
         style={{
@@ -134,7 +135,12 @@ function EmptyOrders({ navigation }) {
         setCategories(topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 6));
       }
       if (featSnap.status === 'fulfilled') {
-        setFeatured(featSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })).slice(0, 8));
+        setFeatured(
+          featSnap.value.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((p) => !isProductOffSale(p))
+            .slice(0, 8)
+        );
       }
       setLoading(false);
     }).catch(() => {
@@ -293,9 +299,10 @@ export default function OrdersScreen({ navigation }) {
     useCallback(() => {
       if (!userProfile) return;
       fetchOrders();
+      // Periodically refresh order statuses quietly (30s interval instead of rapid 3.5s loop)
       const interval = setInterval(() => {
         fetchOrders(true);
-      }, 5000);
+      }, 30000);
       return () => clearInterval(interval);
     }, [userProfile, fetchOrders])
   );
@@ -401,10 +408,14 @@ export default function OrdersScreen({ navigation }) {
 
   const filteredOrders = useMemo(() => {
     if (activeTab === 'ONGOING') {
-      return orders.filter((o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED');
+      return orders.filter(
+        (o) => o.status !== 'DELIVERED' && o.status !== 'PENDING_CONFIRMATION' && o.status !== 'CANCELLED'
+      );
     }
     if (activeTab === 'DELIVERED') {
-      return orders.filter((o) => o.status === 'DELIVERED');
+      return orders.filter(
+        (o) => o.status === 'DELIVERED' || o.status === 'PENDING_CONFIRMATION'
+      );
     }
     return orders;
   }, [orders, activeTab]);
@@ -533,7 +544,7 @@ export default function OrdersScreen({ navigation }) {
             </View>
           )}
           renderItem={({ item, index }) => {
-            const isDelivered = item.status === 'DELIVERED';
+            const isDelivered = item.status === 'DELIVERED' || item.status === 'PENDING_CONFIRMATION';
             const isOngoing = !isDelivered && item.status !== 'CANCELLED';
             const itemCount = item.items?.length || 0;
             const orderTotal = Math.round(item.total || item.totalAmount || 0);
