@@ -11,14 +11,36 @@ export function isProductOnSale(product) {
 export function isProductUnavailable(product, variant = product?.variants?.[0]) {
   if (!product) return true;
 
-  return (
+  if (
     isProductOffSale(product) ||
     product.availability === 'OUT_OF_STOCK' ||
+    product.availability === 'UNAVAILABLE' ||
     product.availability === 'UNAVAILABLE_TODAY' ||
-    product.isAvailableToday === false ||
-    (variant?.availability != null && variant.availability !== 'AVAILABLE') ||
-    (variant?.stock != null && Number(variant.stock) <= 0) ||
-    (!variant && product.stock != null && Number(product.stock) <= 0)
-  );
+    product.isAvailableToday === false
+  ) {
+    return true;
+  }
+
+  const activeVariant = variant || product?.variants?.[0];
+  if (activeVariant) {
+    if (activeVariant.availability != null && activeVariant.availability !== 'AVAILABLE') return true;
+    if (activeVariant.stock != null && Number(activeVariant.stock) <= 0) return true;
+  }
+
+  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+  if (!hasVariants) {
+    if (product.stock != null && Number(product.stock) <= 0) return true;
+    if (product.stockQuantity != null && Number(product.stockQuantity) <= 0) return true;
+  } else {
+    const hasAnyStock = product.variants.some((v) => {
+      if (v.availability && v.availability !== 'AVAILABLE') return false;
+      if (v.stock != null && Number(v.stock) <= 0) return false;
+      return true;
+    });
+    if (!hasAnyStock) return true;
+  }
+
+  return false;
 }
+
 

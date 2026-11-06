@@ -65,7 +65,58 @@ function formatOrderDateTime(createdAt) {
   return `${d.getDate()} ${months[d.getMonth()]}, ${timeStr}`;
 }
 
-function renderStatusBadge(status) {
+function renderStatusBadge(status, item) {
+  if (item?.isRedelivery) {
+    if (item.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION') {
+      return (
+        <View
+          style={{
+            backgroundColor: '#fef3c7',
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 4.5,
+          }}
+        >
+          <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#b45309', letterSpacing: 0.3 }}>
+            CONFIRM AVAILABILITY
+          </Text>
+        </View>
+      );
+    }
+    if (item.redeliveryStatus === 'RESCHEDULED') {
+      return (
+        <View
+          style={{
+            backgroundColor: '#eff6ff',
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 4.5,
+          }}
+        >
+          <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#1d4ed8', letterSpacing: 0.3 }}>
+            RESCHEDULED
+          </Text>
+        </View>
+      );
+    }
+    if (item.redeliveryStatus === 'DECLINED') {
+      return (
+        <View
+          style={{
+            backgroundColor: '#fef2f2',
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 4.5,
+          }}
+        >
+          <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#ef4444', letterSpacing: 0.3 }}>
+            DECLINED
+          </Text>
+        </View>
+      );
+    }
+  }
+
   if (status === 'DELIVERED' || status === 'PENDING_CONFIRMATION') {
     return (
       <View
@@ -100,18 +151,69 @@ function renderStatusBadge(status) {
     );
   }
 
-  // All ongoing statuses (PLACED, ACCEPTED, PACKED, OUT_FOR_DELIVERY)
+  if (status === 'OUT_FOR_DELIVERY') {
+    return (
+      <View
+        style={{
+          backgroundColor: '#fef3c7',
+          borderRadius: 8,
+          paddingHorizontal: 10,
+          paddingVertical: 4.5,
+        }}
+      >
+        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#b45309', letterSpacing: 0.3 }}>
+          ON THE WAY
+        </Text>
+      </View>
+    );
+  }
+
+  if (status === 'PACKED' || status === 'PACKING') {
+    return (
+      <View
+        style={{
+          backgroundColor: '#ecfdf5',
+          borderRadius: 8,
+          paddingHorizontal: 10,
+          paddingVertical: 4.5,
+        }}
+      >
+        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#059669', letterSpacing: 0.3 }}>
+          PACKED
+        </Text>
+      </View>
+    );
+  }
+
+  if (status === 'ORDER_ACCEPTED' || status === 'ACCEPTED') {
+    return (
+      <View
+        style={{
+          backgroundColor: '#eff6ff',
+          borderRadius: 8,
+          paddingHorizontal: 10,
+          paddingVertical: 4.5,
+        }}
+      >
+        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#2563eb', letterSpacing: 0.3 }}>
+          CONFIRMED
+        </Text>
+      </View>
+    );
+  }
+
+  // Fallback for ORDER_PLACED or any other state
   return (
     <View
       style={{
-        backgroundColor: '#fef3c7',
+        backgroundColor: '#f1f5f9',
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 4.5,
       }}
     >
-      <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#b45309', letterSpacing: 0.3 }}>
-        ON THE WAY
+      <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#475569', letterSpacing: 0.3 }}>
+        ORDER PLACED
       </Text>
     </View>
   );
@@ -408,9 +510,12 @@ export default function OrdersScreen({ navigation }) {
 
   const filteredOrders = useMemo(() => {
     if (activeTab === 'ONGOING') {
-      return orders.filter(
-        (o) => o.status !== 'DELIVERED' && o.status !== 'PENDING_CONFIRMATION' && o.status !== 'CANCELLED'
-      );
+      return orders.filter((o) => {
+        if (o.status === 'DELIVERED' || o.status === 'PENDING_CONFIRMATION' || o.status === 'CANCELLED') return false;
+        const createdMs = typeof o.createdAt === 'number' ? o.createdAt : o.createdAt?.toDate?.() ? o.createdAt.toDate().getTime() : new Date(o.createdAt || 0).getTime();
+        if (Date.now() - createdMs > 24 * 60 * 60 * 1000) return false;
+        return true;
+      });
     }
     if (activeTab === 'DELIVERED') {
       return orders.filter(
@@ -545,7 +650,9 @@ export default function OrdersScreen({ navigation }) {
           )}
           renderItem={({ item, index }) => {
             const isDelivered = item.status === 'DELIVERED' || item.status === 'PENDING_CONFIRMATION';
-            const isOngoing = !isDelivered && item.status !== 'CANCELLED';
+            const createdMs = typeof item.createdAt === 'number' ? item.createdAt : item.createdAt?.toDate?.() ? item.createdAt.toDate().getTime() : new Date(item.createdAt || 0).getTime();
+            const isStale = (Date.now() - createdMs) > 24 * 60 * 60 * 1000;
+            const isOngoing = !isDelivered && item.status !== 'CANCELLED' && !isStale;
             const itemCount = item.items?.length || 0;
             const orderTotal = Math.round(item.total || item.totalAmount || 0);
 
@@ -569,16 +676,26 @@ export default function OrdersScreen({ navigation }) {
                   {/* Top Row: Order # and Date + Status Badge */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <View style={{ flex: 1, paddingRight: 12 }}>
-                      <Text style={{ fontSize: 16.5, fontWeight: '800', color: '#0f172a' }}>
-                        Order #{item.orderNo}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                        <Text style={{ fontSize: 16.5, fontWeight: '800', color: '#0f172a' }}>
+                          Order #{item.orderNo}
+                        </Text>
+                        {item.isRedelivery && (
+                          <View style={{ backgroundColor: '#ecfdf5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#a7f3d0' }}>
+                            <Text style={{ fontSize: 10, fontFamily: fonts.bold, color: '#059669' }}>
+                              Free Replacement
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={{ fontSize: 13, fontWeight: '500', color: '#64748b', marginTop: 2 }}>
+                        {item.isRedelivery && item.originalOrderNo ? `Replacement for #${item.originalOrderNo} · ` : ''}
                         {formatOrderDateTime(item.createdAt)}
                       </Text>
                     </View>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {renderStatusBadge(item.status)}
+                      {renderStatusBadge(item.status, item)}
                       <Pressable
                         onPress={() => handleDeleteOrder(item)}
                         hitSlop={8}
@@ -658,12 +775,18 @@ export default function OrdersScreen({ navigation }) {
 
                     {/* Total Amount & Items Count matching Image 4 */}
                     <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
-                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#0f172a' }}>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: item.isRedelivery ? '#059669' : '#0f172a' }}>
                         ₹{orderTotal}
                       </Text>
-                      <Text style={{ fontSize: 13, fontWeight: '500', color: '#64748b', marginTop: 2 }}>
-                        {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                      </Text>
+                      {item.isRedelivery ? (
+                        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: '#059669', marginTop: 2 }}>
+                          FREE REPLACEMENT
+                        </Text>
+                      ) : (
+                        <Text style={{ fontSize: 13, fontWeight: '500', color: '#64748b', marginTop: 2 }}>
+                          {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                        </Text>
+                      )}
                     </View>
                   </View>
 

@@ -55,18 +55,24 @@ function orderEstimate(order, now = Date.now(), liveRider = null) {
   }
 
   if (Number.isFinite(order.estimatedDeliveryAt)) {
+    const delayMinutes = Math.max(0, Number(order.deliveryDelayMinutes ?? order.deliveryDelay?.totalDelayMinutes) || 0);
     // If outForDeliveryAt exists, calculate stable monotonic elapsed minutes
     if (order.outForDeliveryAt && order.estimatedDeliveryAt > order.outForDeliveryAt) {
-      const totalMinutes = Math.round((order.estimatedDeliveryAt - order.outForDeliveryAt) / 60000);
+      let totalMinutes = Math.round((order.estimatedDeliveryAt - order.outForDeliveryAt) / 60000);
+      // Instant delivery within store radius (max 5km) is at most 25 mins plus any explicit delay
+      if (totalMinutes > 25 + delayMinutes) {
+        totalMinutes = 20 + delayMinutes;
+      }
       const elapsedMinutes = Math.floor(Math.max(0, now - order.outForDeliveryAt) / 60000);
       const remaining = Math.max(1, totalMinutes - elapsedMinutes);
-      if (remaining <= 180) return `~${remaining} mins`;
-    }
-    const remaining = Math.max(1, Math.round((order.estimatedDeliveryAt - now) / 60000));
-    if (remaining <= 180) {
-      if (order.estimatedDeliveryAt < now) return 'Updating arrival time';
       return `~${remaining} mins`;
     }
+    let remaining = Math.max(1, Math.round((order.estimatedDeliveryAt - now) / 60000));
+    if (remaining > 25 + delayMinutes) {
+      remaining = 20 + delayMinutes;
+    }
+    if (order.estimatedDeliveryAt < now) return 'Updating arrival time';
+    return `~${remaining} mins`;
   }
   return 'Updating arrival time';
 }

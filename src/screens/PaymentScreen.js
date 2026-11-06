@@ -200,6 +200,11 @@ export default function PaymentScreen({ route, navigation }) {
       navigation.navigate('Main', { screen: 'Cart' });
       return;
     }
+    if (!storeOpen && !createdOrder?.id) {
+      setConfirmModalVisible(false);
+      Toast.show({ type: 'info', text1: 'Store is closed for orders', text2: 'Please try again when the store opens.' });
+      return;
+    }
     setLoading(true);
     try {
       // 1. If an order was already created and is being retried, attempt to re-claim directly
@@ -267,12 +272,12 @@ export default function PaymentScreen({ route, navigation }) {
       ) {
         let removedName = outOfStockItem?.name;
         if (outOfStockItem?.productId && typeof removeItem === 'function') {
-          await removeItem(outOfStockItem.productId, outOfStockItem.variantId);
+          await removeItem(outOfStockItem.productId, outOfStockItem.variantId, { silent: true });
         } else {
           const matchedItem = cartItems.find((i) => i.name && errMsg.toLowerCase().includes(i.name.toLowerCase()));
           if (matchedItem && typeof removeItem === 'function') {
             removedName = matchedItem.name;
-            await removeItem(matchedItem.productId, matchedItem.variantId);
+            await removeItem(matchedItem.productId, matchedItem.variantId, { silent: true });
           }
         }
         await loadCart(true, { force: true });
@@ -346,7 +351,7 @@ export default function PaymentScreen({ route, navigation }) {
     }
 
     if (!storeOpen && !createdOrder?.id) {
-      Toast.show({ type: 'info', text1: 'The shop is closed', text2: 'Order daily from 10 AM to 11 PM.' });
+      Toast.show({ type: 'info', text1: 'Store is closed for orders', text2: 'Please try again when the store opens.' });
       return;
     }
 

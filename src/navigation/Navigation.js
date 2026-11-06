@@ -55,6 +55,7 @@ import DeliveryInstructionsScreen from '../screens/DeliveryInstructionsScreen';
 import DeliveryOrdersScreen from '../screens/DeliveryOrdersScreen';
 import DeliveryMapScreen from '../screens/DeliveryMapScreen';
 import DeliveryConfirmationModal from '../components/DeliveryConfirmationModal';
+import RedeliveryConfirmationModal from '../components/RedeliveryConfirmationModal';
 
 export { navigationRef };
 
@@ -485,6 +486,7 @@ export default function Navigation() {
         )}
       </Stack.Navigator>
       <DeliveryConfirmationModal />
+      <RedeliveryConfirmationModal />
     </NavigationContainer>
   );
 }

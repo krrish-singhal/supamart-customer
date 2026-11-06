@@ -318,6 +318,29 @@ export default function OrderDetailScreen({ route, navigation }) {
               </Pressable>
             </Animated.View>
           )}
+          {/* FREE REPLACEMENT BANNER */}
+          {order?.isRedelivery && (
+            <View
+              style={{
+                backgroundColor: '#ecfdf5',
+                borderRadius: 18,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: '#a7f3d0',
+                marginBottom: 14,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <RotateCcw size={16} color="#047857" strokeWidth={2.4} />
+                <Text style={{ fontFamily: fonts.bold, fontSize: 14, fontWeight: '800', color: '#065f46' }}>
+                  Free Replacement Order
+                </Text>
+              </View>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 12.5, color: '#047857', lineHeight: 18 }}>
+                Linked to Original Order #{order.originalOrderNo || 'Original'}. This replacement order is provided at ₹0 store coverage. You are not charged anything.
+              </Text>
+            </View>
+          )}
 
           {/* CANCELLED STATUS BANNER LINKING TO REFUND STATUS */}
           {isCancelled && (
@@ -459,16 +482,25 @@ export default function OrderDetailScreen({ route, navigation }) {
                       </View>
 
                       {/* Price */}
-                      <Text
-                        style={{
-                          fontFamily: fonts.extraBold,
-                          fontSize: 15,
-                          fontWeight: '900',
-                          color: '#0f172a',
-                        }}
-                      >
-                        ₹{prod.price || prod.offerPrice || 0}
-                      </Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text
+                          style={{
+                            fontFamily: fonts.extraBold,
+                            fontSize: 15,
+                            fontWeight: '900',
+                            color: '#0f172a',
+                          }}
+                        >
+                          ₹{prod.price || prod.offerPrice || 0}
+                        </Text>
+                        {order?.isRedelivery && (
+                          <View style={{ backgroundColor: '#ecfdf5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 2 }}>
+                            <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: '#047857' }}>
+                              FREE
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   );
                 })}
@@ -505,101 +537,147 @@ export default function OrderDetailScreen({ route, navigation }) {
               </Text>
 
               <View style={{ gap: 10 }}>
-                {/* Item total */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text
-                    style={{
-                      fontFamily: fonts.regular,
-                      fontSize: 13.5,
-                      fontWeight: '500',
-                      color: '#64748b',
-                    }}
-                  >
-                    Item total
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <Text
+                {order?.isRedelivery ? (
+                  <>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: fonts.regular, fontSize: 13.5, color: '#64748b' }}>
+                        Replacement items value
+                      </Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#0f172a' }}>
+                        ₹{Number(order.itemsTotalValue || order.subtotal || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 13.5, color: '#047857' }}>
+                        Store coverage (100% Free)
+                      </Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: '#047857' }}>
+                        -₹{Number(order.itemsTotalValue || order.subtotal || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: fonts.regular, fontSize: 13.5, color: '#64748b' }}>
+                        Delivery fee
+                      </Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 13.5, color: '#047857' }}>
+                        FREE
+                      </Text>
+                    </View>
+                    <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#e2e8f0', paddingTop: 12, marginTop: 2, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: fonts.extraBold, fontSize: 15, fontWeight: '900', color: '#0f172a' }}>
+                        Paid
+                      </Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontFamily: fonts.extraBold, fontSize: 16.5, fontWeight: '900', color: '#047857' }}>
+                          ₹0
+                        </Text>
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: '#047857' }}>
+                          FREE REPLACEMENT
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {/* Item total */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text
+                        style={{
+                          fontFamily: fonts.regular,
+                          fontSize: 13.5,
+                          fontWeight: '500',
+                          color: '#64748b',
+                        }}
+                      >
+                        Item total
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                        {Number(order?.originalSubtotal || order?.mrpTotal || 0) > orderTotal && (
+                          <Text
+                            style={{
+                              fontFamily: fonts.regular,
+                              fontSize: 12.5,
+                              color: '#94a3b8',
+                              textDecorationLine: 'line-through',
+                              marginRight: 6,
+                            }}
+                          >
+                            ₹{Number(order?.originalSubtotal || order?.mrpTotal)}
+                          </Text>
+                        )}
+                        <Text
+                          style={{
+                            fontFamily: fonts.bold,
+                            fontSize: 14,
+                            fontWeight: '800',
+                            color: '#0f172a',
+                          }}
+                        >
+                          ₹{orderTotal}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Delivery fee */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text
+                        style={{
+                          fontFamily: fonts.regular,
+                          fontSize: 13.5,
+                          fontWeight: '500',
+                          color: '#64748b',
+                        }}
+                      >
+                        Delivery fee
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: fonts.bold,
+                          fontSize: 13.5,
+                          fontWeight: '800',
+                          color: '#047857',
+                        }}
+                      >
+                        FREE
+                      </Text>
+                    </View>
+
+                    {/* Dotted separator */}
+                    <View
                       style={{
-                        fontFamily: fonts.regular,
-                        fontSize: 12.5,
-                        color: '#94a3b8',
-                        textDecorationLine: 'line-through',
-                        marginRight: 6,
+                        borderTopWidth: 1,
+                        borderStyle: 'dashed',
+                        borderColor: '#e2e8f0',
+                        paddingTop: 12,
+                        marginTop: 2,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                       }}
                     >
-                      ₹283
-                    </Text>
-                    <Text
-                      style={{
-                        fontFamily: fonts.bold,
-                        fontSize: 14,
-                        fontWeight: '800',
-                        color: '#0f172a',
-                      }}
-                    >
-                      ₹{orderTotal}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Delivery fee */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text
-                    style={{
-                      fontFamily: fonts.regular,
-                      fontSize: 13.5,
-                      fontWeight: '500',
-                      color: '#64748b',
-                    }}
-                  >
-                    Delivery fee
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: fonts.bold,
-                      fontSize: 13.5,
-                      fontWeight: '800',
-                      color: '#047857',
-                    }}
-                  >
-                    FREE
-                  </Text>
-                </View>
-
-                {/* Dotted separator */}
-                <View
-                  style={{
-                    borderTopWidth: 1,
-                    borderStyle: 'dashed',
-                    borderColor: '#e2e8f0',
-                    paddingTop: 12,
-                    marginTop: 2,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontFamily: fonts.extraBold,
-                      fontSize: 15,
-                      fontWeight: '900',
-                      color: '#0f172a',
-                    }}
-                  >
-                    Paid
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: fonts.extraBold,
-                      fontSize: 16.5,
-                      fontWeight: '900',
-                      color: '#0f172a',
-                    }}
-                  >
-                    ₹{orderTotal}
-                  </Text>
-                </View>
+                      <Text
+                        style={{
+                          fontFamily: fonts.extraBold,
+                          fontSize: 15,
+                          fontWeight: '900',
+                          color: '#0f172a',
+                        }}
+                      >
+                        Paid
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: fonts.extraBold,
+                          fontSize: 16.5,
+                          fontWeight: '900',
+                          color: '#0f172a',
+                        }}
+                      >
+                        ₹{orderTotal}
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
           </Animated.View>

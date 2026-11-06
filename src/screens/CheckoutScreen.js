@@ -208,7 +208,7 @@ export default function CheckoutScreen({ navigation, route }) {
       return;
     }
     if (!storeOpen) {
-      Toast.show({ type: 'info', text1: 'The shop is closed', text2: 'Order daily from 10 AM to 11 PM. No slots or breaks.' });
+      Toast.show({ type: 'info', text1: 'Store is closed for orders', text2: 'Please try again when the store opens.' });
       return;
     }
     if (belowMinimum) {
@@ -486,7 +486,7 @@ export default function CheckoutScreen({ navigation, route }) {
                       color: storeOpen ? '#047857' : '#b91c1c',
                     }}
                   >
-                    {storeOpen ? 'Open until 11 PM' : 'Closed · Opens 10 AM'}
+                    {storeOpen ? 'Store open' : 'Store closed'}
                   </Text>
                 </View>
               ) : null}
@@ -1082,7 +1082,7 @@ export default function CheckoutScreen({ navigation, route }) {
         >
           <Text style={{ fontFamily: fonts.bold, fontSize: 15, fontWeight: 'normal', color: '#ffffff' }}>
             {!storeOpen
-              ? 'Closed · Opens 10 AM'
+              ? 'Store closed'
               : !selectedAddress
               ? 'Select Address'
               : !configReady

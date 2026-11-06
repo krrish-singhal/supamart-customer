@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from '../services/reads';
 import KeylessMap from '../components/maps/KeylessMap';
 import {
   ChevronLeft,
@@ -25,6 +25,7 @@ import {
   MapPin,
   Clock,
   DoorClosed,
+  RotateCcw,
 } from '../components/icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
@@ -49,6 +50,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
   const [repeating, setRepeating] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [submittingRedelivery, setSubmittingRedelivery] = useState(false);
 
   const mapRef = useRef(null);
   const [estimateNow, setEstimateNow] = useState(Date.now());
@@ -246,10 +248,16 @@ export default function OrderTrackingScreen({ route, navigation }) {
     partnerDoc?.id ||
     null;
 
+  const isRedeliveryPending = Boolean(
+    order?.isRedelivery &&
+    (order.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION' || order.redeliveryStatus === 'RESCHEDULED')
+  );
+
   const isPartnerAssigned = Boolean(
-    (assignedPartnerId && String(assignedPartnerId).trim() !== '') ||
+    !isRedeliveryPending &&
+    ((assignedPartnerId && String(assignedPartnerId).trim() !== '') ||
     (order?.deliveryBoyName && order.deliveryBoyName.trim() !== '') ||
-    (order?.deliveryPartner?.name && order.deliveryPartner.name.trim() !== '')
+    (order?.deliveryPartner?.name && order.deliveryPartner.name.trim() !== ''))
   );
 
   const riderCoord = useMemo(() => {
@@ -280,14 +288,14 @@ export default function OrderTrackingScreen({ route, navigation }) {
     const fetchRoute = async () => {
       try {
         const waypoints = [];
-        if (order?.status === 'OUT_FOR_DELIVERY' && riderCoord) {
+        if (!isRedeliveryPending && order?.status === 'OUT_FOR_DELIVERY' && riderCoord) {
           waypoints.push(riderCoord);
           waypoints.push(destCoord);
-        } else if (isPartnerAssigned && riderCoord) {
+        } else if (!isRedeliveryPending && isPartnerAssigned && riderCoord) {
           waypoints.push(storeCoord);
           waypoints.push(riderCoord);
           waypoints.push(destCoord);
-        } else {
+        } else if (!isRedeliveryPending && isOutForDelivery) {
           waypoints.push(storeCoord);
           waypoints.push(destCoord);
         }
@@ -322,26 +330,29 @@ export default function OrderTrackingScreen({ route, navigation }) {
     return () => {
       cancelled = true;
     };
-  }, [storeCoord, destCoord, riderCoord?.latitude, riderCoord?.longitude, order?.status, isPartnerAssigned]);
+  }, [storeCoord, destCoord, riderCoord?.latitude, riderCoord?.longitude, order?.status, isPartnerAssigned, isRedeliveryPending, isOutForDelivery]);
 
   // Active route points for Leaflet map rendering (road polyline if ready, else geometric waypoints)
   const activeRoutePoints = useMemo(() => {
+    if (isRedeliveryPending || !isOutForDelivery) {
+      return [];
+    }
     if (roadRoutePoints && roadRoutePoints.length > 1) {
       return roadRoutePoints;
     }
     if (isPartnerAssigned && riderCoord) {
       return [storeCoord, riderCoord, destCoord];
     }
-    return [storeCoord, destCoord];
-  }, [roadRoutePoints, isPartnerAssigned, storeCoord, riderCoord, destCoord]);
+    return [];
+  }, [isRedeliveryPending, isOutForDelivery, roadRoutePoints, isPartnerAssigned, storeCoord, riderCoord, destCoord]);
 
   // Points to fit camera viewport safely without feeding thousands of road points
   const fitPoints = useMemo(() => {
-    if (isPartnerAssigned && riderCoord) {
+    if (!isRedeliveryPending && isOutForDelivery && isPartnerAssigned && riderCoord) {
       return [storeCoord, riderCoord, destCoord];
     }
-    return [storeCoord, destCoord];
-  }, [isPartnerAssigned, storeCoord, riderCoord, destCoord]);
+    return [destCoord];
+  }, [isRedeliveryPending, isOutForDelivery, isPartnerAssigned, storeCoord, riderCoord, destCoord]);
 
   // Auto-fit map viewport to coordinates initially, avoiding repeated camera animation jitter
   const hasInitialFitRef = useRef(false);
@@ -484,19 +495,58 @@ export default function OrderTrackingScreen({ route, navigation }) {
     }
   };
 
+  const handleRedeliveryResponse = async (action, slot, reason) => {
+    if (!order?.id || submittingRedelivery) return;
+    setSubmittingRedelivery(true);
+    try {
+      const { data } = await apiClient.patch(`/orders/${order.id}/redelivery/respond`, {
+        action,
+        slot,
+        reason,
+      });
+      if (data) {
+        setOrder((prev) => ({ ...prev, ...data }));
+      }
+      Toast.show({
+        type: action === 'DECLINE' ? 'info' : 'success',
+        text1:
+          action === 'CONFIRM'
+            ? 'Replacement Confirmed'
+            : action === 'RESCHEDULE'
+            ? 'Replacement Rescheduled'
+            : 'Replacement Declined',
+        text2:
+          action === 'CONFIRM'
+            ? 'Our partner will dispatch your replacement shortly.'
+            : action === 'RESCHEDULE'
+            ? `Scheduled for ${slot || 'selected time'}.`
+            : 'Request closed. Our team will follow up for refund or support.',
+      });
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Action failed',
+        text2: err.response?.data?.error || err.message || 'Please try again',
+      });
+    } finally {
+      setSubmittingRedelivery(false);
+    }
+  };
+
   const isCancelled = order?.status === 'CANCELLED';
-  const isDelivered = order?.status === 'DELIVERED' || order?.status === 'PENDING_CONFIRMATION';
-  const isOutForDelivery = order?.status === 'OUT_FOR_DELIVERY';
-  const isAccepted =
+  const isDelivered = !isCancelled && (order?.status === 'DELIVERED' || order?.status === 'PENDING_CONFIRMATION');
+  const isOutForDelivery = !isCancelled && order?.status === 'OUT_FOR_DELIVERY';
+  const isAccepted = !isCancelled && (
     order?.status === 'ORDER_ACCEPTED' ||
     order?.status === 'ACCEPTED' ||
     order?.status === 'PACKED' ||
     order?.status === 'READY_FOR_DELIVERY' ||
     isOutForDelivery ||
-    isDelivered;
+    isDelivered
+  );
   const isConfirmed = Boolean(order?.status) && !isCancelled;
-  const isStep2Done = isOutForDelivery || isDelivered || order?.status === 'PACKED' || order?.status === 'READY_FOR_DELIVERY';
-  const isStep2Active = isAccepted && !isStep2Done;
+  const isStep2Done = !isCancelled && (isOutForDelivery || isDelivered || order?.status === 'PACKED' || order?.status === 'READY_FOR_DELIVERY');
+  const isStep2Active = !isCancelled && isAccepted && !isStep2Done;
 
   const isPartnerAccepted = Boolean(
     isPartnerAssigned &&
@@ -506,6 +556,11 @@ export default function OrderTrackingScreen({ route, navigation }) {
 
   // Real-time dynamic ETA calculation (Hooks must be unconditional!)
   const displayEstimatedTime = useMemo(() => {
+    if (order?.isRedelivery) {
+      if (order?.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION') return 'Action Required';
+      if (order?.redeliveryStatus === 'RESCHEDULED') return order.rescheduledSlot || 'Rescheduled';
+      if (order?.redeliveryStatus === 'DECLINED') return 'Declined';
+    }
     if (isDelivered) return 'Delivered';
     if (isCancelled) return 'Cancelled';
     if (isOutForDelivery) {
@@ -522,6 +577,17 @@ export default function OrderTrackingScreen({ route, navigation }) {
   }, [isDelivered, isCancelled, isPartnerAssigned, isOutForDelivery, order, estimateNow, riderCoord]);
 
   const statusBadge = useMemo(() => {
+    if (order?.isRedelivery) {
+      if (order?.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION') {
+        return { label: 'CONFIRM AVAILABILITY', bg: '#fef3c7', text: '#b45309' };
+      }
+      if (order?.redeliveryStatus === 'RESCHEDULED') {
+        return { label: 'RESCHEDULED', bg: '#eff6ff', text: '#1d4ed8' };
+      }
+      if (order?.redeliveryStatus === 'DECLINED') {
+        return { label: 'DECLINED', bg: '#fee2e2', text: '#dc2626' };
+      }
+    }
     if (isCancelled) return { label: 'CANCELLED', bg: '#fee2e2', text: '#dc2626' };
     if (isDelivered) return { label: 'COMPLETED', bg: '#ecfdf5', text: '#059669' };
     if (order?.delayReason || order?.deliveryDelay) return { label: 'DELAYED', bg: '#fef3c7', text: '#b45309' };
@@ -529,7 +595,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
     if (isPartnerAssigned) return { label: 'PARTNER ASSIGNED', bg: '#eff6ff', text: '#1d4ed8' };
     if (isAccepted) return { label: 'PREPARING', bg: '#ecfdf5', text: '#059669' };
     return { label: 'ASSIGNING RIDER', bg: '#fef3c7', text: '#b45309' };
-  }, [isCancelled, isDelivered, order?.delayReason, order?.deliveryDelay, isOutForDelivery, isAccepted, isPartnerAssigned]);
+  }, [isCancelled, isDelivered, order?.delayReason, order?.deliveryDelay, isOutForDelivery, isAccepted, isPartnerAssigned, order?.isRedelivery, order?.redeliveryStatus]);
 
   const itemCount = order?.items?.length || 0;
   const orderTotal = Math.round(order?.total || order?.totalAmount || 0);
@@ -671,7 +737,9 @@ export default function OrderTrackingScreen({ route, navigation }) {
               <View>
                 {!isDelivered && !isCancelled && (
                   <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 2 }}>
-                    {isOutForDelivery
+                    {order?.isRedelivery
+                      ? `Free Replacement (Original #${order?.originalOrderNo || 'Original'})`
+                      : isOutForDelivery
                       ? (order?.delayReason ? 'Updated ETA' : 'Estimated Arrival')
                       : 'Order Status'}
                   </Text>
@@ -737,6 +805,130 @@ export default function OrderTrackingScreen({ route, navigation }) {
                 ) : null}
               </View>
             )}
+
+            {/* Redelivery Lifecycle Card */}
+            {order?.isRedelivery && (
+              <>
+                {order.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION' && (
+                  <View
+                    style={{
+                      backgroundColor: '#fffbeb',
+                      borderRadius: 16,
+                      padding: 14,
+                      marginBottom: 16,
+                      borderWidth: 1.5,
+                      borderColor: '#fde68a',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <Clock size={16} color="#b45309" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e' }}>
+                        Free Replacement: Are you available now?
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12.5, color: '#78350f', lineHeight: 18, marginBottom: 12 }}>
+                      We have prepared your free replacement package (Original #{order.originalOrderNo}). You will not be charged anything. Please confirm availability so our partner can dispatch.
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <Pressable
+                        onPress={() => handleRedeliveryResponse('CONFIRM')}
+                        disabled={submittingRedelivery}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#059669',
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          opacity: submittingRedelivery ? 0.6 : 1,
+                        }}
+                      >
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#ffffff' }}>
+                          Yes, Available Now
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => handleRedeliveryResponse('RESCHEDULE', 'Later today, 6:00 PM – 8:00 PM')}
+                        disabled={submittingRedelivery}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#f1f5f9',
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          opacity: submittingRedelivery ? 0.6 : 1,
+                        }}
+                      >
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#334155' }}>
+                          Later Today
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => handleRedeliveryResponse('DECLINE', 'Customer declined replacement')}
+                        disabled={submittingRedelivery}
+                        style={{
+                          paddingHorizontal: 10,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: submittingRedelivery ? 0.6 : 1,
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#dc2626' }}>
+                          Decline
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {order.redeliveryStatus === 'RESCHEDULED' && (
+                  <View
+                    style={{
+                      backgroundColor: '#eff6ff',
+                      borderRadius: 16,
+                      padding: 14,
+                      marginBottom: 16,
+                      borderWidth: 1,
+                      borderColor: '#bfdbfe',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                      <Clock size={16} color="#1d4ed8" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#1e40af' }}>
+                        Replacement Rescheduled
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12.5, color: '#1e3a8a', lineHeight: 18 }}>
+                      Scheduled window: <Text style={{ fontWeight: '800' }}>{order.rescheduledSlot || order.customerAvailability?.rescheduledSlot || 'Pending'}</Text>. Our partner will dispatch your replacement during this slot.
+                    </Text>
+                  </View>
+                )}
+
+                {order.redeliveryStatus === 'DECLINED' && (
+                  <View
+                    style={{
+                      backgroundColor: '#fef2f2',
+                      borderRadius: 16,
+                      padding: 14,
+                      marginBottom: 16,
+                      borderWidth: 1,
+                      borderColor: '#fecaca',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                      <X size={16} color="#dc2626" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#991b1b' }}>
+                        Replacement Request Closed
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12.5, color: '#7f1d1d', lineHeight: 18 }}>
+                      You declined this redelivery. Our support team has been notified for further action or refund.
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
           </Animated.View>
 
           {/* 4-Step Vertical Tracker Timeline */}
@@ -798,11 +990,25 @@ export default function OrderTrackingScreen({ route, navigation }) {
                 </View>
                 <View style={{ flex: 1, paddingTop: 2 }}>
                   <Text style={{ fontSize: 15, fontWeight: '800', color: isCancelled ? '#ef4444' : '#0f172a' }}>
-                    {isCancelled ? 'Order cancelled' : 'Order confirmed'}
-                  </Text>
-                  <Text style={{ fontSize: 12.5, fontWeight: '500', color: '#64748b', marginTop: 1 }}>
                     {isCancelled
-                      ? 'This order was cancelled'
+                      ? 'Order cancelled'
+                      : order?.isRedelivery
+                      ? (order.redeliveryStatus === 'RESCHEDULED'
+                          ? 'Replacement scheduled'
+                          : order.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION'
+                          ? 'Replacement arranged'
+                          : 'Replacement confirmed')
+                      : 'Order confirmed'}
+                  </Text>
+                  <Text style={{ fontSize: 12.5, fontWeight: '500', color: isCancelled ? '#b91c1c' : '#64748b', marginTop: 1 }}>
+                    {isCancelled
+                      ? (order?.cancelReason || order?.cancellationReason ? `Reason: ${order.cancelReason || order.cancellationReason}` : 'This order was cancelled by the store')
+                      : order?.isRedelivery
+                      ? (order.redeliveryStatus === 'RESCHEDULED'
+                          ? `Delivery scheduled for ${order.rescheduledSlot || 'your selected window'}`
+                          : order.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION'
+                          ? 'Awaiting your confirmation to dispatch'
+                          : 'Confirmed · Preparing for delivery')
                       : isConfirmed
                       ? 'We have received your order'
                       : 'Received · Awaiting store confirmation'}
@@ -877,6 +1083,10 @@ export default function OrderTrackingScreen({ route, navigation }) {
                       ? 'Your items are packed at the store'
                       : isStep2Active
                       ? 'Your items are being packed at the store'
+                      : order?.isRedelivery && order.redeliveryStatus === 'RESCHEDULED'
+                      ? 'Will be packed during your scheduled window'
+                      : order?.isRedelivery && order.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION'
+                      ? 'Will be packed once availability is confirmed'
                       : 'Will be packed once confirmed'}
                   </Text>
                 </View>
@@ -949,6 +1159,10 @@ export default function OrderTrackingScreen({ route, navigation }) {
                       ? 'Delivered to your address'
                       : isOutForDelivery
                       ? (partnerName ? `${partnerName} is on the way` : 'Your delivery partner is on the way')
+                      : order?.isRedelivery && order.redeliveryStatus === 'RESCHEDULED'
+                      ? 'Delivery partner will be assigned during your window'
+                      : order?.isRedelivery && order.redeliveryStatus === 'AWAITING_CUSTOMER_CONFIRMATION'
+                      ? 'Delivery partner will be assigned upon confirmation'
                       : isPartnerAssigned
                       ? `Assigned to ${partnerName}`
                       : 'Delivery partner will be assigned soon'}
@@ -1005,7 +1219,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
 
           {/* Delivery Partner Card */}
           <Animated.View entering={FadeInUp.duration(400).delay(150)}>
-            {isPartnerAssigned ? (
+            {isPartnerAssigned && !isRedeliveryPending ? (
               <View
                 style={{
                   flexDirection: 'row',
@@ -1368,37 +1582,93 @@ export default function OrderTrackingScreen({ route, navigation }) {
             </View>
 
             {/* Bill Details */}
-            <View
-              style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: 18,
-                padding: 16,
-                marginBottom: 20,
-              }}
-            >
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', marginBottom: 12 }}>
-                Bill Summary
-              </Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 13.5, color: '#64748b' }}>Item Total</Text>
-                <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#0f172a' }}>
-                  ₹{(order?.subtotal || orderTotal).toFixed(2)}
-                </Text>
+            {order?.isRedelivery ? (
+              <View
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 18,
+                  padding: 16,
+                  marginBottom: 20,
+                  borderWidth: 1,
+                  borderColor: '#a7f3d0',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <RotateCcw size={16} color="#059669" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+                    Free Replacement Summary
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13.5, color: '#64748b' }}>Original Order Ref</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#0f172a' }}>
+                    #{order.originalOrderNo || 'Original'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13.5, color: '#64748b' }}>Replacement Items Value</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#0f172a' }}>
+                    ₹{(order?.itemsTotalValue || order?.subtotal || 0).toFixed(2)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13.5, color: '#059669', fontWeight: '600' }}>Store Coverage (100% Free)</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#059669' }}>
+                    -₹{(order?.itemsTotalValue || order?.subtotal || 0).toFixed(2)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13.5, color: '#64748b' }}>Delivery Fee</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#059669' }}>
+                    FREE
+                  </Text>
+                </View>
+                <View style={{ height: 1, backgroundColor: '#e2e8f0', marginVertical: 10 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#0f172a' }}>Customer To Pay</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 17, fontWeight: '900', color: '#059669' }}>
+                      ₹0
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#059669' }}>
+                      FREE REPLACEMENT
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 13.5, color: '#64748b' }}>Delivery Fee</Text>
-                <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#059669' }}>
-                  {order?.deliveryFee ? `₹${order.deliveryFee}` : 'FREE'}
+            ) : (
+              <View
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 18,
+                  padding: 16,
+                  marginBottom: 20,
+                }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', marginBottom: 12 }}>
+                  Bill Summary
                 </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13.5, color: '#64748b' }}>Item Total</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#0f172a' }}>
+                    ₹{(order?.subtotal || orderTotal).toFixed(2)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13.5, color: '#64748b' }}>Delivery Fee</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#059669' }}>
+                    {order?.deliveryFee ? `₹${order.deliveryFee}` : 'FREE'}
+                  </Text>
+                </View>
+                <View style={{ height: 1, backgroundColor: '#e2e8f0', marginVertical: 10 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#0f172a' }}>To Pay</Text>
+                  <Text style={{ fontSize: 17, fontWeight: '900', color: '#059669' }}>
+                    ₹{orderTotal}
+                  </Text>
+                </View>
               </View>
-              <View style={{ height: 1, backgroundColor: '#e2e8f0', marginVertical: 10 }} />
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#0f172a' }}>To Pay</Text>
-                <Text style={{ fontSize: 17, fontWeight: '900', color: '#059669' }}>
-                  ₹{orderTotal}
-                </Text>
-              </View>
-            </View>
+            )}
 
             {/* Delivery Address */}
             {order?.addressSnapshot && (

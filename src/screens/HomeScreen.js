@@ -152,6 +152,24 @@ const ROTATING_SEARCH_TERMS = [
 ];
 const BANNER_GAP = 16;
 
+const getFloatingOrderStatusText = (status) => {
+  if (status === 'OUT_FOR_DELIVERY') return 'Order is on the way!';
+  if (status === 'PACKED') return 'Order is packed!';
+  if (status === 'ORDER_ACCEPTED' || status === 'ACCEPTED') return 'Order is getting packed!';
+  if (status === 'ORDER_PLACED' || status === 'PLACED') return 'Order placed!';
+  return 'Order in progress!';
+};
+
+const formatEtaForPill = (est) => {
+  if (!est) return { val: '14', unit: 'mins' };
+  const clean = est.replace(/[~]/g, '').trim();
+  const match = clean.match(/^(\d+)\s*(.*)$/);
+  if (match) {
+    return { val: match[1], unit: match[2] || 'mins' };
+  }
+  return { val: '14', unit: 'mins' };
+};
+
 export default function HomeScreen({ navigation }) {
   const { width: windowWidth, fontScale } = useWindowDimensions();
   const screenWidth = windowWidth;
@@ -604,8 +622,8 @@ export default function HomeScreen({ navigation }) {
                 accessibilityLabel={activeOrder ? `Order in progress. ${estimate || 'Arriving soon'}` : 'Delivery status'}
                 style={{ flexDirection: 'row', alignItems: 'center', minWidth: 0, paddingVertical: 1 }}
               >
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0A7C47', marginRight: 6, flexShrink: 0 }} />
-                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: activeOrder ? '#0A7C47' : '#475569', fontWeight: activeOrder ? '700' : '500' }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: storeOpen ? '#0A7C47' : '#EF4444', marginRight: 6, flexShrink: 0 }} />
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, color: activeOrder ? '#0A7C47' : storeOpen ? '#0A7C47' : '#EF4444', fontWeight: activeOrder || storeOpen ? '700' : '600' }}>
                   {activeOrder
                     ? `MS Traders · ${activeOrder.status === 'OUT_FOR_DELIVERY'
                       ? estimate && estimate !== 'Updating arrival time'
@@ -613,8 +631,8 @@ export default function HomeScreen({ navigation }) {
                         : 'Updating arrival time'
                       : estimate || 'Order being prepared'}`
                     : storeOpen
-                    ? 'Open until 11 PM · Deliver to'
-                    : 'Closed · Opens at 10 AM'}
+                    ? 'Store Open · Deliver to'
+                    : 'Store Closed'}
                 </Text>
                 {Boolean(activeOrder) && (
                   <ChevronRight size={13} color="#0A7C47" strokeWidth={2.4} style={{ marginLeft: 2 }} />
@@ -1802,8 +1820,121 @@ export default function HomeScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* FLOATING "View cart" CAPSULE BAR matching Images 1, 2, 3 */}
-      {cartItemCount > 0 && (
+      {/* FLOATING ACTIVE ORDER TRACKING PILL matching Image 4 */}
+      {activeOrder && !['DELIVERED', 'CANCELLED', 'PENDING_CONFIRMATION'].includes(activeOrder.status) ? (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            left: 14,
+            right: 14,
+            zIndex: 1000,
+          }}
+        >
+          <Pressable
+            onPress={() =>
+              navigation.navigate('OrderTracking', {
+                orderId: activeOrder.id || activeOrder.orderId,
+                orderNo: activeOrder.orderNo,
+              })
+            }
+            style={{ width: '100%' }}
+          >
+            <View
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 18,
+                minHeight: 64,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.12,
+                shadowRadius: 10,
+                elevation: 6,
+                borderWidth: 1,
+                borderColor: '#f1f5f9',
+              }}
+            >
+              {/* Green ETA Box */}
+              <View
+                style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 12,
+                  backgroundColor: '#0A7C47',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 2,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: fonts.extraBold,
+                    fontSize: 17,
+                    color: '#ffffff',
+                    lineHeight: 20,
+                  }}
+                >
+                  {formatEtaForPill(estimate).val}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: fonts.bold,
+                    fontSize: 10.5,
+                    color: '#ffffff',
+                    lineHeight: 12,
+                  }}
+                >
+                  {formatEtaForPill(estimate).unit}
+                </Text>
+              </View>
+
+              {/* Title & Store Name */}
+              <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontFamily: fonts.bold,
+                    fontSize: 15,
+                    color: '#0f172a',
+                  }}
+                >
+                  {getFloatingOrderStatusText(activeOrder.status)}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontFamily: fonts.medium,
+                    fontSize: 12.5,
+                    color: '#64748b',
+                    marginTop: 2,
+                  }}
+                >
+                  {activeOrder.storeName || 'MS Traders'}
+                </Text>
+              </View>
+
+              {/* Circle Chevron Button */}
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: '#f1f5f9',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: 8,
+                }}
+              >
+                <ChevronRight size={16} color="#64748b" strokeWidth={2.4} />
+              </View>
+            </View>
+          </Pressable>
+        </View>
+      ) : cartItemCount > 0 ? (
         <View
           style={{
             position: 'absolute',
@@ -1899,7 +2030,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </Pressable>
       </View>
-      )}
+      ) : null}
 
       {/* MS Club Modal */}
       <MSClubModal visible={showClubModal} onClose={() => setShowClubModal(false)} />

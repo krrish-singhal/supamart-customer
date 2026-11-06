@@ -23,6 +23,21 @@ test('storeStatus accurately indicates closed status outside operating hours', (
   assert.equal(lateStatus.isOpen, false);
 });
 
+test('storeStatus toggle overrides time: toggle ON opens store at night, toggle OFF closes store at noon', () => {
+  const nightDate = new Date('2026-10-29T01:54:00+05:30').getTime();
+  const noonDate = new Date('2026-10-29T12:00:00+05:30').getTime();
+
+  // Toggle ON at 1:54 AM: must be open irrespective of the time
+  assert.equal(storeStatus(nightDate, { isStoreOpen: true }).isOpen, true);
+  assert.equal(storeStatus(nightDate, { storeOpen: true }).isOpen, true);
+  assert.equal(storeStatus(nightDate, { isStoreOpen: 'true' }).isOpen, true);
+
+  // Toggle OFF at 12:00 PM: must be closed irrespective of standard hours
+  assert.equal(storeStatus(noonDate, { isStoreOpen: false }).isOpen, false);
+  assert.equal(storeStatus(noonDate, { storeOpen: false }).isOpen, false);
+  assert.equal(storeStatus(noonDate, { isStoreOpen: 'false' }).isOpen, false);
+});
+
 test('ShopClosedNotification component exists and is mounted in AppContent', () => {
   const appContent = fs.readFileSync(path.resolve(__dirname, '../App.js'), 'utf8');
   assert(appContent.includes("import ShopClosedNotification from './src/components/ShopClosedNotification';"));

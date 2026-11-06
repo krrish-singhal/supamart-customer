@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../services/api';
 import { db } from '../config/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from '../services/reads';
 import { FINAL_STATUSES, ACTIVE_ORDER_STATUSES, orderEstimate } from '../utils/orderEstimate';
 // Deliveries complete within 15-30 minutes. Orders older than 3 hours are stale.
 const MAX_ACTIVE_ORDER_AGE_MS = 3 * 60 * 60 * 1000;
@@ -49,7 +49,7 @@ export default function useActiveOrder(userId, focused) {
 
     const scheduleNext = (hasActive) => {
       if (!active) return;
-      const delay = hasActive ? 15_000 : 45_000;
+      const delay = hasActive ? 4_000 : 12_000;
       timer = setTimeout(async () => {
         const activeFound = await load();
         scheduleNext(activeFound);

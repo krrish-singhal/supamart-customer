@@ -50,7 +50,9 @@ export function CartProvider({ children }) {
         activeDisc = activeDetails.maxDiscount ? Math.min(activeDetails.maxDiscount, percDisc) : percDisc;
         activeDisc = Number(Math.min(activeDisc, rounded).toFixed(2));
       } else if (activeDetails.kind === 'FLAT') {
-        activeDisc = Number(Math.min(Number(activeDetails.value) || 0, rounded).toFixed(2));
+        const flatVal = Number(activeDetails.value) || 0;
+        const capped = activeDetails.maxDiscount ? Math.min(Number(activeDetails.maxDiscount), flatVal) : flatVal;
+        activeDisc = Number(Math.min(capped, rounded).toFixed(2));
       }
     } else if (customDiscount === undefined) {
       activeDisc = 0;
@@ -214,20 +216,24 @@ export function CartProvider({ children }) {
 
   const addItem = async (product, variant) => {
     await ensureCartHydrated();
-    if (isProductUnavailable(product, variant)) {
+    const resolvedVariant = variant || product?.variants?.[0];
+    if (isProductUnavailable(product, resolvedVariant)) {
       Toast.show({ type: 'error', text1: 'This item is out of stock' });
       return;
     }
     const productId = product.id;
-    const variantId = variant?.id || 'default';
-    const price = variant?.offerPrice ?? variant?.price ?? product?.price ?? 0;
+    const variantId = resolvedVariant?.id || 'default';
+    const price = resolvedVariant?.offerPrice ?? resolvedVariant?.price ?? product?.price ?? 0;
 
     const currentItems = itemsRef.current;
     const existingIdx = currentItems.findIndex(
       (i) => i.productId === productId && normalizeVariantId(i.variantId) === variantId
     );
-    const currentQty = existingIdx >= 0 ? Number(currentItems[existingIdx].qty) || 0 : 0;
-    if (variant?.stock != null && currentQty >= Number(variant.stock)) {
+    const currentQty = existingIdx >= 0 ? (currentItems[existingIdx]?.qty || 0) : 0;
+    const availableStock = resolvedVariant?.stock != null
+      ? Number(resolvedVariant.stock)
+      : (product?.stock != null ? Number(product.stock) : null);
+    if (availableStock != null && currentQty >= availableStock) {
       Toast.show({ type: 'error', text1: 'This item is out of stock' });
       return;
     }
@@ -246,13 +252,13 @@ export function CartProvider({ children }) {
           variantId,
           qty: 1,
           name: product.name,
-          variantLabel: variant?.label || '1 Unit',
+          variantLabel: resolvedVariant?.label || product.unit || '1 Unit',
           price,
           images: product.images,
           availability: product.availability || 'AVAILABLE',
           isAvailableToday: product.isAvailableToday !== false,
-          variantAvailability: variant?.availability || 'AVAILABLE',
-          stock: variant?.stock,
+          variantAvailability: resolvedVariant?.availability || 'AVAILABLE',
+          stock: resolvedVariant?.stock,
         },
       ];
       Toast.show({ type: 'success', text1: 'Added to cart' });
@@ -310,7 +316,7 @@ export function CartProvider({ children }) {
     // A server refresh here could race with a newer write and restore stale data.
   };
 
-  const removeItem = async (productId, variantId) => {
+  const removeItem = async (productId, variantId, { silent = false } = {}) => {
     await ensureCartHydrated();
     const normalizedVariantId = normalizeVariantId(variantId);
     const newItems = itemsRef.current.filter(
@@ -319,7 +325,9 @@ export function CartProvider({ children }) {
 
     commitItems(newItems, { localChange: true });
     computeTotals(newItems);
-    Toast.show({ type: 'success', text1: 'Removed from cart' });
+    if (!silent) {
+      Toast.show({ type: 'success', text1: 'Removed from cart' });
+    }
     await putCart(newItems);
     await validateCouponAfterChange(newItems);
   };

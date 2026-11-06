@@ -41,6 +41,130 @@ import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 import { getCategoryVisual } from '../utils/categoryImages';
 import { isProductOffSale } from '../utils/productAvailability';
 import { fonts } from '../theme/typography';
+import { getCachedCategories } from './CategoryScreen';
+
+// Module-level caches for 0ms instant display across navigation
+let cachedPopularProducts = null;
+let cachedEmptyCategories = null;
+
+// Eagerly pre-hydrate module-level cache from AsyncStorage on script load
+(async () => {
+  try {
+    const [storedPop, storedCats, homeProds, homeCats] = await Promise.all([
+      AsyncStorage.getItem('@supamart_cart_empty_popular'),
+      AsyncStorage.getItem('@supamart_cart_empty_categories'),
+      AsyncStorage.getItem('@supamart_cached_home_products'),
+      AsyncStorage.getItem('@supamart_cached_home_categories'),
+    ]);
+    if (storedPop) {
+      const parsed = JSON.parse(storedPop);
+      if (Array.isArray(parsed) && parsed.length > 0) cachedPopularProducts = parsed;
+    } else if (homeProds) {
+      const parsed = JSON.parse(homeProds);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cachedPopularProducts = parsed.filter((p) => !isProductOffSale(p)).slice(0, 8);
+      }
+    }
+
+    if (storedCats) {
+      const parsed = JSON.parse(storedCats);
+      if (Array.isArray(parsed) && parsed.length > 0) cachedEmptyCategories = parsed;
+    } else if (homeCats) {
+      const parsed = JSON.parse(homeCats);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cachedEmptyCategories = parsed.filter((c) => !c.parentId).slice(0, 8);
+      }
+    }
+  } catch {}
+})();
+
+function PopularRightNowSkeleton() {
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <Text
+        style={{
+          fontFamily: fonts.extraBold,
+          fontSize: 16.5,
+          fontWeight: 'normal',
+          color: '#0f172a',
+          paddingHorizontal: 18,
+          marginBottom: 12,
+        }}
+      >
+        Popular right now
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 18, gap: 12 }}
+      >
+        {[1, 2, 3, 4].map((idx) => (
+          <View
+            key={`pop-skel-${idx}`}
+            style={{
+              width: 128,
+              backgroundColor: '#ffffff',
+              borderRadius: 18,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: '#f1f5f9',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.04,
+              shadowRadius: 4,
+              elevation: 1,
+            }}
+          >
+            <Skeleton width="100%" height={104} borderRadius={14} style={{ marginBottom: 8 }} />
+            <Skeleton width="85%" height={14} borderRadius={4} style={{ marginBottom: 6 }} />
+            <Skeleton width="50%" height={12} borderRadius={4} style={{ marginBottom: 10 }} />
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Skeleton width={38} height={16} borderRadius={4} />
+              <Skeleton width={30} height={30} borderRadius={8} />
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function ShopByCategorySkeleton() {
+  return (
+    <View>
+      <Text
+        style={{
+          fontFamily: fonts.extraBold,
+          fontSize: 16.5,
+          fontWeight: 'normal',
+          color: '#0f172a',
+          paddingHorizontal: 18,
+          marginBottom: 12,
+        }}
+      >
+        Shop by category
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 18, gap: 14 }}
+      >
+        {[1, 2, 3, 4, 5].map((idx) => (
+          <View key={`cat-skel-${idx}`} style={{ alignItems: 'center', width: 76 }}>
+            <Skeleton width={72} height={72} borderRadius={20} style={{ marginBottom: 6 }} />
+            <Skeleton width={56} height={12} borderRadius={4} />
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
 
 function getPaymentLogo(app) {
   const norm = (app || '').toLowerCase();
@@ -81,8 +205,19 @@ export default function CartScreen({ navigation }) {
   const { config: deliveryConfig, refreshConfig } = useConfig();
   const { isOpen: storeOpen } = useStoreStatus();
   const taxPercent = deliveryConfig?.taxPercent;
-  const [popularProducts, setPopularProducts] = useState([]);
-  const [emptyCategories, setEmptyCategories] = useState([]);
+  const [popularProducts, setPopularProducts] = useState(() => cachedPopularProducts || []);
+  const [emptyCategories, setEmptyCategories] = useState(() => {
+    if (cachedEmptyCategories?.length) return cachedEmptyCategories;
+    const fromCatScreen = getCachedCategories?.();
+    if (Array.isArray(fromCatScreen) && fromCatScreen.length > 0) {
+      const topLevel = fromCatScreen.filter((c) => !c.parentId);
+      return topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 8);
+    }
+    return [];
+  });
+  const [loadingEmptyContent, setLoadingEmptyContent] = useState(
+    () => !(cachedPopularProducts?.length > 0 && cachedEmptyCategories?.length > 0)
+  );
   const [defaultPayment, setDefaultPayment] = useState({ app: 'UPI app' });
 
   useFocusEffect(
@@ -107,26 +242,135 @@ export default function CartScreen({ navigation }) {
     }, [loadCart])
   );
 
-  // Fetch categories and popular products for empty state (one-time fetch on mount)
+  // Fetch categories and popular products for empty state with instant cache hydration
   useEffect(() => {
     let active = true;
-    Promise.allSettled([
-      getDocs(query(collection(db, 'categories'), where('isActive', '==', true))),
-      getDocs(query(collection(db, 'products'), limit(8))),
-    ]).then(([catsSnap, popSnap]) => {
-      if (!active) return;
-      if (catsSnap.status === 'fulfilled') {
-        const topLevel = catsSnap.value.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
-        setEmptyCategories(topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 8));
+
+    // Fast check to hydrate from AsyncStorage immediately if state is empty
+    (async () => {
+      try {
+        const [storedPop, storedCats, homeProds, homeCats] = await Promise.all([
+          AsyncStorage.getItem('@supamart_cart_empty_popular'),
+          AsyncStorage.getItem('@supamart_cart_empty_categories'),
+          AsyncStorage.getItem('@supamart_cached_home_products'),
+          AsyncStorage.getItem('@supamart_cached_home_categories'),
+        ]);
+
+        if (!active) return;
+
+        let hydratedProds = null;
+        let hydratedCats = null;
+
+        if (storedPop) {
+          try {
+            const parsed = JSON.parse(storedPop);
+            if (Array.isArray(parsed) && parsed.length > 0) hydratedProds = parsed;
+          } catch {}
+        }
+        if (!hydratedProds && homeProds) {
+          try {
+            const parsed = JSON.parse(homeProds);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              hydratedProds = parsed.filter((p) => !isProductOffSale(p)).slice(0, 8);
+            }
+          } catch {}
+        }
+
+        if (storedCats) {
+          try {
+            const parsed = JSON.parse(storedCats);
+            if (Array.isArray(parsed) && parsed.length > 0) hydratedCats = parsed;
+          } catch {}
+        }
+        if (!hydratedCats && homeCats) {
+          try {
+            const parsed = JSON.parse(homeCats);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              hydratedCats = parsed.filter((c) => !c.parentId).slice(0, 8);
+            }
+          } catch {}
+        }
+
+        if (hydratedProds && active) {
+          cachedPopularProducts = hydratedProds;
+          setPopularProducts((prev) => (prev.length > 0 ? prev : hydratedProds));
+        }
+        if (hydratedCats && active) {
+          cachedEmptyCategories = hydratedCats;
+          setEmptyCategories((prev) => (prev.length > 0 ? prev : hydratedCats));
+        }
+        if (hydratedProds && hydratedCats && active) {
+          setLoadingEmptyContent(false);
+        }
+      } catch {}
+    })();
+
+    // Concurrent fresh fetch via fast backend API with Firestore fallback
+    (async () => {
+      try {
+        const [catsRes, prodsRes] = await Promise.allSettled([
+          apiClient.get('/categories', { __skipErrorToast: true }),
+          apiClient.get('/products', { params: { limit: 12 }, __skipErrorToast: true }),
+        ]);
+
+        let freshCats = null;
+        let freshProds = null;
+
+        if (catsRes.status === 'fulfilled' && catsRes.value?.data) {
+          const raw = Array.isArray(catsRes.value.data)
+            ? catsRes.value.data
+            : catsRes.value.data.items || [];
+          const topLevel = raw.filter((c) => !c.parentId);
+          if (topLevel.length > 0) {
+            freshCats = topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 8);
+          }
+        }
+
+        if (prodsRes.status === 'fulfilled' && prodsRes.value?.data) {
+          const raw = Array.isArray(prodsRes.value.data)
+            ? prodsRes.value.data
+            : prodsRes.value.data.items || [];
+          const filtered = raw.filter((p) => !isProductOffSale(p));
+          if (filtered.length > 0) {
+            freshProds = filtered.slice(0, 8);
+          }
+        }
+
+        // Fallback to Firestore reads if API didn't return data
+        if (!freshCats || !freshCats.length) {
+          try {
+            const snap = await getDocs(query(collection(db, 'categories'), where('isActive', '==', true)));
+            const topLevel = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.parentId);
+            freshCats = topLevel.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 8);
+          } catch {}
+        }
+
+        if (!freshProds || !freshProds.length) {
+          try {
+            const snap = await getDocs(query(collection(db, 'products'), limit(8)));
+            freshProds = snap.docs
+              .map((d) => ({ id: d.id, ...d.data() }))
+              .filter((p) => !isProductOffSale(p));
+          } catch {}
+        }
+
+        if (!active) return;
+
+        if (freshCats && freshCats.length > 0) {
+          cachedEmptyCategories = freshCats;
+          setEmptyCategories(freshCats);
+          AsyncStorage.setItem('@supamart_cart_empty_categories', JSON.stringify(freshCats)).catch(() => {});
+        }
+        if (freshProds && freshProds.length > 0) {
+          cachedPopularProducts = freshProds;
+          setPopularProducts(freshProds);
+          AsyncStorage.setItem('@supamart_cart_empty_popular', JSON.stringify(freshProds)).catch(() => {});
+        }
+      } catch {} finally {
+        if (active) setLoadingEmptyContent(false);
       }
-      if (popSnap.status === 'fulfilled') {
-        setPopularProducts(
-          popSnap.value.docs
-            .map((d) => ({ id: d.id, ...d.data() }))
-            .filter((p) => !isProductOffSale(p))
-        );
-      }
-    }).catch(() => {});
+    })();
+
     return () => {
       active = false;
     };
@@ -371,7 +615,9 @@ export default function CartScreen({ navigation }) {
           </View>
 
           {/* Section: Popular right now matching Image 5 */}
-          {popularProducts.length > 0 && (
+          {loadingEmptyContent && !popularProducts.length ? (
+            <PopularRightNowSkeleton />
+          ) : popularProducts.length > 0 ? (
             <View style={{ marginBottom: 24 }}>
               <Text
                 style={{
@@ -439,13 +685,13 @@ export default function CartScreen({ navigation }) {
 
                       <Text
                         numberOfLines={1}
-                        style={{ fontSize: 13, fontWeight: '800', color: '#0f172a' }}
+                        style={{ fontFamily: fonts.bold, fontSize: 13, fontWeight: 'normal', color: '#0f172a' }}
                       >
                         {prod.name}
                       </Text>
                       <Text
                         numberOfLines={1}
-                        style={{ fontSize: 11.5, fontWeight: '500', color: '#64748b', marginTop: 1, marginBottom: 8 }}
+                        style={{ fontFamily: fonts.medium, fontSize: 11.5, fontWeight: 'normal', color: '#64748b', marginTop: 1, marginBottom: 8 }}
                       >
                         {packSize}
                       </Text>
@@ -457,7 +703,7 @@ export default function CartScreen({ navigation }) {
                           justifyContent: 'space-between',
                         }}
                       >
-                        <Text style={{ fontSize: 14.5, fontWeight: '900', color: '#0f172a' }}>
+                        <Text style={{ fontFamily: fonts.extraBold, fontSize: 14.5, fontWeight: 'normal', color: '#0f172a' }}>
                           ₹{price}
                         </Text>
                         <Pressable
@@ -482,15 +728,18 @@ export default function CartScreen({ navigation }) {
                 })}
               </ScrollView>
             </View>
-          )}
+          ) : null}
 
           {/* Section: Shop by category matching Image 5 */}
-          {emptyCategories.length > 0 && (
+          {loadingEmptyContent && !emptyCategories.length ? (
+            <ShopByCategorySkeleton />
+          ) : emptyCategories.length > 0 ? (
             <View>
               <Text
                 style={{
+                  fontFamily: fonts.extraBold,
                   fontSize: 16.5,
-                  fontWeight: '800',
+                  fontWeight: 'normal',
                   color: '#0f172a',
                   paddingHorizontal: 18,
                   marginBottom: 12,
@@ -538,7 +787,7 @@ export default function CartScreen({ navigation }) {
                       </View>
                       <Text
                         numberOfLines={1}
-                        style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'center' }}
+                        style={{ fontFamily: fonts.bold, fontSize: 12, fontWeight: 'normal', color: '#0f172a', textAlign: 'center' }}
                       >
                         {cat.name}
                       </Text>
@@ -547,7 +796,7 @@ export default function CartScreen({ navigation }) {
                 })}
               </ScrollView>
             </View>
-          )}
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     );

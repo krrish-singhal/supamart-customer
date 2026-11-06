@@ -551,7 +551,28 @@ export default function ProductDetailScreen({ route, navigation }) {
                   </Text>
                 </View>
 
-                {altQty === 0 ? (
+                {isProductUnavailable(alt, alt.variants?.[0]) ? (
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#ef4444',
+                      borderRadius: 10,
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      backgroundColor: '#ffffff',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: fonts.bold,
+                        fontSize: 12,
+                        color: '#ef4444',
+                      }}
+                    >
+                      Sold out
+                    </Text>
+                  </View>
+                ) : altQty === 0 ? (
                   <Pressable
                     onPress={() => addItem(alt, alt.variants?.[0])}
                     style={{
