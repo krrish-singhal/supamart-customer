@@ -122,6 +122,7 @@ export default function EditProfileScreen({ navigation }) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Avatar Section */}
           <Animated.View entering={FadeInDown.duration(320)} style={styles.avatarSection}>
@@ -142,6 +143,7 @@ export default function EditProfileScreen({ navigation }) {
                 onPress={pickAndUploadPhoto}
                 disabled={uploadingPhoto}
                 style={styles.cameraBtn}
+                accessibilityRole="button"
                 accessibilityLabel="Change profile picture"
               >
                 {uploadingPhoto ? (
@@ -173,6 +175,7 @@ export default function EditProfileScreen({ navigation }) {
                   placeholder="Your full name"
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="words"
+                  returnKeyType="next"
                   style={styles.textInput}
                 />
               </View>
@@ -190,6 +193,8 @@ export default function EditProfileScreen({ navigation }) {
                   placeholderTextColor="#94a3b8"
                   keyboardType="phone-pad"
                   maxLength={10}
+                  returnKeyType="done"
+                  onSubmitEditing={save}
                   style={styles.textInput}
                 />
               </View>
@@ -210,25 +215,36 @@ export default function EditProfileScreen({ navigation }) {
               </Text>
             </View>
           </Animated.View>
-        </ScrollView>
 
-        {/* Save button */}
-        <View style={styles.bottomBar}>
-          <Pressable
-            onPress={save}
-            disabled={saving || !isValid}
-            style={[
-              styles.saveBtn,
-              (!isValid || saving) && styles.saveBtnDisabled,
-            ]}
-          >
-            {saving ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <Text style={styles.saveBtnText}>Save Changes</Text>
-            )}
-          </Pressable>
-        </View>
+          {/* Save Changes button styled strictly according to MS Traders theme */}
+          <View style={styles.actionSection}>
+            <Pressable
+              onPress={save}
+              disabled={saving || !isValid}
+              accessibilityRole="button"
+              accessibilityLabel="Save Changes"
+              accessibilityState={{ disabled: !isValid || saving, busy: saving }}
+              android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+              style={[
+                styles.saveBtn,
+                (!isValid || saving) && styles.saveBtnDisabled,
+              ]}
+            >
+              {saving ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text
+                  style={[
+                    styles.saveBtnText,
+                    (!isValid || saving) && styles.saveBtnTextDisabled,
+                  ]}
+                >
+                  Save Changes
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -318,16 +334,21 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 18,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#edf2ed',
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardTitle: {
     fontFamily: fonts.bold,
-    fontSize: 15.5,
+    fontSize: 16,
     color: '#0f172a',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   inputGroup: {
     marginBottom: 14,
@@ -372,25 +393,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 2,
   },
-  bottomBar: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderTopWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 4,
+  actionSection: {
+    width: '100%',
+    marginTop: 6,
+    marginBottom: 32,
   },
   saveBtn: {
+    width: '100%',
     height: 52,
     borderRadius: 14,
     backgroundColor: '#047857',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     shadowColor: '#047857',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
@@ -398,13 +413,19 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   saveBtnDisabled: {
-    backgroundColor: '#94a3b8',
+    backgroundColor: '#d8e4db',
+    shadowColor: 'transparent',
     shadowOpacity: 0,
     elevation: 0,
   },
   saveBtnText: {
     fontFamily: fonts.bold,
-    fontSize: 15.5,
+    fontSize: 16,
     color: '#ffffff',
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
+  saveBtnTextDisabled: {
+    color: '#5c6d62',
   },
 });

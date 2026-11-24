@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { isRunningInExpoGo } from 'expo';
+import { auth } from './firebase';
 
 export const BACKGROUND_LOCATION_TASK = 'SUPAMART_DELIVERY_BG_LOCATION';
 
@@ -12,7 +13,7 @@ export const isExpoGo =
   Constants?.executionEnvironment === ExecutionEnvironment?.StoreClient ||
   (typeof isRunningInExpoGo === 'function' && isRunningInExpoGo());
 
-async function canTrackInBackground() {
+export async function canTrackInBackground() {
   if (Platform.OS === 'web' || isExpoGo) return false;
   try {
     return await TaskManager.isAvailableAsync();
@@ -21,7 +22,30 @@ async function canTrackInBackground() {
   }
 }
 
-// Safely register background location task handler outside Expo Go
+/**
+ * Retrieve a valid authorization token for background operations.
+ * Auto-refreshes Firebase ID token if expired or near expiry,
+ * while safely falling back to stored backend JWT tokens (30d duration).
+ */
+async function getValidAuthToken({ forceRefresh = false } = {}) {
+  try {
+    const authMode = await AsyncStorage.getItem('authMode');
+    if (authMode === 'firebase' && auth?.currentUser) {
+      try {
+        const freshIdToken = await auth.currentUser.getIdToken(forceRefresh);
+        if (freshIdToken) {
+          await AsyncStorage.setItem('userToken', freshIdToken).catch(() => {});
+          return freshIdToken;
+        }
+      } catch (_fbErr) {
+        // Fall back to stored token
+      }
+    }
+  } catch (_e) {}
+  return await AsyncStorage.getItem('userToken');
+}
+
+// Register headless background location task
 try {
   if (!isExpoGo && TaskManager && typeof TaskManager.isTaskDefined === 'function' && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK)) {
     TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
@@ -35,25 +59,41 @@ try {
 
         try {
           const partnerId = await AsyncStorage.getItem('@supamart_partner_id');
-          const token = await AsyncStorage.getItem('userToken');
+          if (!partnerId) return;
 
-          if (partnerId && token) {
-            const payload = {
-              lat: latest.coords.latitude,
-              lng: latest.coords.longitude,
-              heading: latest.coords.heading ?? 0,
-              speed: latest.coords.speed ?? 0,
-            };
+          let token = await getValidAuthToken({ forceRefresh: false });
+          if (!token) return;
 
-            const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${apiUrl}/delivery-partners/${partnerId}/location`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify(payload),
-            });
+          const payload = {
+            lat: latest.coords.latitude,
+            lng: latest.coords.longitude,
+            heading: latest.coords.heading ?? 0,
+            speed: latest.coords.speed ?? 0,
+          };
+
+          const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+          const res = await fetch(`${apiUrl}/delivery-partners/${partnerId}/location`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          // If unauthorized (e.g. Firebase token expired after 60 min), refresh token and retry once
+          if (res.status === 401) {
+            const freshToken = await getValidAuthToken({ forceRefresh: true });
+            if (freshToken && freshToken !== token) {
+              await fetch(`${apiUrl}/delivery-partners/${partnerId}/location`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${freshToken}`,
+                },
+                body: JSON.stringify(payload),
+              });
+            }
           }
         } catch (_err) {
           // Silent fail in background to avoid disrupting OS task runner
@@ -66,9 +106,60 @@ try {
 }
 
 /**
+ * Check location permission statuses cleanly
+ */
+export async function checkLocationPermissions() {
+  try {
+    const fg = await Location.getForegroundPermissionsAsync().catch(() => ({ status: 'undetermined' }));
+    let bg = { status: 'undetermined' };
+    if (Platform.OS !== 'web') {
+      bg = await Location.getBackgroundPermissionsAsync().catch(() => ({ status: 'undetermined' }));
+    }
+    return {
+      foregroundGranted: fg?.status === 'granted',
+      backgroundGranted: bg?.status === 'granted',
+      foregroundStatus: fg?.status || 'undetermined',
+      backgroundStatus: bg?.status || 'undetermined',
+    };
+  } catch {
+    return {
+      foregroundGranted: false,
+      backgroundGranted: false,
+      foregroundStatus: 'undetermined',
+      backgroundStatus: 'undetermined',
+    };
+  }
+}
+
+/**
+ * Request Foreground Permission (Step 1 of Android sequence)
+ */
+export async function requestForegroundLocationPermission() {
+  try {
+    const res = await Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' }));
+    return res?.status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Request Background Permission (Step 2 of Android sequence, after Prominent Disclosure)
+ */
+export async function requestBackgroundLocationPermission() {
+  try {
+    if (Platform.OS === 'web') return true;
+    const res = await Location.requestBackgroundPermissionsAsync().catch(() => ({ status: 'denied' }));
+    return res?.status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Start background location tracking with persistent Android notification banner
  */
-export async function startBackgroundTracking({ orderNo, partnerId }) {
+export async function startBackgroundTracking({ orderNo, partnerId } = {}) {
   try {
     if (!(await canTrackInBackground())) {
       return { success: false, reason: 'Background tracking requires a development or production native build.' };
@@ -76,38 +167,26 @@ export async function startBackgroundTracking({ orderNo, partnerId }) {
     if (partnerId) {
       await AsyncStorage.setItem('@supamart_partner_id', String(partnerId));
     }
-
-    // 1. Request foreground permission first
-    const fgRes = await Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' }));
-    if (fgRes?.status !== 'granted') {
-      return { success: false, reason: 'Foreground location permission not granted' };
+    if (orderNo) {
+      await AsyncStorage.setItem('@supamart_active_order_no', String(orderNo));
     }
 
-    // 2. Safely verify background permission on native Android / iOS
-    if (Platform.OS !== 'web') {
-      try {
-        let bgStatus = (await Location.getBackgroundPermissionsAsync().catch(() => ({ status: 'undetermined' }))).status;
-        if (bgStatus !== 'granted') {
-          const reqBg = await Location.requestBackgroundPermissionsAsync().catch(() => ({ status: 'denied' }));
-          bgStatus = reqBg.status;
-        }
-        if (bgStatus !== 'granted') {
-          console.warn('[BackgroundLocation] Background permission not granted. Skipping foreground service update.');
-          return { success: false, reason: 'Background location permission not granted' };
-        }
-      } catch (bgPermErr) {
-        console.warn('[BackgroundLocation] Background permission check failed:', bgPermErr?.message);
-        return { success: false, reason: 'Background permission check failed' };
+    // 1. Verify foreground permission first
+    const { foregroundGranted } = await checkLocationPermissions();
+    if (!foregroundGranted) {
+      const granted = await requestForegroundLocationPermission();
+      if (!granted) {
+        return { success: false, reason: 'Foreground location permission not granted' };
       }
     }
 
-    // 3. Check if already running
+    // 2. Check if updates are already started
     const isStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(() => false);
     if (isStarted) {
       return { success: true, alreadyRunning: true };
     }
 
-    // 4. Start location updates with foreground service notification (wrapped to prevent native fatal crashes)
+    // 3. Start location updates with foreground service notification
     try {
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
         accuracy: Location.Accuracy.Balanced,
@@ -142,6 +221,7 @@ export async function stopBackgroundTracking() {
   try {
     if (!(await canTrackInBackground())) {
       await AsyncStorage.removeItem('@supamart_partner_id').catch(() => {});
+      await AsyncStorage.removeItem('@supamart_active_order_no').catch(() => {});
       return { success: true };
     }
     const isStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(() => false);
@@ -155,6 +235,7 @@ export async function stopBackgroundTracking() {
       }
     }
     await AsyncStorage.removeItem('@supamart_partner_id').catch(() => {});
+    await AsyncStorage.removeItem('@supamart_active_order_no').catch(() => {});
     return { success: true };
   } catch (err) {
     console.warn('[BackgroundLocation] stopBackgroundTracking error:', err?.message);
@@ -173,4 +254,3 @@ export async function isTrackingActive() {
     return false;
   }
 }
-

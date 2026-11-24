@@ -1,7 +1,7 @@
 {
   "name": "customer",
   "main": "expo/AppEntry",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "scripts": {
     "start": "expo start",
     "start:tunnel": "expo start --tunnel --clear",
@@ -9,9 +9,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "test": "node --test test/*.test.js",
     "bundle:map": "node ./scripts/bundle-leaflet.cjs",
-    "bundle:splash": "node ./scripts/bundle-splash.cjs",
-    "size:audit": "python3 scripts/trim-app-assets.py"
+    "bundle:splash": "node ./scripts/bundle-splash.cjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

@@ -611,9 +611,9 @@ export default function BuyAgainScreen({ navigation }) {
                           <Pressable
                             onPress={() => handleReorder(order)}
                             disabled={isReordering}
-                            style={({ pressed }) => [
+                            android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                            style={[
                               styles.reorderBtn,
-                              pressed && { opacity: 0.88 },
                               isReordering && { opacity: 0.7 },
                             ]}
                             accessibilityLabel={`Reorder order ${order.orderNo}`}
@@ -818,10 +818,8 @@ export default function BuyAgainScreen({ navigation }) {
                           <Pressable
                             onPress={() => handleAddItem(item)}
                             disabled={isBusy}
-                            style={({ pressed }) => [
-                              styles.addBtn,
-                              pressed && { opacity: 0.8 },
-                            ]}
+                            android_ripple={{ color: '#dcfce7' }}
+                            style={styles.addBtn}
                           >
                             {isBusy ? (
                               <ActivityIndicator size="small" color="#0A7C47" />
@@ -882,9 +880,9 @@ export default function BuyAgainScreen({ navigation }) {
               <Pressable
                 onPress={handleAddAll}
                 disabled={addingAll || totalAvailableCount === 0}
-                style={({ pressed }) => [
+                android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                style={[
                   styles.addAllButton,
-                  pressed && { opacity: 0.9 },
                   (addingAll || totalAvailableCount === 0) && styles.addAllButtonDisabled,
                 ]}
                 accessibilityLabel={`Add all ${totalAvailableCount} items to cart`}

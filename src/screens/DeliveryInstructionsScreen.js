@@ -497,10 +497,8 @@ export default function DeliveryInstructionsScreen({ navigation, route }) {
               ? `Save ${totalSelectedCount} delivery instructions`
               : 'Save delivery instructions'
           }
-          style={({ pressed }) => [
-            styles.saveButton,
-            pressed && styles.saveButtonPressed,
-          ]}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+          style={styles.saveButton}
         >
           <Check size={20} color="#ffffff" strokeWidth={2.8} />
           <Text style={styles.saveButtonText}>

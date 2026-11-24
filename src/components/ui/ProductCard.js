@@ -176,7 +176,7 @@ function ProductCard({ item, onPress, onAdd, qty = 0, onIncrement, onDecrement, 
         <Pressable
           onPress={onPress}
           accessibilityLabel={item.name}
-          style={({ pressed }) => [{ opacity: pressed ? 0.94 : 1 }]}
+          android_ripple={{ color: '#f1f5f9' }}
         >
           {/* Top Image area with discount tag, veg icon, and ETA pill matching Screenshots 3 & 4 */}
         <View

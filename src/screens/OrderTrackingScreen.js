@@ -1,6 +1,6 @@
 import { orderEstimate } from '../utils/orderEstimate';
 import { STORE_LOCATION, validCoordinates } from '../config/deliveryArea';
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useContext } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ import { db } from '../config/firebase';
 import { Skeleton } from '../components/ui';
 import apiClient from '../services/api';
 import { useCart } from '../context/CartContext';
+import { AuthContext } from '../context/AuthContext';
 import { getProductImageSource } from '../utils/productImages';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryImage';
 
@@ -44,6 +45,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
     incomingId && incomingId !== 'undefined' && incomingId !== 'null' ? incomingId : null
   );
   const { loadCart } = useCart();
+  const { userProfile } = useContext(AuthContext);
   const [order, setOrder] = useState(null);
   const [partnerDoc, setPartnerDoc] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -142,7 +144,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
     };
   }, [resolvedOrderId, order?.status]);
 
-  // 3. Real-time Firestore listener for the Assigned Delivery Partner document
+  // 3. Real-time Firestore listener for the Assigned Delivery Partner document (admin or self only)
   useEffect(() => {
     if (order?.status === 'DELIVERED' || order?.status === 'CANCELLED') {
       return;
@@ -150,6 +152,13 @@ export default function OrderTrackingScreen({ route, navigation }) {
     const partnerId = order?.assignedPartnerId || order?.deliveryBoyId || order?.deliveryPartner?.id;
     if (!partnerId) {
       setPartnerDoc(null);
+      return;
+    }
+
+    // Direct deliveryPartner document reads are restricted to Admin or the partner themselves
+    const canReadPartnerDoc = userProfile?.role === 'ADMIN' || String(userProfile?.id) === String(partnerId);
+    if (!canReadPartnerDoc) {
+      // Customer receives live partner coordinates safely via order.partnerLocation
       return;
     }
 
@@ -161,14 +170,14 @@ export default function OrderTrackingScreen({ route, navigation }) {
           setPartnerDoc({ id: snap.id, ...snap.data() });
         }
       },
-      (err) => {
-        console.warn('Delivery partner listener error:', err.message);
+      (_err) => {
+        // Silently handled: customer receives live location via order.partnerLocation
       }
     );
     return () => {
       unsubscribe();
     };
-  }, [order?.assignedPartnerId, order?.deliveryBoyId, order?.deliveryPartner?.id, order?.status]);
+  }, [order?.assignedPartnerId, order?.deliveryBoyId, order?.deliveryPartner?.id, order?.status, userProfile?.role, userProfile?.id]);
 
   /**
    * Handle Back navigation cleanly to avoid the 2-screen loop:

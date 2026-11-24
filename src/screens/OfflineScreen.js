@@ -119,14 +119,15 @@ export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
         <Pressable
           onPress={handleRetry}
           disabled={checking}
-          style={({ pressed }) => ({
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+          style={{
             height: 50,
             borderRadius: 12,
             backgroundColor: '#0d7a46',
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: pressed ? 0.9 : (checking ? 0.75 : 1),
-          })}
+            opacity: checking ? 0.75 : 1,
+          }}
         >
           <Text
             style={{
@@ -142,12 +143,12 @@ export default function OfflineScreen({ navigation, onRetry, onGoHome }) {
 
         <Pressable
           onPress={handleGoHome}
-          style={({ pressed }) => ({
+          android_ripple={{ color: '#dcfce7' }}
+          style={{
             paddingVertical: 10,
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: pressed ? 0.7 : 1,
-          })}
+          }}
         >
           <Text
             style={{

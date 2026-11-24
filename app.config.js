@@ -3,7 +3,7 @@ import 'dotenv/config';
 export default {
   "name": "MS Traders",
   "slug": "supamart-customer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "orientation": "portrait",
   "icon": "./assets/icon.png",
   "scheme": "mstraders",
@@ -30,7 +30,7 @@ export default {
   },
   "android": {
     "package": "in.mstraders.grocery",
-    "versionCode": 4,
+    "versionCode": 5,
     "usesCleartextTraffic": true,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",

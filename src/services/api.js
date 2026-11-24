@@ -4,6 +4,7 @@ import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const FALLBACK_API_URL = 'https://supamart-backend-353k.onrender.com/api';
 
@@ -100,6 +101,39 @@ const apiClient = create({
   timeout: 25000,
 });
 
+let authRestorePromise = null;
+function waitForFirebaseUser() {
+  if (auth?.currentUser) return Promise.resolve(auth.currentUser);
+  if (!auth) return Promise.resolve(null);
+
+  if (!authRestorePromise) {
+    authRestorePromise = new Promise((resolve) => {
+      let resolved = false;
+      const done = (user) => {
+        if (!resolved) {
+          resolved = true;
+          authRestorePromise = null;
+          resolve(user || null);
+        }
+      };
+      let unsub = () => {};
+      try {
+        unsub = onAuthStateChanged(auth, (u) => {
+          try { unsub(); } catch (_) {}
+          done(u);
+        });
+      } catch (_) {
+        done(auth?.currentUser || null);
+      }
+      setTimeout(() => {
+        try { unsub(); } catch (_) {}
+        done(auth?.currentUser || null);
+      }, 3500);
+    });
+  }
+  return authRestorePromise;
+}
+
 apiClient.interceptors.request.use(async (config) => {
   // Check once on startup for a saved working URL to avoid unnecessary failover delay
   if (!hasCheckedPersistedBaseUrl) {
@@ -131,10 +165,29 @@ apiClient.interceptors.request.use(async (config) => {
   if (config.headers.Authorization) return config;
   try {
     const authMode = await AsyncStorage.getItem('authMode');
-    const token =
-      authMode === 'firebase' && auth.currentUser
-        ? await auth.currentUser.getIdToken()
-        : await AsyncStorage.getItem('userToken');
+    let token = null;
+
+    if (authMode === 'firebase') {
+      let fbUser = auth?.currentUser;
+      if (!fbUser) {
+        fbUser = await waitForFirebaseUser();
+      }
+      if (fbUser) {
+        try {
+          token = await fbUser.getIdToken();
+          if (token) {
+            AsyncStorage.setItem('userToken', token).catch(() => {});
+          }
+        } catch (_tokenErr) {
+          token = await AsyncStorage.getItem('userToken');
+        }
+      } else {
+        token = await AsyncStorage.getItem('userToken');
+      }
+    } else {
+      token = await AsyncStorage.getItem('userToken');
+    }
+
     if (token) config.headers.Authorization = `Bearer ${token}`;
   } catch {
     // proceed without token
@@ -156,6 +209,36 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const config = error.config;
+
+    // Auto-refresh expired Firebase ID token and retry once on 401
+    if (
+      error.response?.status === 401 &&
+      config &&
+      !config._retriedAuth
+    ) {
+      config._retriedAuth = true;
+      try {
+        const authMode = await AsyncStorage.getItem('authMode');
+        if (authMode === 'firebase') {
+          let fbUser = auth?.currentUser;
+          if (!fbUser) {
+            fbUser = await waitForFirebaseUser();
+          }
+          if (fbUser) {
+            const freshToken = await fbUser.getIdToken(true);
+            if (freshToken) {
+              await AsyncStorage.setItem('userToken', freshToken);
+              config.headers = config.headers || {};
+              config.headers.Authorization = `Bearer ${freshToken}`;
+              return await apiClient(config);
+            }
+          }
+        }
+      } catch (_refreshErr) {
+        // proceed to standard 401 handling
+      }
+    }
+
     const isNetworkOrTimeout =
       !error.response &&
       (error.code === 'ERR_NETWORK' ||

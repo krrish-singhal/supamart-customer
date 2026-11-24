@@ -431,7 +431,7 @@ export default function RedeliveryConfirmationModal() {
                       <>
                         <CheckCircle size={18} color="#ffffff" style={{ marginRight: 8 }} />
                         <Text style={styles.primaryBtnText}>
-                          Yes, I'm available (Dispatch Now)
+                          {"Yes, I'm available (Dispatch Now)"}
                         </Text>
                       </>
                     )}

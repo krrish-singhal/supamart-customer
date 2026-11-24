@@ -225,10 +225,8 @@ export default function TermsScreen({ navigation }) {
               <Pressable
                 key={section.id}
                 onPress={() => scrollToSection(idx)}
-                style={({ pressed }) => [
-                  styles.contentPressable,
-                  pressed && { opacity: 0.65 },
-                ]}
+                android_ripple={{ color: '#f1f5f9' }}
+                style={styles.contentPressable}
               >
                 <View style={styles.contentRow}>
                   <Text style={styles.contentNum}>{section.number}</Text>

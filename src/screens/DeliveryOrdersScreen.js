@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
   Linking,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -77,6 +78,13 @@ export default function DeliveryOrdersScreen({ navigation }) {
   const [incomingOrder, setIncomingOrder] = useState(null);
   const [respondingToOrder, setRespondingToOrder] = useState(false);
   const [storeOpen, setStoreOpen] = useState(true);
+
+  // Role guard: Ensure only delivery partners or admins can access DeliveryOrders
+  useEffect(() => {
+    if (userProfile && !['PARTNER', 'ADMIN'].includes(String(userProfile.role || '').toUpperCase())) {
+      navigation.replace('Main');
+    }
+  }, [userProfile, navigation]);
 
   // Subscribe in real-time to store status
   useEffect(() => {
@@ -223,7 +231,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
 
   const fetchOrders = async () => {
     try {
-      const res = await apiClient.get('/orders');
+      const res = await apiClient.get('/orders', { __skipErrorToast: true });
       const items = res.data.items || [];
       if (items.length) {
         setOrders((previous) => {
@@ -416,25 +424,13 @@ export default function DeliveryOrdersScreen({ navigation }) {
     const addressLine = addressParts.length > 0 ? addressParts.join(', ') : 'Delivery Address';
 
     return (
-      <Pressable
-        onPress={() => handleViewAndDeliver(item)}
-        style={({ pressed }) => ({
-          marginHorizontal: 16,
-          marginBottom: 14,
-          backgroundColor: '#ffffff',
-          borderRadius: 18,
-          borderWidth: 1.2,
-          borderColor: '#dce3dc',
-          padding: 16,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 5,
-          elevation: 2,
-          opacity: pressed ? 0.93 : 1,
-        })}
-      >
-        {/* Header row: Order # and Status pill */}
+      <View style={styles.orderCard}>
+        <Pressable
+          onPress={() => handleViewAndDeliver(item)}
+          android_ripple={{ color: '#f1f5f9' }}
+          style={styles.orderCardInner}
+        >
+          {/* Header row: Order # and Status pill */}
         <View
           style={{
             flexDirection: 'row',
@@ -653,13 +649,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
         ) : null}
 
         {/* Subtle Divider Line */}
-        <View
-          style={{
-            height: 1,
-            backgroundColor: '#edf2ed',
-            marginVertical: 12,
-          }}
-        />
+        <View style={styles.divider} />
 
         {/* Bottom Row: Items & Payment on Left, Action Button on Right */}
         <View
@@ -779,7 +769,8 @@ export default function DeliveryOrdersScreen({ navigation }) {
             </Pressable>
           )}
         </View>
-      </Pressable>
+        </Pressable>
+      </View>
     );
   };
 
@@ -1101,7 +1092,7 @@ export default function DeliveryOrdersScreen({ navigation }) {
         contentContainerStyle={[
           {
             paddingTop: 14,
-            paddingBottom: 28,
+            paddingBottom: 16,
           },
           displayOrders.length === 0 && { flexGrow: 1 },
         ]}
@@ -1424,3 +1415,29 @@ export default function DeliveryOrdersScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  orderCard: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: '#dce3dc',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  orderCardInner: {
+    padding: 16,
+    width: '100%',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#edf2ed',
+    marginVertical: 12,
+  },
+});

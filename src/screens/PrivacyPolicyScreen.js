@@ -59,10 +59,11 @@ const PRIVACY_SECTIONS = [
     number: '04',
     title: 'Location data',
     bullets: [
-      'We ask for location permission only to find your address and place your delivery pin. You can say no and enter your address by hand instead.',
-      'We use your location only while the app is open. The customer app doesn’t track you in the background.',
-      'Your delivery partner sees your pinned address only while delivering your order.',
-      'You can turn location off at any time in your phone’s settings.',
+      'Customer Location (Foreground Only): For customers, we ask for location permission solely while the app is open to identify your address, calculate delivery feasibility, and place your doorstep delivery pin. Customers can deny location permission and enter their address manually. Customers are never tracked in the background.',
+      'Delivery Partner Location (Active Delivery Only): For authenticated delivery partners, the app collects precise location data during active order deliveries, including in the background when the app is minimized or the device screen is locked. This enables real-time arrival estimates and live tracking for the customer awaiting their order.',
+      'Foreground Service Notification: When delivery partner tracking is active in the background, a non-dismissible Android status bar notification is displayed. Tracking starts only when the driver taps "Start Delivery & Pick Up" and automatically stops as soon as the order is delivered, cancelled, reassigned, or the driver goes off duty.',
+      'Location Storage & Retention: The system stores only the latest real-time GPS coordinate fix to coordinate active delivery. Historical GPS trails or route breadcrumbs are not archived. When an account is deleted, all profile and location records are permanently deleted.',
+      'Permission Control: You can modify or revoke location permissions at any time through your device settings.',
     ],
   },
   {
@@ -211,10 +212,8 @@ export default function PrivacyPolicyScreen({ navigation }) {
               <Pressable
                 key={section.id}
                 onPress={() => scrollToSection(idx)}
-                style={({ pressed }) => [
-                  styles.contentPressable,
-                  pressed && { opacity: 0.65 },
-                ]}
+                android_ripple={{ color: '#f1f5f9' }}
+                style={styles.contentPressable}
               >
                 <View style={styles.contentRow}>
                   <Text style={styles.contentNum}>{section.number}</Text>

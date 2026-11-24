@@ -1027,7 +1027,8 @@ export default function OrderDetailScreen({ route, navigation }) {
               <Pressable
                 onPress={() => setShowCancelModal(false)}
                 disabled={cancelling}
-                style={({ pressed }) => ({
+                android_ripple={{ color: '#f1f5f9' }}
+                style={{
                   flex: 1,
                   height: 50,
                   borderRadius: 16,
@@ -1036,8 +1037,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                   borderColor: '#cbd5e1',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  opacity: pressed ? 0.8 : 1,
-                })}
+                }}
               >
                 <Text
                   style={{
@@ -1054,7 +1054,8 @@ export default function OrderDetailScreen({ route, navigation }) {
               <Pressable
                 onPress={handleCancelOrder}
                 disabled={cancelling}
-                style={({ pressed }) => ({
+                android_ripple={{ color: '#fca5a5' }}
+                style={{
                   flex: 1,
                   height: 50,
                   borderRadius: 16,
@@ -1065,8 +1066,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                   justifyContent: 'center',
                   flexDirection: 'row',
                   gap: 8,
-                  opacity: pressed ? 0.8 : 1,
-                })}
+                }}
               >
                 {cancelling ? (
                   <ActivityIndicator size="small" color="#b91c1c" />

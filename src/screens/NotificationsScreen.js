@@ -742,17 +742,15 @@ export default function NotificationsScreen({ navigation }) {
                 >
                   <Pressable
                     onPress={() => handleItemPress(item)}
-                    style={({ pressed }) => [
-                      {
-                        flex: 1,
-                        height: 44,
-                        borderRadius: 12,
-                        backgroundColor: '#0A7C47',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      },
-                      pressed && { opacity: 0.9 },
-                    ]}
+                    android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                    style={{
+                      flex: 1,
+                      height: 44,
+                      borderRadius: 12,
+                      backgroundColor: '#0A7C47',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     <Text
                       style={{
@@ -800,19 +798,16 @@ export default function NotificationsScreen({ navigation }) {
                         navigation.navigate('Orders');
                       }
                     }}
-                    style={({ pressed }) => [
-                      {
-                        flex: 1,
-                        height: 44,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: '#e2e8f0',
-                        backgroundColor: '#ffffff',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      },
-                      pressed && { opacity: 0.9 },
-                    ]}
+                    style={{
+                      flex: 1,
+                      height: 44,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#e2e8f0',
+                      backgroundColor: '#ffffff',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     <Text
                       style={{
@@ -833,16 +828,14 @@ export default function NotificationsScreen({ navigation }) {
                 >
                   <Pressable
                     onPress={() => handleItemPress(item)}
-                    style={({ pressed }) => [
-                      {
-                        height: 44,
-                        borderRadius: 12,
-                        backgroundColor: '#0A7C47',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      },
-                      pressed && { opacity: 0.9 },
-                    ]}
+                    android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                    style={{
+                      height: 44,
+                      borderRadius: 12,
+                      backgroundColor: '#0A7C47',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     <Text
                       style={{

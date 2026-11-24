@@ -82,6 +82,12 @@ export function AuthProvider({ children }) {
 
         // Session is valid in Firebase Auth
         setToken(FIREBASE_NATIVE_MARKER);
+        try {
+          const freshIdToken = await fbUser.getIdToken();
+          if (freshIdToken) {
+            await AsyncStorage.setItem('userToken', freshIdToken);
+          }
+        } catch (_) {}
 
         // If we didn't have a cached profile, supply an optimistic profile and unblock UI
         if (!hasCachedProfile) {
@@ -249,7 +255,9 @@ export function AuthProvider({ children }) {
         }
         if (profile) {
           await AsyncStorage.setItem('authMode', 'firebase');
-          await AsyncStorage.removeItem('userToken');
+          if (idToken) {
+            await AsyncStorage.setItem('userToken', idToken);
+          }
           await AsyncStorage.setItem('userProfile', JSON.stringify(profile));
           await restoreAddressPreference(profile);
           setToken(FIREBASE_NATIVE_MARKER);

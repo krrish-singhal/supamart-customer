@@ -215,10 +215,8 @@ export default function DeleteAccountScreen({ navigation }) {
 
           <Pressable
             onPress={handleFinalDone}
-            style={({ pressed }) => [
-              styles.doneBtn,
-              pressed && { opacity: 0.9 },
-            ]}
+            android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+            style={styles.doneBtn}
           >
             <Text style={styles.doneBtnText}>Done</Text>
           </Pressable>
@@ -382,9 +380,9 @@ export default function DeleteAccountScreen({ navigation }) {
             <Pressable
               onPress={handleContinueToDelete}
               disabled={sendingOtp || loadingStatus}
-              style={({ pressed }) => [
+              android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+              style={[
                 styles.deleteBtn,
-                pressed && { opacity: 0.9 },
                 (sendingOtp || loadingStatus) && { opacity: 0.7 },
               ]}
             >

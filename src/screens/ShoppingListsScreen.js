@@ -392,10 +392,8 @@ function DashedChip({ label, onPress }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.dashedChipBtn,
-        pressed && { opacity: 0.75 },
-      ]}
+      android_ripple={{ color: '#dcfce7' }}
+      style={styles.dashedChipBtn}
       accessibilityRole="button"
       accessibilityLabel={`Start list for ${label}`}
     >
@@ -957,9 +955,9 @@ export default function ShoppingListsScreen({ navigation }) {
             disabled={actionBusy}
             onPress={() => handleAddAllItems(list)}
             hitSlop={6}
-            style={({ pressed }) => [
+            android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+            style={[
               styles.addAllBtn,
-              pressed && { opacity: 0.75 },
               actionBusy && { opacity: 0.6 },
             ]}
           >
@@ -1016,10 +1014,8 @@ export default function ShoppingListsScreen({ navigation }) {
 
         <Pressable
           onPress={() => openCreateModal()}
-          style={({ pressed }) => [
-            styles.newListHeaderBtn,
-            pressed && { opacity: 0.75 },
-          ]}
+          android_ripple={{ color: '#dcfce7' }}
+          style={styles.newListHeaderBtn}
           accessibilityLabel="Create new list"
         >
           <Text numberOfLines={1} style={styles.newListHeaderText}>
@@ -1444,12 +1440,12 @@ export default function ShoppingListsScreen({ navigation }) {
             <Pressable
               disabled={actionBusy || Object.keys(selectedItems).length === 0}
               onPress={handleSaveNewList}
-              style={({ pressed }) => [
+              android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+              style={[
                 styles.saveListBtn,
                 (actionBusy || Object.keys(selectedItems).length === 0) && {
                   opacity: 0.5,
                 },
-                pressed && { opacity: 0.8 },
               ]}
             >
               {actionBusy ? (
@@ -1546,9 +1542,9 @@ export default function ShoppingListsScreen({ navigation }) {
                     handleAddAllItems(activeListDetail);
                     setActiveListDetail(null);
                   }}
-                  style={({ pressed }) => [
+                  android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                  style={[
                     styles.saveListBtn,
-                    pressed && { opacity: 0.8 },
                     actionBusy && { opacity: 0.6 },
                   ]}
                 >
